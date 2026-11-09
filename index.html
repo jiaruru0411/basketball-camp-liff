@@ -202,7 +202,7 @@ button:disabled{ opacity: .5; cursor: not-allowed; }
   border-radius: 10px;
 }
 .seg button.on[data-s="未到"]{ background: #64748b; color: #fff; box-shadow: 0 3px 8px rgba(100, 116, 139, 0.35); }
-.seg button.on[data-s="出席"]{ background: #10b981; color: #fff; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35); }
+.seg button.on[data-s="出席"]{ background: #10b981; color: #fff; box-shadow: 0 3px 8px rgba(16, 185, 129, 0.35); }
 .seg button.on[data-s="請假"]{ background: #f59e0b; color: #fff; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.35); }
 .seg button.on[data-s="缺席"]{ background: #ef4444; color: #fff; box-shadow: 0 3px 10px rgba(239, 68, 68, 0.35); }
 
@@ -341,7 +341,6 @@ function updateGreeting() {
   $('#greet').textContent = `${S.me ? S.me.name + '・' + roleName + ' ' : ''}${w}`;
 }
 
-// 防無限循環登入 (最多自動嘗試 1 次)
 function reLogin() {
   const retry = sessionStorage.getItem('relogin_attempt') || '0';
   if (parseInt(retry, 10) >= 1) {
@@ -374,7 +373,7 @@ async function api(action, data = {}) {
     }
     throw new Error(j.error);
   }
-  sessionStorage.removeItem('relogin_attempt'); // 呼叫成功則清除計數
+  sessionStorage.removeItem('relogin_attempt');
   return j.data;
 }
 
@@ -427,6 +426,7 @@ function viewBind() {
   $('#app').innerHTML = bindBox() + card('📋 教練權限開通', `<p class="muted">教練請將以下 LINE ID 提供給總教練，在試算表設定權限後即可使用：</p><code>${esc(S.me.id)}</code>`);
 }
 
+// 家長專區（精準過濾請假下拉選單與多寶連動）
 async function viewParent() {
   if (!S.parentData) {
     const [h, cl] = await Promise.all([api('history'), api('classes')]);
@@ -444,7 +444,10 @@ async function viewParent() {
   }
 
   const visibleStudents = S.curKid === 'ALL' ? st : st.filter(s => s.studentId === S.curKid);
-  const opt = st.map(s => `<option value="${s.studentId}" ${s.studentId === S.curKid ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+
+  // 關鍵修復：若當前選取特定小孩，請假選單只列出該位小孩；選「全部」時才列出所有人
+  const eligibleLeaveStudents = S.curKid === 'ALL' ? st : st.filter(s => s.studentId === S.curKid);
+  const opt = eligibleLeaveStudents.map(s => `<option value="${s.studentId}" ${s.studentId === S.curKid ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
 
   const attList = (h.attendances || []).filter(a => S.curKid === 'ALL' || a.studentId === S.curKid);
   const attHtml = attList.map(a => `
@@ -484,11 +487,11 @@ async function viewParent() {
       <div class="rules-box">
         <b>📌 請假注意事項：</b>
         <ol>
-          <li><b>病假-單堂課補課</b>：請提供看診收據，收據日期僅接受上課日的前後二日。</li>
-          <li><b>病假-兩堂課以上補課</b>：請提供醫生診斷證明，內須載明日期（如看診日期、休養週期等）。</li>
-          <li>如因學員<b>私人因素請假，每期僅補課 1 次</b>，其餘恕無法補課及退費。</li>
-          <li>逢颱風、地震等天然災害，<b>依新北市政府宣佈停班停課規定辦理</b>，不再特別通知，配套措施將另行公告。</li>
-          <li>補課請於課程結束後<b>『四週內』完成</b>，逾期視同放棄無法退費。補課為<b>每週日開課時段</b>，並請提前登記補課日期。</li>
+          <li><b>病假-單堂課補課</b>：請提供看診收據，收據日期僅接受上課日的前後二日[cite: 1]。</li>
+          <li><b>病假-兩堂課以上補課</b>：請提供醫生診斷證明，內須載明日期（如看診日期、休養週期等）[cite: 1]。</li>
+          <li>如因學員<b>私人因素請假，每期僅補課 1 次</b>，其餘恕無法補課及退費[cite: 1]。</li>
+          <li>逢颱風、地震等天然災害，<b>依新北市政府宣佈停班停課規定辦理</b>，不再特別通知，配套措施將另行公告[cite: 1]。</li>
+          <li>補課請於課程結束後<b>『四週內』完成</b>，逾期視同放棄無法退費[cite: 1]。補課為<b>每週日開課時段</b>，並請提前登記補課日期[cite: 1]。</li>
         </ol>
       </div>
     `) +

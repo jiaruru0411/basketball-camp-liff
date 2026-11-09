@@ -28,7 +28,7 @@ main{padding:14px;max-width:540px;margin:0 auto}
 .card{background:var(--card);border-radius:18px;padding:18px 16px;margin-bottom:14px;border:1px solid #e1e7f0;box-shadow:0 3px 12px rgba(15,23,42,0.04)}
 h2{margin:0 0 14px;font-size:17px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px}
 
-/* 輸入框與修復 iPhone 日期外擴問題 */
+/* 輸入框寬度鎖定與樣式 */
 input, select {
   display: block;
   width: 100% !important;
@@ -45,7 +45,7 @@ input, select {
 }
 input:focus, select:focus { border-color: var(--o); outline: none; background: #fff; }
 
-/* 針對 iOS DatePicker 強制鎖定寬度 */
+/* 針對 iOS DatePicker 強制鎖定寬度避免溢出邊界 */
 input[type="date"] {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -55,9 +55,7 @@ input[type="date"] {
   background-color: #f8fafc;
   box-sizing: border-box !important;
 }
-input[type="date"]::-webkit-date-and-time-value {
-  text-align: left;
-}
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 input[type=checkbox]{display:inline-block;width:18px!important;height:18px;margin:0 8px 0 0;accent-color:var(--o)}
 button{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:12px;padding:12px 14px;transition:opacity .15s,transform .1s}
@@ -116,14 +114,30 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.className = 'sho
 async function run(btn, fn) { btn.disabled = true; try { await fn(); } catch (e) { toast(e.message); } finally { btn.disabled = false; } }
 async function safe(fn) { try { await fn(); } catch (e) { $('#app').innerHTML = card('載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); } }
 
+function reLogin() {
+  try { liff.logout(); } catch (e) {}
+  liff.login();
+}
+
 async function api(action, data = {}) {
+  let token = '';
+  try {
+    if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
+      token = liff.getIDToken();
+    }
+  } catch (err) {}
+
   const r = await fetch(CONFIG.API_URL, {
     method: 'POST',
-    body: JSON.stringify({ action, token: liff.getIDToken(), ...data })
+    body: JSON.stringify({ action, token, ...data })
   });
   const j = await r.json();
   if (!j.ok) {
-    if (/登入/.test(j.error)) { liff.logout(); liff.login(); }
+    // 遇到驗證失敗直接清除暫存並跳轉登入
+    if (/登入|驗證失敗/i.test(j.error)) {
+      reLogin();
+      return;
+    }
     throw new Error(j.error);
   }
   return j.data;
@@ -132,11 +146,19 @@ async function api(action, data = {}) {
 async function init() {
   try {
     await liff.init({ liffId: CONFIG.LIFF_ID });
-    if (!liff.isLoggedIn()) { liff.login(); return; }
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
     S.me = await api('me');
+    if (!S.me) return;
     render();
   } catch (e) {
-    $('#app').innerHTML = card('無法開啟', `<p>${esc(e.message)}</p><button class="pri" onclick="init()">重試</button>`);
+    $('#app').innerHTML = card('無法開啟', `
+      <p style="color:var(--bad);font-weight:600;margin-bottom:12px">${esc(e.message)}</p>
+      <button class="pri" onclick="reLogin()">重新登入 LINE</button>
+      <button class="ghost" style="width:100%;margin-top:10px" onclick="location.reload()">重新整理</button>
+    `);
   }
 }
 

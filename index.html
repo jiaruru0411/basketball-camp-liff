@@ -397,7 +397,6 @@ function viewBind() {
   $('#app').innerHTML = bindBox();
 }
 
-// ==================== 家長專區 (極速純資料版) ====================
 async function viewParent() {
   if (!S.parentData) {
     const [h, cl] = await Promise.all([api('history'), api('classes')]);
@@ -435,7 +434,6 @@ async function viewParent() {
 
     card('📋 上課出勤明細', attHtml) +
 
-    // 請假獨立表單
     card('📝 我要請假', `
       <select id="leave_sid">${opt}</select>
       <select id="leave_reason_type">
@@ -448,7 +446,6 @@ async function viewParent() {
       <button class="pri" onclick="run(this,doSubmitLeave)">送出請假申請 ➜</button>
     `) +
 
-    // 補課獨立表單
     card('🏀 預約補課', `
       <p class="muted">補課限定於週日開課時段</p>
       <select id="mk_sid">${opt}</select>
@@ -468,7 +465,6 @@ async function viewParent() {
       </div>
     `) +
 
-    // 匯款表單 (純資料超快速)
     card('💳 匯款對帳回傳', `
       <p class="muted">${esc(CONFIG.BANK)}</p>
       <select id="pay_period">
@@ -540,7 +536,6 @@ async function doSubmitMakeup() {
   render();
 }
 
-// ==================== 教練點名 (防呆彈窗) ====================
 async function viewCoach() {
   const cs = S.me.classes || [];
   if (!cs.length) {
@@ -627,7 +622,7 @@ async function confirmAndSaveAttendance() {
   render();
 }
 
-// ==================== 總教練後台 (分別設定堂數) ====================
+// ==================== 總教練後台 (已修復按鈕引號衝突) ====================
 async function viewAdmin() {
   const a = await api('admin');
   const s = a.stats || {};
@@ -643,7 +638,7 @@ async function viewAdmin() {
     </div>` +
 
     card('💳 待審核匯款（可分別設定加堂）', (a.payments || []).map(p => `
-      <div class="item">
+      <div class="item" id="pay_item_${p.id}">
         <b>${esc(p.parentName)}</b>｜期別：<b>${esc(p.period)}</b>
         <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
         
@@ -652,15 +647,15 @@ async function viewAdmin() {
           ${p.studentIds.map(sid => `
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:14px">${esc(sid)}</span>
-              <input id="add_lessons_${p.id}_${sid}" type="number" style="width:110px!important;padding:6px;margin:0" placeholder="增加堂數">
+              <input class="add-lesson-input" data-sid="${esc(sid)}" type="number" style="width:110px!important;padding:6px;margin:0" placeholder="增加堂數">
             </div>
           `).join('')}
         </div>
 
         <input id="nt_${p.id}" placeholder="退回說明（若退回必填）">
         <div class="two">
-          <button class="pri" onclick="run(this,()=>reviewPay('${p.id}','pass', ${JSON.stringify(p.studentIds)}))">核准並加堂 ➜</button>
-          <button class="ghost" onclick="run(this,()=>reviewPay('${p.id}','reject', []))">退回匯款</button>
+          <button class="pri" onclick="run(this,()=>reviewPaySafe('${p.id}','pass'))">核准並加堂 ➜</button>
+          <button class="ghost" onclick="run(this,()=>reviewPaySafe('${p.id}','reject'))">退回匯款</button>
         </div>
       </div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>') +
 
@@ -681,19 +676,27 @@ async function viewAdmin() {
       </div>`).join(''));
 }
 
-async function reviewPay(id, decision, sids) {
+// 安全版審核處理函式
+async function reviewPaySafe(id, decision) {
   const addMap = {};
   if (decision === 'pass') {
-    sids.forEach(sid => {
-      const val = $(`#add_lessons_${id}_${sid}`)?.value;
-      if (val) addMap[sid] = Number(val);
-    });
+    const container = document.querySelector(`#pay_item_${id}`);
+    if (container) {
+      container.querySelectorAll('.add-lesson-input').forEach(inp => {
+        const sid = inp.getAttribute('data-sid');
+        const val = inp.value.trim();
+        if (sid && val && Number(val) > 0) {
+          addMap[sid] = Number(val);
+        }
+      });
+    }
   }
+
   await api('reviewPay', {
     id: id,
     decision: decision,
     studentAddLessons: addMap,
-    note: $('#nt_' + id)?.value
+    note: $('#nt_' + id)?.value || ''
   });
   toast('匯款審核完成！');
   render();

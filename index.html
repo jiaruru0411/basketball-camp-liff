@@ -453,8 +453,8 @@ async function viewParent() {
     card('📝 我要請假', `
       <select id="leave_sid">${opt}</select>
       <select id="leave_reason_type">
-        <option value="病假">🤒 病假（請備妥看診收據，四週內補課）</option>
-        <option value="事假">🚗 私人因素事假（每期上限 1 次）</option>
+        <option value="病假">🤒 病假（請備妥看診收據，結業後四周內補課）</option>
+        <option value="事假">🚗 私人因素事假（每期上限 1 次，結業後四周內補課）</option>
         <option value="其他">📌 其他公假/天災</option>
       </select>
       <input id="leave_date" type="date" min="${today()}" value="${today()}">
@@ -466,8 +466,8 @@ async function viewParent() {
       <p class="muted" style="margin-bottom:6px">請選擇補課學員與補課假別</p>
       <select id="mk_sid">${opt}</select>
       <select id="mk_reason_type">
-        <option value="事假補課">🚗 事假補課（每期上限 1 次，4 週內完成）</option>
-        <option value="病假補課">🤒 病假補課（4 週內完成）</option>
+        <option value="事假補課">🚗 事假補課（每期上限 1 次，課程結束後 4 週內完成）</option>
+        <option value="病假補課">🤒 病假補課（課程結束後 4 週內完成）</option>
       </select>
       <select id="mk_cls">${cl.map(c => `<option value="${c.classId}">${esc(c.name)} (${c.hours || 2}h)</option>`).join('')}</select>
       <p class="muted" style="font-size:13px;margin:4px 0 2px">選擇週日補課日期</p>
@@ -477,10 +477,10 @@ async function viewParent() {
       <div class="rules-box">
         <b>📌 請假補課規範：</b>
         <ol>
-          <li><b>病假</b>：請提供收據（接受上課日前後二日）[cite: 1]。</li>
-          <li><b>事假</b>：私人因素每期<b>僅限補課 1 次</b>，逾期視同放棄[cite: 1]。</li>
-          <li><b>補課期限</b>：請於原請假上課日後<b>『四週內』</b>完成[cite: 1]。</li>
-          <li><b>時段限定</b>：補課一律安排於<b>每週日開課時段</b>[cite: 1]。</li>
+          <li><b>病假</b>：請提供收據（接受上課日前後二日）。</li>
+          <li><b>事假</b>：私人因素每期<b>僅限補課 1 次</b>，逾期視同放棄。</li>
+          <li><b>補課期限</b>：請於本期<b>『課程結束後四周內』</b>完成補課。</li>
+          <li><b>時段限定</b>：補課一律安排於<b>每週日開課時段</b>。</li>
         </ol>
       </div>
     `) +
@@ -566,7 +566,6 @@ async function viewCoach() {
   S.date = S.date || today();
   const isAdmin = (S.me.role === 'admin' || S.me.realRole === 'admin');
 
-  // 強制重新拉取點名名單
   S.list = await api('roster', { classId: S.cls, date: S.date });
   S.list.forEach(x => { if (!x.v) x.v = x.saved || (x.leave ? '請假' : '未到'); });
 

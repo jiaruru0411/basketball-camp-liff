@@ -323,12 +323,23 @@ function updateGreeting() {
   $('#greet').textContent = `${S.me ? S.me.name + '・' + roleDisplay : '活力充沛'}`;
 }
 
+function forceReLogin() {
+  try { liff.logout(); } catch (err) {}
+  liff.login();
+}
+
 async function api(action, data = {}) {
   let token = '';
   try { if (typeof liff !== 'undefined' && liff.isLoggedIn()) token = liff.getIDToken(); } catch (err) {}
   const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
   const j = await r.json();
-  if (!j.ok) throw new Error(j.error);
+  if (!j.ok) {
+    if (/驗證失敗|登入/i.test(j.error)) {
+      forceReLogin();
+      return;
+    }
+    throw new Error(j.error);
+  }
   return j.data;
 }
 
@@ -337,10 +348,15 @@ async function init() {
     await liff.init({ liffId: CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
     S.me = await api('me');
+    if (!S.me) return;
     S.activeRole = S.activeRole || S.me.role;
     render();
   } catch (e) {
-    $('#app').innerHTML = card('系統維護中', `<p class="muted">${esc(e.message)}</p><button class="pri" onclick="location.reload()">重新整理</button>`);
+    $('#app').innerHTML = card('需要重新驗證', `
+      <p class="muted" style="color:var(--bad);font-weight:600;margin-bottom:14px">${esc(e.message)}</p>
+      <button class="pri" onclick="forceReLogin()">重新登入 LINE ➜</button>
+      <button class="ghost" style="width:100%;margin-top:10px" onclick="location.reload()">重新整理</button>
+    `);
   }
 }
 
@@ -622,7 +638,6 @@ async function confirmAndSaveAttendance() {
   render();
 }
 
-// 總教練後台 (顯示姓名＋代號)
 async function viewAdmin() {
   const a = await api('admin');
   const s = a.stats || {};

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>永不平凡籃球營 - 線上管理系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+    body { 
+      font-family: 'Noto Sans TC', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-28">
+
+  <!-- 頂部 Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-10 h-10 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center text-lg shadow-md">
+          <i class="fa-solid font-black fa-basketball"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-slate-800 text-sm leading-tight">永不平凡籃球營</h1>
+          <p class="text-[11px] text-slate-500">LINE 官方線上學務系統</p>
+        </div>
+      </div>
+      <span class="text-[11px] bg-slate-100 text-slate-500 font-bold px-2 py-1 rounded">測試模擬</span>
+    </div>
+  </header>
+
+  <!-- 主要內容區 -->
+  <main class="max-w-md mx-auto px-4 pt-4 space-y-3">
+
+    <!-- 醒目的身分切換控制盒 -->
+    <div class="bg-amber-50 border border-amber-300 p-3 rounded-2xl shadow-sm flex items-center justify-between">
+      <div class="flex items-center space-x-1.5 text-amber-900 text-xs font-bold">
+        <i class="fa-solid fa-sliders text-amber-600 text-sm"></i>
+        <span>切換測試身分：</span>
+      </div>
+      <select id="roleSelector" onchange="switchRole(this.value)" class="bg-white border border-amber-400 text-amber-900 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none font-bold shadow-sm">
+        <option value="admin">總教練 / 管理員 (全域)</option>
+        <option value="coach_sat">張教練 (僅週六班)</option>
+        <option value="parent">陳媽媽 (家長專區)</option>
+      </select>
+    </div>
+
+    <!-- 身分告示牌 -->
+    <div id="roleBanner" class="bg-blue-50 border border-blue-200 text-blue-800 text-xs px-3.5 py-2.5 rounded-xl flex items-center justify-between shadow-sm">
+      <span id="roleBannerText"><i class="fa-solid fa-user-shield mr-1.5 text-blue-600"></i> 目前身分：<b>總教練 / 管理員</b>（全域最高權限）</span>
+    </div>
+
+    <!-- 1. 學員專區 (家長畫面) -->
+    <section id="sectionStudent" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <h2 class="font-bold text-slate-800 text-sm flex items-center">
+            <i class="fa-solid fa-id-card text-orange-500 mr-2 text-base"></i>名下學員課務狀態
+          </h2>
+          <span class="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">已綁定 LINE</span>
+        </div>
+        
+        <div class="space-y-2.5" id="parentChildrenCards">
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between animate-pulse">
+            <p class="text-xs text-slate-400">正在讀取學員資料...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 匯款回條提交 -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <h2 class="font-bold text-slate-800 text-sm mb-3 flex items-center">
+          <i class="fa-solid fa-file-invoice-dollar text-blue-600 mr-2 text-base"></i>學費匯款回條提交
+        </h2>
+        <form id="remittanceForm" onsubmit="handleRemittanceSubmit(event)" class="space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-600 font-bold mb-1">家長姓名</label>
+            <input type="text" id="remitParent" required value="陳媽媽" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          </div>
+          <div>
+            <label class="block text-slate-600 font-bold mb-1">繳費學員姓名</label>
+            <input type="text" id="remitStudent" required value="林小明、林小華" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-slate-600 font-bold mb-1">匯款金額 ($)</label>
+              <input type="number" id="remitAmount" required placeholder="10000" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+            <div>
+              <label class="block text-slate-600 font-bold mb-1">帳號後五碼</label>
+              <input type="text" id="remitCode" maxlength="5" required placeholder="12345" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+          </div>
+          <div>
+            <label class="block text-slate-600 font-bold mb-1">轉帳日期</label>
+            <input type="date" id="remitDate" required class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          </div>
+          <button type="submit" class="w-full bg-orange-500 active:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-md text-sm mt-1">
+            <i class="fa-solid fa-paper-plane mr-1"></i> 確認送出對帳資料
+          </button>
+        </form>
+      </div>
+
+      <!-- 請假與補課申請表單 -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <h2 class="font-bold text-slate-800 text-sm mb-3 flex items-center">
+          <i class="fa-solid fa-calendar-xmark text-amber-500 mr-2 text-base"></i>線上請假與補課預約
+        </h2>
+        <form id="leaveMakeupForm" onsubmit="handleLeaveMakeupSubmit(event)" class="space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-600 font-bold mb-1">學員姓名</label>
+            <input type="text" id="leaveStudent" required value="林小明" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
+          </div>
+          <div>
+            <label class="block text-slate-600 font-bold mb-1">原請假日期</label>
+            <input type="date" id="leaveDate" required class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
+          </div>
+          <div>
+            <label class="block text-slate-600 font-bold mb-1">請假事由</label>
+            <input type="text" id="leaveReason" required placeholder="例如：感冒看醫生、學校段考、家庭聚會" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
+          </div>
+          <div>
+            <label class="block text-slate-600 font-bold mb-1">預約補課班級</label>
+            <select id="makeupClass" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold">
+              <option value="週六上午國小基礎班">週六上午國小基礎班</option>
+              <option value="週日下午國中進階班">週日下午國中進階班</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-600 font-bold mb-1">預約補課日期</label>
+            <input type="date" id="makeupDate" required class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
+          </div>
+          <button type="submit" class="w-full bg-amber-500 active:bg-amber-600 text-white font-bold py-3 rounded-xl transition shadow-md text-sm mt-1">
+            <i class="fa-solid fa-paper-plane mr-1"></i> 送出請假與補課申請
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 2. 點名與簽到區 (教練介面) -->
+    <section id="sectionAttendance" class="space-y-4">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+          <h2 class="font-bold text-slate-800 text-sm flex items-center">
+            <i class="fa-solid fa-user-check text-orange-500 mr-2 text-base"></i>教練出勤打卡
+          </h2>
+          <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-bold" id="currentDateDisplay">2026-11-09</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-[11px] text-slate-500">當前打卡身分</p>
+            <p class="font-bold text-slate-800 text-sm" id="coachNameLabel">總教練</p>
+          </div>
+          <button onclick="coachCheckIn()" class="bg-orange-500 active:bg-orange-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow">
+            <i class="fa-solid fa-location-dot mr-1"></i> 當日打卡簽到
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold text-slate-800 text-sm flex items-center">
+            <i class="fa-solid fa-clipboard-user text-blue-600 mr-2 text-base"></i>學生班級點名
+          </h2>
+          <select id="classSelector" onchange="filterStudentsByClass()" class="text-xs border border-slate-300 rounded-xl px-2.5 py-1.5 bg-slate-50 font-bold">
+            <option value="週六上午國小基礎班">週六上午國小基礎班</option>
+            <option value="週日下午國中進階班">週日下午國中進階班</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
+          <span class="text-slate-500 font-bold">快捷操作：</span>
+          <button onclick="markAll('出席')" class="bg-emerald-100 text-emerald-700 active:bg-emerald-200 px-3 py-1.5 rounded-lg font-bold transition shadow-sm">
+            <i class="fa-solid fa-check-double mr-1"></i>全班皆設為出席
+          </button>
+        </div>
+
+        <div id="coachClassWarning" class="hidden bg-amber-50 border border-amber-200 text-amber-700 text-xs p-2.5 rounded-xl flex items-center font-bold">
+          <i class="fa-solid fa-triangle-exclamation mr-1.5 text-base"></i>
+          <span id="warningText">提示：您僅能點名您負責的班級。</span>
+        </div>
+
+        <!-- 學生清單 -->
+        <div class="space-y-3 max-h-72 overflow-y-auto pr-1" id="coachStudentList">
+          <p class="text-xs text-slate-400 text-center py-4">正在載入學生清單...</p>
+        </div>
+
+        <!-- 送出按鈕 -->
+        <button onclick="submitAttendance()" class="w-full bg-blue-600 active:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs shadow-md transition flex items-center justify-center mt-2">
+          <i class="fa-solid fa-paper-plane mr-1.5 text-sm"></i> 送出已點名學員 (未到者不送出)
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. 管理員後台審核區 -->
+    <section id="sectionAdmin" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <h2 class="font-bold text-slate-800 text-sm mb-3 flex items-center justify-between">
+          <span><i class="fa-solid fa-tasks text-orange-500 mr-2 text-base"></i>全營隊待審核匯款紀錄</span>
+        </h2>
+        <div class="space-y-2.5 text-xs" id="remittanceList">
+          <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between shadow-sm">
+            <div>
+              <p class="font-bold text-slate-800 text-sm">陳媽媽（學員：林小明、林小華）</p>
+              <p class="text-xs text-slate-500 mt-0.5">金額: $10000 | 後五碼: <span class="font-mono font-bold text-blue-600 text-sm">12345</span></p>
+            </div>
+            <button onclick="approveRemittance()" class="px-3.5 py-2 bg-emerald-500 active:bg-emerald-600 text-white font-bold rounded-xl text-xs shadow">通過審核</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 手機底部導覽列：採用 Flex 水平排列，絕不垂直堆疊 -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-50 shadow-lg pb-safe">
+    <div id="bottomNavContainer" class="max-w-md mx-auto flex items-center justify-around text-center text-xs py-1">
+      <button onclick="showTab('attendance')" id="navAttendance" class="flex-1 py-2 text-orange-500 font-bold transition flex flex-col items-center justify-center">
+        <i class="fa-solid fa-clipboard-check text-lg mb-0.5"></i> 點名打卡
+      </button>
+      <button onclick="showTab('student')" id="navStudent" class="flex-1 py-2 text-slate-400 hover:text-slate-600 transition flex flex-col items-center justify-center">
+        <i class="fa-solid fa-user-shield text-lg mb-0.5"></i> 學員專區
+      </button>
+      <button onclick="showTab('admin')" id="navAdmin" class="flex-1 py-2 text-slate-400 hover:text-slate-600 transition flex flex-col items-center justify-center">
+        <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i> 後台審核
+      </button>
+    </div>
+  </nav>
+
+  <script>
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwt1oyigjqQH7kbf6xEvWuP49XoWXvPmgWsZu-EFyfO2CixsNqmgzC3c-fA9MGOHRmF/exec";
+    
+    let currentRole = 'admin';
+    let allStudents = [];
+
+    document.getElementById('currentDateDisplay').innerText = new Date().toISOString().split('T')[0];
+
+    async function fetchStudentsData() {
+      try {
+        const response = await fetch(`${GAS_API_URL}?action=getStudents`);
+        const rawData = await response.json();
+        
+        allStudents = [];
+        for (let i = 1; i < rawData.length; i++) {
+          const row = rawData[i];
+          if (row[1]) {
+            allStudents.push({
+              id: i,
+              name: row[1],
+              parent: row[2] || '未填寫',
+              class: row[3] || '未分班',
+              lessons: Number(row[4]) || 0,
+              status: "未到"
+            });
+          }
+        }
+        filterStudentsByClass();
+        updateParentView();
+      } catch (e) {
+        console.error("無法同步最新學員資料：", e);
+      }
+    }
+
+    // 核心身分切換邏輯：動態隱藏/顯示按鈕，始終保持橫向排列
+    function switchRole(role) {
+      currentRole = role;
+      const bannerText = document.getElementById('roleBannerText');
+      const classSelector = document.getElementById('classSelector');
+      const warningBox = document.getElementById('coachClassWarning');
+      const coachNameLabel = document.getElementById('coachNameLabel');
+
+      const navAttendance = document.getElementById('navAttendance');
+      const navStudent = document.getElementById('navStudent');
+      const navAdmin = document.getElementById('navAdmin');
+
+      if (role === 'admin') {
+        bannerText.innerHTML = '<i class="fa-solid fa-user-shield mr-1.5 text-blue-600"></i> 目前身分：<b>總教練 / 管理員</b>（全域最高權限）';
+        if (classSelector) classSelector.disabled = false;
+        if (warningBox) warningBox.classList.add('hidden');
+        if (coachNameLabel) coachNameLabel.innerText = '總教練';
+
+        // 總教練：三個選單全部橫向並排顯示
+        navAttendance.classList.remove('hidden');
+        navStudent.classList.remove('hidden');
+        navAdmin.classList.remove('hidden');
+
+        showTab('attendance');
+
+      } else if (role === 'coach_sat') {
+        bannerText.innerHTML = '<i class="fa-solid fa-user-ninja mr-1.5 text-blue-600"></i> 目前身分：<b>張教練</b>（僅限點名：週六班）';
+        if (classSelector) {
+          classSelector.value = "週六上午國小基礎班";
+          classSelector.disabled = true;
+        }
+        if (warningBox) warningBox.classList.remove('hidden');
+        if (coachNameLabel) coachNameLabel.innerText = '張教練';
+        const warningText = document.getElementById('warningText');
+        if (warningText) warningText.innerText = "提示：您為週六班專責教練，僅能點名週六上午班學生。";
+
+        // 張教練：僅開放點名打卡
+        navAttendance.classList.remove('hidden');
+        navStudent.classList.add('hidden');
+        navAdmin.classList.add('hidden');
+
+        showTab('attendance');
+
+      } else if (role === 'parent') {
+        bannerText.innerHTML = '<i class="fa-solid fa-user-circle mr-1.5 text-blue-600"></i> 目前身分：<b>陳媽媽</b>（家長：已綁定學員）';
+
+        // 陳媽媽（家長）：僅保留學員專區，點名打卡與後台審核完全隱藏
+        navAttendance.classList.add('hidden');
+        navAdmin.classList.add('hidden');
+        navStudent.classList.remove('hidden');
+
+        showTab('student');
+        updateParentView();
+      }
+
+      filterStudentsByClass();
+    }
+
+    // 頁籤切換與權限隔離
+    function showTab(tab) {
+      if (tab === 'admin' && currentRole !== 'admin') {
+        alert("⚠️ 權限不足：您不是總教練，無法存取管理後台！");
+        return;
+      }
+      if (tab === 'attendance' && currentRole === 'parent') {
+        alert("⚠️ 權限不足：家長無法進行教練點名打卡！");
+        return;
+      }
+
+      document.getElementById('sectionAttendance').classList.add('hidden');
+      document.getElementById('sectionStudent').classList.add('hidden');
+      document.getElementById('sectionAdmin').classList.add('hidden');
+
+      ['navAttendance', 'navStudent', 'navAdmin'].forEach(id => {
+        document.getElementById(id).className = "flex-1 py-2 text-slate-400 hover:text-slate-600 transition flex flex-col items-center justify-center";
+      });
+
+      if (tab === 'attendance') {
+        document.getElementById('sectionAttendance').classList.remove('hidden');
+        document.getElementById('navAttendance').className = "flex-1 py-2 text-orange-500 font-bold transition flex flex-col items-center justify-center";
+        fetchStudentsData();
+      } else if (tab === 'student') {
+        document.getElementById('sectionStudent').classList.remove('hidden');
+        document.getElementById('navStudent').className = "flex-1 py-2 text-orange-500 font-bold transition flex flex-col items-center justify-center";
+        fetchStudentsData();
+      } else if (tab === 'admin') {
+        document.getElementById('sectionAdmin').classList.remove('hidden');
+        document.getElementById('navAdmin').className = "flex-1 py-2 text-orange-500 font-bold transition flex flex-col items-center justify-center";
+      }
+    }
+
+    function filterStudentsByClass() {
+      const selectedClass = document.getElementById('classSelector').value;
+      const container = document.getElementById('coachStudentList');
+      const filtered = allStudents.filter(s => s.class === selectedClass);
+      
+      if(filtered.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">此班級目前無學生資料</p>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(s => {
+        const isPresent = s.status === '出席';
+        const isLeave = s.status === '請假';
+        const isPending = s.status === '未到';
+
+        return `
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800 text-xs flex items-center">
+                ${s.name} 
+                <span class="text-[10px] text-slate-500 font-normal ml-1">(家長: ${s.parent})</span>
+                ${isPending ? '<span class="ml-1.5 text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">未到</span>' : ''}
+              </p>
+              <p class="text-xs text-orange-600 font-extrabold mt-0.5">剩餘堂數：${s.lessons} 堂</p>
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <button onclick="setStudentStatus(${s.id}, '出席')" class="px-3.5 py-1.5 text-xs ${isPresent ? 'bg-emerald-500 text-white shadow font-bold' : 'bg-slate-200 text-slate-600'} rounded-lg transition">出席</button>
+              <button onclick="setStudentStatus(${s.id}, '請假')" class="px-3.5 py-1.5 text-xs ${isLeave ? 'bg-amber-500 text-white shadow font-bold' : 'bg-slate-200 text-slate-600'} rounded-lg transition">請假</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateParentView() {
+      const container = document.getElementById('parentChildrenCards');
+      const parentName = "陳媽媽";
+      const myChildren = allStudents.filter(s => s.parent === parentName);
+
+      if(myChildren.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">查無名下學員資料</p>`;
+        return;
+      }
+
+      container.innerHTML = myChildren.map(child => `
+        <div class="bg-gradient-to-r from-slate-50 to-orange-50/30 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between shadow-xs">
+          <div>
+            <p class="font-bold text-slate-800 text-sm">${child.name} <span class="text-xs font-normal text-slate-500">(${child.class})</span></p>
+            <p class="text-xs text-orange-600 font-extrabold mt-0.5">剩餘堂數：${child.lessons} 堂</p>
+          </div>
+          <span class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg font-bold">在訓中</span>
+        </div>
+      `).join('');
+    }
+
+    function setStudentStatus(id, newStatus) {
+      const student = allStudents.find(s => s.id === id);
+      if(student) {
+        if(student.status === newStatus) {
+          student.status = '未到';
+        } else {
+          student.status = newStatus;
+        }
+        filterStudentsByClass();
+      }
+    }
+
+    function markAll(status) {
+      const selectedClass = document.getElementById('classSelector').value;
+      allStudents.forEach(s => {
+        if(s.class === selectedClass) {
+          s.status = status;
+        }
+      });
+      filterStudentsByClass();
+    }
+
+    function coachCheckIn() {
+      alert("✅ 打卡成功！簽到時間已記錄。");
+    }
+
+    async function submitAttendance() {
+      const selectedClass = document.getElementById('classSelector').value;
+      const activeStudents = allStudents.filter(s => s.class === selectedClass && s.status !== '未到');
+      
+      if(activeStudents.length === 0) {
+        alert("⚠️ 目前沒有任何學生被標記為出席或請假（皆為未到狀態），無需送出。");
+        return;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const coach = currentRole === 'coach_sat' ? '張教練' : '總教練';
+
+      try {
+        for(let s of activeStudents) {
+          const payload = {
+            action: 'addAttendance',
+            date: today,
+            className: selectedClass,
+            coachName: coach,
+            studentName: s.name,
+            status: s.status,
+            note: '現場點名'
+          };
+          await fetch(GAS_API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+        
+        const names = activeStudents.map(s => s.name).join('、');
+        alert(`✅ 已完成點名：【${names}】共 ${activeStudents.length} 位！\n未到的學生不會被送出或扣堂數。`);
+        setTimeout(fetchStudentsData, 1200);
+
+      } catch(e) {
+        alert("❌ 傳送失敗：" + e);
+      }
+    }
+
+    async function handleRemittanceSubmit(e) {
+      e.preventDefault();
+      const payload = {
+        action: 'addRemittance',
+        parentName: document.getElementById('remitParent').value,
+        studentName: document.getElementById('remitStudent').value,
+        amount: document.getElementById('remitAmount').value,
+        last5Code: document.getElementById('remitCode').value,
+        transferDate: document.getElementById('remitDate').value
+      };
+      try {
+        await fetch(GAS_API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch(err){}
+      alert("✅ 匯款回條已成功提交！");
+      document.getElementById('remittanceForm').reset();
+    }
+
+    async function handleLeaveMakeupSubmit(e) {
+      e.preventDefault();
+      const payload = {
+        action: 'addLeaveMakeup',
+        studentName: document.getElementById('leaveStudent').value,
+        leaveDate: document.getElementById('leaveDate').value,
+        reason: document.getElementById('leaveReason').value,
+        makeupClass: document.getElementById('makeupClass').value,
+        makeupDate: document.getElementById('makeupDate').value
+      };
+      try {
+        await fetch(GAS_API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch(err){}
+      alert("✅ 請假與補課申請已成功送出！");
+      document.getElementById('leaveMakeupForm').reset();
+    }
+
+    function approveRemittance() {
+      alert("✅ 審核完成！");
+    }
+
+    // 初始化執行
+    fetchStudentsData();
+  </script>
+</body>
+</html>

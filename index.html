@@ -8,7 +8,6 @@
 <style>
 :root {
   --pri: #ff6b00;
-  --pri-light: #fff5ed;
   --pri-gradient: linear-gradient(135deg, #ff8a00 0%, #ff5500 100%);
   --ink: #1e293b;
   --mut: #64748b;
@@ -115,10 +114,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   color: #fff;
   box-shadow: 0 5px 16px rgba(255, 107, 0, 0.3);
 }
-.ghost {
-  background: #f1f5f9;
-  color: #334155;
-}
+.ghost { background: #f1f5f9; color: #334155; }
 .ghost:active { background: #e2e8f0; }
 .row, .item {
   display: flex;
@@ -232,16 +228,21 @@ code {
 <header>
   <div class="brand">
     <div class="logo">🏀</div>
-    <div><b>永不平凡籃球營</b><span id="who">載入中…</span></div>
+    <div><b>永不平凡籃球營</b><span id="who">連線中…</span></div>
   </div>
 </header>
-<main id="app"><p class="muted">載入中…</p></main>
+<main id="app">
+  <div class="card" style="text-align:center;padding:40px 20px">
+    <div style="font-size:32px;margin-bottom:12px">🏀</div>
+    <p style="font-weight:700;margin:0 0 6px">系統載入中，請稍候…</p>
+    <p class="muted" style="margin:0">正在確認您的 LINE 身分與課務資料</p>
+  </div>
+</main>
 <nav id="nav"></nav><div id="toast"></div>
 
 <script>
 // ==================== 參數設定區 ====================
 const CONFIG = {
-  TEST_MODE: false,
   LIFF_ID: '2012507478-35PGiqXO',
   API_URL: 'https://script.google.com/macros/s/AKfycbwXzUnQ1zvcQhCHZs3ezX5tGsJzTCkbQVJij4ID7dWD7kgPFsWFYbySGoqBA8nSasGUzQ/exec',
   BANK: '匯款帳號：822 中國信託 1234-5678-9012（戶名：永不平凡籃球營）'
@@ -256,10 +257,15 @@ const card = (t, b, x = '') => `<section class="card"><h2>${t}${x}</h2>${b}</sec
 const pill = s => `<span class="pill ${/退回|拒絕|缺席/.test(s) ? 'bad' : /待/.test(s) ? 'warn' : ''}">${esc(s)}</span>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.className = 'show'; setTimeout(() => t.className = '', 2600); }
 async function run(btn, fn) { btn.disabled = true; try { await fn(); } catch (e) { toast(e.message); } finally { btn.disabled = false; } }
-async function safe(fn) { try { await fn(); } catch (e) { $('#app').innerHTML = card('載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); } }
 
 async function api(action, data = {}) {
-  const token = (typeof liff !== 'undefined' && liff.isLoggedIn()) ? liff.getIDToken() : '';
+  let token = '';
+  try {
+    if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
+      token = liff.getIDToken();
+    }
+  } catch (err) {}
+
   const r = await fetch(CONFIG.API_URL, {
     method: 'POST',
     body: JSON.stringify({ action, token, ...data })
@@ -275,14 +281,39 @@ async function api(action, data = {}) {
   return j.data;
 }
 
+// 啟動主流程
 async function init() {
+  // 設定 7 秒逾時防卡死保護
+  const timer = setTimeout(() => {
+    if (!S.me) {
+      $('#app').innerHTML = card('載入逾時', `
+        <p class="muted">連線時間較長或未完成 LINE 授權。</p>
+        <button class="pri" onclick="liff.login()">使用 LINE 重新登入</button>
+        <button class="ghost" style="width:100%;margin-top:10px" onclick="location.reload()">重新整理頁面</button>
+      `);
+    }
+  }, 7000);
+
   try {
     await liff.init({ liffId: CONFIG.LIFF_ID });
-    if (!liff.isLoggedIn()) { liff.login(); return; }
+    
+    // 如果尚未登入 LINE，直接引導登入
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+
+    // 取得使用者資料
     S.me = await api('me');
+    clearTimeout(timer);
     render();
   } catch (e) {
-    $('#app').innerHTML = card('無法開啟', `<p>${esc(e.message)}</p><button class="pri" onclick="init()">重試</button>`);
+    clearTimeout(timer);
+    $('#app').innerHTML = card('無法連線', `
+      <p style="color:var(--bad);font-weight:700">錯誤訊息：${esc(e.message)}</p>
+      <p class="muted">請確認網路狀態，或嘗試重新登入。</p>
+      <button class="pri" onclick="init()">再試一次</button>
+    `);
   }
 }
 
@@ -298,7 +329,12 @@ function render() {
   if (!tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === S.tab ? 'on' : ''}" onclick="S.tab='${t[0]}';render()">${t[1]}</button>`).join('');
   $('#who').textContent = `${S.me.name}・${{ guest: '訪客', parent: '家長', coach: '教練', admin: '總教練' }[r] || ''}`;
-  safe({ bind: viewBind, parent: viewParent, coach: viewCoach, admin: viewAdmin }[S.tab]);
+  
+  try {
+    ({ bind: viewBind, parent: viewParent, coach: viewCoach, admin: viewAdmin }[S.tab])();
+  } catch (err) {
+    $('#app').innerHTML = card('載入失敗', `<p>${esc(err.message)}</p><button class="pri" onclick="render()">重試</button>`);
+  }
 }
 
 // ---------- 1. 綁定頁面 ----------

@@ -28,7 +28,7 @@
           <p class="text-[11px] text-slate-500">LINE 官方線上學務系統</p>
         </div>
       </div>
-      <span class="text-[11px] bg-slate-100 text-slate-500 font-bold px-2 py-1 rounded">系統運行中</span>
+      <span class="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-2 py-0.5 rounded">系統在線</span>
     </div>
   </header>
 
@@ -62,7 +62,6 @@
           </h2>
           <span class="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">已綁定 LINE</span>
         </div>
-        
         <div class="space-y-2.5" id="parentChildrenCards">
           <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between animate-pulse">
             <p class="text-xs text-slate-400">正在讀取學員資料...</p>
@@ -120,7 +119,7 @@
           </div>
           <div>
             <label class="block text-slate-600 font-bold mb-1">請假事由</label>
-            <input type="text" id="leaveReason" required placeholder="例如：感冒看醫生、學校段考" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
+            <input type="text" id="leaveReason" required placeholder="例如：感冒看診" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
           </div>
           <div>
             <label class="block text-slate-600 font-bold mb-1">預約補課班級</label>
@@ -207,7 +206,7 @@
               <p class="font-bold text-slate-800 text-sm">陳媽媽（學員：林小明、林小華）</p>
               <p class="text-xs text-slate-500 mt-0.5">金額: $10000 | 後五碼: <span class="font-mono font-bold text-blue-600 text-sm">12345</span></p>
             </div>
-            <button onclick="approveRemittance()" class="px-3.5 py-2 bg-emerald-500 active:bg-emerald-600 text-white font-bold rounded-xl text-xs shadow">通過審核</button>
+            <button onclick="alert('✅ 審核完成！')" class="px-3.5 py-2 bg-emerald-500 active:bg-emerald-600 text-white font-bold rounded-xl text-xs shadow">通過審核</button>
           </div>
         </div>
       </div>
@@ -231,13 +230,13 @@
   </nav>
 
   <script>
-    // 你的最新後端 Apps Script API 部署網址
-     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx_ER4Ycb5yDt16MFj-3KZckKUdLMCK4XmZWCwxZxulISA7MaUGrWobpC8FzhyexdvF/exec";    
+    // ⚠️ 請在此處填入從 Google Apps Script「管理部署」複製下來的正式網址
+    const GAS_API_URL = "請在此填入你的AppsScript網址";
+    
     let currentRole = 'coach_sat';
     let allStudents = [];
     let allMakeups = [];
 
-    // 取得今天純日期 (yyyy-MM-dd)
     function getTodayString() {
       const now = new Date();
       const y = now.getFullYear();
@@ -249,7 +248,6 @@
     const todayDateStr = getTodayString();
     document.getElementById('currentDateDisplay').innerText = todayDateStr;
 
-    // 日期格式防呆正規化
     function parseDateString(val) {
       if (!val) return "";
       if (typeof val === 'string') {
@@ -270,7 +268,6 @@
 
     async function fetchStudentsData() {
       try {
-        // 1. 同步抓取學員名單
         const resStudents = await fetch(`${GAS_API_URL}?action=getStudents`);
         const rawStudents = await resStudents.json();
         
@@ -289,14 +286,12 @@
           }
         }
 
-        // 2. 抓取請假補課清單
         try {
           const resMakeups = await fetch(`${GAS_API_URL}?action=getMakeups`);
           const rawMakeups = await resMakeups.json();
           allMakeups = [];
           for (let k = 1; k < rawMakeups.length; k++) {
             const mRow = rawMakeups[k];
-            // 欄位: [1]=學員姓名, [4]=預約補課班級, [5]=預約補課日期
             if (mRow[1] && mRow[4] && mRow[5]) {
               allMakeups.push({
                 name: String(mRow[1]).trim(),
@@ -329,14 +324,16 @@
 
       if (role === 'admin') {
         bannerText.innerHTML = '<i class="fa-solid fa-user-shield mr-1.5 text-blue-600"></i> 目前身分：<b>總教練 / 管理員</b>（全域最高權限）';
-        if (classSelector) classSelector.disabled = false;
+        if (classSelector) {
+          classSelector.disabled = false;
+          if (!classSelector.value) classSelector.value = "週六上午國小基礎班";
+        }
         if (warningBox) warningBox.classList.add('hidden');
         if (coachNameLabel) coachNameLabel.innerText = '總教練';
 
         navAttendance.classList.remove('hidden');
         navStudent.classList.remove('hidden');
         navAdmin.classList.remove('hidden');
-
         showTab('attendance');
 
       } else if (role === 'coach_sat') {
@@ -353,16 +350,13 @@
         navAttendance.classList.remove('hidden');
         navStudent.classList.add('hidden');
         navAdmin.classList.add('hidden');
-
         showTab('attendance');
 
       } else if (role === 'parent') {
         bannerText.innerHTML = '<i class="fa-solid fa-user-circle mr-1.5 text-blue-600"></i> 目前身分：<b>陳媽媽</b>（家長：已綁定學員）';
-
         navAttendance.classList.add('hidden');
         navAdmin.classList.add('hidden');
         navStudent.classList.remove('hidden');
-
         showTab('student');
         updateParentView();
       }
@@ -402,15 +396,12 @@
       }
     }
 
-    // 班級名單與跨班補課整合渲染
     function filterStudentsByClass() {
       const selectedClass = document.getElementById('classSelector').value;
       const container = document.getElementById('coachStudentList');
 
-      // 1. 本班固定學員
       const regularStudents = allStudents.filter(s => s.class === selectedClass);
 
-      // 2. 當日跨班補課學員
       const makeupStudentNames = allMakeups
         .filter(m => m.makeupClass === selectedClass && m.makeupDate === todayDateStr)
         .map(m => m.name);
@@ -419,7 +410,6 @@
         .filter(s => makeupStudentNames.includes(s.name) && s.class !== selectedClass)
         .map(s => ({ ...s, isMakeup: true }));
 
-      // 補課學員置頂
       const displayList = [...makeupStudents, ...regularStudents];
 
       if (displayList.length === 0) {
@@ -478,11 +468,7 @@
     function setStudentStatus(id, newStatus) {
       const student = allStudents.find(s => s.id === id);
       if(student) {
-        if(student.status === newStatus) {
-          student.status = '未到';
-        } else {
-          student.status = newStatus;
-        }
+        student.status = (student.status === newStatus) ? '未到' : newStatus;
         filterStudentsByClass();
       }
     }
@@ -490,14 +476,11 @@
     function markAll(status) {
       const selectedClass = document.getElementById('classSelector').value;
       allStudents.forEach(s => {
-        if(s.class === selectedClass) {
-          s.status = status;
-        }
+        if(s.class === selectedClass) s.status = status;
       });
       filterStudentsByClass();
     }
 
-    // 教練即時出勤打卡
     async function coachCheckIn() {
       const coach = currentRole === 'coach_sat' ? '張教練' : '總教練';
       try {
@@ -505,21 +488,16 @@
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'addCoachCheckIn',
-            coachName: coach
-          })
+          body: JSON.stringify({ action: 'addCoachCheckIn', coachName: coach })
         });
         alert(`✅ 打卡成功！\n已將【${coach}】今日出勤時間寫入試算表「教練出勤紀錄」。`);
       } catch (e) {
-        alert("❌ 打卡連線異常，請稍後再試：" + e);
+        alert("❌ 打卡連線異常：" + e);
       }
     }
 
-    // 送出點名
     async function submitAttendance() {
       const selectedClass = document.getElementById('classSelector').value;
-
       const makeupStudentNames = allMakeups
         .filter(m => m.makeupClass === selectedClass && m.makeupDate === todayDateStr)
         .map(m => m.name);
@@ -560,7 +538,6 @@
         const names = activeStudents.map(s => s.name).join('、');
         alert(`✅ 已完成點名：【${names}】共 ${activeStudents.length} 位！\n未到的學生不會扣除堂數。`);
         setTimeout(fetchStudentsData, 1200);
-
       } catch(e) {
         alert("❌ 傳送失敗：" + e);
       }
@@ -611,11 +588,6 @@
       fetchStudentsData();
     }
 
-    function approveRemittance() {
-      alert("✅ 審核完成！");
-    }
-
-    // 初始化載入
     fetchStudentsData();
   </script>
 </body>

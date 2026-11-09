@@ -202,9 +202,32 @@ button:disabled{ opacity: .5; cursor: not-allowed; }
   border-radius: 10px;
 }
 .seg button.on[data-s="未到"]{ background: #64748b; color: #fff; box-shadow: 0 3px 8px rgba(100, 116, 139, 0.35); }
-.seg button.on[data-s="出席"]{ background: #10b981; color: #fff; box-shadow: 0 3px 8px rgba(16, 185, 129, 0.35); }
+.seg button.on[data-s="出席"]{ background: #10b981; color: #fff; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35); }
 .seg button.on[data-s="請假"]{ background: #f59e0b; color: #fff; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.35); }
 .seg button.on[data-s="缺席"]{ background: #ef4444; color: #fff; box-shadow: 0 3px 10px rgba(239, 68, 68, 0.35); }
+
+.role-switcher{
+  display: flex;
+  background: #fff;
+  border: 1.5px solid var(--pri);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.role-switcher button{
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.role-switcher button.active{
+  background: var(--pri);
+  color: #fff;
+}
 
 .kid-tabs{
   display: flex;
@@ -321,7 +344,7 @@ const CONFIG = {
 };
 
 const $ = s => document.querySelector(s);
-const S = { me: null, tab: null, cls: null, date: null, list: [], curKid: 'ALL', parentData: null };
+const S = { me: null, tab: null, cls: null, date: null, list: [], curKid: 'ALL', parentData: null, activeRole: null };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
 const card = (t, b, x = '') => `<section class="card"><h2>${t}${x}</h2>${b}</section>`;
@@ -337,8 +360,8 @@ function updateGreeting() {
   else if (h < 14) w = '🥪 午安！補充能量繼續衝！';
   else if (h < 18) w = '🏀 下午好！練球加油！';
   else w = '🌙 辛苦了！今天課程超精彩！';
-  const roleName = { guest: '訪客', parent: '家長', coach: '教練', admin: '總教練' }[S.me?.role] || '';
-  $('#greet').textContent = `${S.me ? S.me.name + '・' + roleName + ' ' : ''}${w}`;
+  const roleDisplay = { guest: '訪客', parent: '家長', coach: '教練', admin: '總教練' }[S.activeRole || S.me?.role] || '';
+  $('#greet').textContent = `${S.me ? S.me.name + '・' + roleDisplay + ' ' : ''}${w}`;
 }
 
 function reLogin() {
@@ -386,6 +409,7 @@ async function init() {
     }
     S.me = await api('me');
     if (!S.me) return;
+    S.activeRole = S.activeRole || S.me.role;
     render();
   } catch (e) {
     $('#app').innerHTML = card('無法開啟', `
@@ -396,19 +420,44 @@ async function init() {
   }
 }
 
+function switchViewRole(r) {
+  S.activeRole = r;
+  S.tab = null;
+  render();
+}
+
 function render() {
-  const r = S.me.role;
+  const isSuperAdmin = (S.me.role === 'admin' || S.me.realRole === 'admin');
+  const curRole = isSuperAdmin ? (S.activeRole || 'admin') : S.me.role;
+
   const tabs = {
     guest: [['bind', '🎒 學員綁定']],
     parent: [['parent', '🏀 學員專區']],
     coach: [['coach', '👟 點名打卡']],
     admin: [['admin', '📊 後台總覽'], ['coach', '👟 點名打卡']]
-  }[r] || [['bind', '🎒 學員綁定']];
+  }[curRole] || [['bind', '🎒 學員綁定']];
 
   if (!tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === S.tab ? 'on' : ''}" onclick="S.tab='${t[0]}';render()">${t[1]}</button>`).join('');
   updateGreeting();
-  safe({ bind: viewBind, parent: viewParent, coach: viewCoach, admin: viewAdmin }[S.tab]);
+
+  let switcherHtml = '';
+  if (isSuperAdmin) {
+    switcherHtml = `
+      <div class="role-switcher">
+        <button class="${curRole === 'admin' ? 'active' : ''}" onclick="switchViewRole('admin')">👑 總教練後台</button>
+        <button class="${curRole === 'coach' ? 'active' : ''}" onclick="switchViewRole('coach')">👟 教練點名</button>
+        <button class="${curRole === 'parent' ? 'active' : ''}" onclick="switchViewRole('parent')">🏀 家長專區</button>
+      </div>`;
+  }
+
+  const renderTarget = { bind: viewBind, parent: viewParent, coach: viewCoach, admin: viewAdmin }[S.tab];
+  safe(async () => {
+    await renderTarget();
+    if (isSuperAdmin) {
+      $('#app').insertAdjacentHTML('afterbegin', switcherHtml);
+    }
+  });
 }
 
 const bindBox = () => card('🎒 綁定學員', `<p class="muted">輸入營隊提供的 6 碼綁定碼，立即查詢堂數與請假。</p><input id="code" placeholder="請輸入 6 碼綁定碼"><button class="pri" onclick="run(this,doBind)">立即綁定學員 ➜</button>`);
@@ -426,7 +475,6 @@ function viewBind() {
   $('#app').innerHTML = bindBox() + card('📋 教練權限開通', `<p class="muted">教練請將以下 LINE ID 提供給總教練，在試算表設定權限後即可使用：</p><code>${esc(S.me.id)}</code>`);
 }
 
-// 家長專區（精準過濾請假下拉選單與多寶連動）
 async function viewParent() {
   if (!S.parentData) {
     const [h, cl] = await Promise.all([api('history'), api('classes')]);
@@ -444,8 +492,6 @@ async function viewParent() {
   }
 
   const visibleStudents = S.curKid === 'ALL' ? st : st.filter(s => s.studentId === S.curKid);
-
-  // 關鍵修復：若當前選取特定小孩，請假選單只列出該位小孩；選「全部」時才列出所有人
   const eligibleLeaveStudents = S.curKid === 'ALL' ? st : st.filter(s => s.studentId === S.curKid);
   const opt = eligibleLeaveStudents.map(s => `<option value="${s.studentId}" ${s.studentId === S.curKid ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
 
@@ -472,12 +518,12 @@ async function viewParent() {
           <div class="muted" style="margin:2px 0 0">${esc(s.className)}</div>
         </div>
         <span class="pill ${s.balance <= 1 ? 'warn' : ''}">${s.balance <= 1 ? '⚠️ 剩 ' : '剩餘 '}${s.balance} 堂</span>
-      </div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
+      </div>`).join('') || '<p class="muted">尚未綁定學員（可點下方綁定輸入代碼）</p>') +
 
     card('📋 上課出勤明細', attHtml) +
 
     card('📅 請假與補課申請', `
-      <select id="lst">${opt}</select>
+      <select id="lst">${opt || '<option value="">請先綁定學員</option>'}</select>
       <select id="ltype" onchange="$('#lclsw').hidden = this.value !== '補課'"><option value="請假">📝 我要請假</option><option value="補課">🏀 申請補課</option></select>
       <div id="lclsw" hidden><select id="lcls">${cl.map(c => `<option value="${c.classId}">${esc(c.name)}</option>`).join('')}</select></div>
       <input id="ldate" type="date" min="${today()}" value="${today()}">
@@ -497,7 +543,7 @@ async function viewParent() {
     `) +
 
     card('💳 匯款對帳回傳', `<p class="muted">${esc(CONFIG.BANK)}</p>
-      <div class="chk">${st.map(s => `<label><input type="checkbox" value="${s.studentId}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}</label>`).join('')}</div>
+      <div class="chk">${st.map(s => `<label><input type="checkbox" value="${s.studentId}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
       <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額"><input id="l5" maxlength="5" inputmode="numeric" placeholder="帳號後五碼"></div>
       <p class="muted" style="font-weight:600">轉帳日期</p><input id="pdate" type="date" value="${today()}">
       <button class="pri" onclick="run(this,doPay)">送出對帳資料 ➜</button>`) +
@@ -543,7 +589,7 @@ async function viewCoach() {
   }
   if (!cs.some(c => c.classId === S.cls)) S.cls = cs[0].classId;
   S.date = S.date || today();
-  const isAdmin = S.me.role === 'admin';
+  const isAdmin = (S.me.role === 'admin' || S.me.realRole === 'admin');
 
   S.list = await api('roster', { classId: S.cls, date: S.date });
   S.list.forEach(x => { 

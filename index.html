@@ -28,7 +28,7 @@
           <p class="text-[11px] text-slate-500">LINE 官方線上學務系統</p>
         </div>
       </div>
-      <span class="text-[11px] bg-slate-100 text-slate-500 font-bold px-2 py-1 rounded">測試模擬</span>
+      <span class="text-[11px] bg-slate-100 text-slate-500 font-bold px-2 py-1 rounded">系統運行中</span>
     </div>
   </header>
 
@@ -147,7 +147,7 @@
           <h2 class="font-bold text-slate-800 text-sm flex items-center">
             <i class="fa-solid fa-user-check text-orange-500 mr-2 text-base"></i>教練出勤打卡
           </h2>
-          <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-bold" id="currentDateDisplay">2026-11-09</span>
+          <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-bold" id="currentDateDisplay">--</span>
         </div>
         <div class="flex items-center justify-between">
           <div>
@@ -184,7 +184,7 @@
         </div>
 
         <!-- 學生清單（補課學員置頂） -->
-        <div class="space-y-3 max-h-72 overflow-y-auto pr-1" id="coachStudentList">
+        <div class="space-y-3 max-h-80 overflow-y-auto pr-1" id="coachStudentList">
           <p class="text-xs text-slate-400 text-center py-4">正在載入學生清單...</p>
         </div>
 
@@ -231,7 +231,8 @@
   </nav>
 
   <script>
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx_ER4Ycb5yDt16MFj-3KZckKUdLMCK4XmZWCwxZxulISA7MaUGrWobpC8FzhyexdvF/exec";
+    // 你的最新後端 Apps Script API 部署網址
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx_ER4Ycb5yDt16MFj-3KZM1Q7e48o1sF4zR1v282-Z28qCj2q7d1w1v0_sample/exec";
     
     let currentRole = 'coach_sat';
     let allStudents = [];
@@ -249,7 +250,7 @@
     const todayDateStr = getTodayString();
     document.getElementById('currentDateDisplay').innerText = todayDateStr;
 
-    // 日期標準化防呆函式
+    // 日期格式防呆正規化
     function parseDateString(val) {
       if (!val) return "";
       if (typeof val === 'string') {
@@ -402,15 +403,15 @@
       }
     }
 
-    // 核心名單計算：比對常態班級與當日跨班補課學員
+    // 班級名單與跨班補課整合渲染
     function filterStudentsByClass() {
       const selectedClass = document.getElementById('classSelector').value;
       const container = document.getElementById('coachStudentList');
 
-      // 1. 本班固定常態學生
+      // 1. 本班固定學員
       const regularStudents = allStudents.filter(s => s.class === selectedClass);
 
-      // 2. 比對當天跨班補課的學生 (補課班級一致 + 補課日期等於今天)
+      // 2. 當日跨班補課學員
       const makeupStudentNames = allMakeups
         .filter(m => m.makeupClass === selectedClass && m.makeupDate === todayDateStr)
         .map(m => m.name);
@@ -419,7 +420,7 @@
         .filter(s => makeupStudentNames.includes(s.name) && s.class !== selectedClass)
         .map(s => ({ ...s, isMakeup: true }));
 
-      // 合併：補課學員優先置頂在最上方
+      // 補課學員置頂
       const displayList = [...makeupStudents, ...regularStudents];
 
       if (displayList.length === 0) {
@@ -433,19 +434,21 @@
         const isPending = s.status === '未到';
 
         return `
-          <div class="p-3 ${s.isMakeup ? 'bg-purple-50/90 border-purple-300 ring-1 ring-purple-200' : 'bg-slate-50 border-slate-200'} border rounded-xl flex items-center justify-between">
-            <div>
-              <p class="font-bold text-slate-800 text-xs flex items-center">
-                ${s.name}
-                ${s.isMakeup ? '<span class="ml-1.5 text-[9px] bg-purple-600 text-white font-extrabold px-1.5 py-0.5 rounded shadow-xs">跨班補課</span>' : ''}
-                <span class="text-[10px] text-slate-500 font-normal ml-1">(${s.isMakeup ? '原班: ' + s.class : '家長: ' + s.parent})</span>
-                ${isPending ? '<span class="ml-1.5 text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">未到</span>' : ''}
-              </p>
-              <p class="text-xs text-orange-600 font-extrabold mt-0.5">剩餘堂數：${s.lessons} 堂</p>
+          <div class="p-3 ${s.isMakeup ? 'bg-purple-50/90 border-purple-300 ring-1 ring-purple-200' : 'bg-slate-50 border-slate-200'} border rounded-xl flex items-center justify-between gap-2.5">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-bold text-slate-800 text-sm whitespace-nowrap">${s.name}</span>
+                ${s.isMakeup ? '<span class="text-[10px] bg-purple-600 text-white font-bold px-1.5 py-0.5 rounded whitespace-nowrap">跨班補課</span>' : ''}
+                ${isPending ? '<span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded whitespace-nowrap">未到</span>' : ''}
+              </div>
+              <div class="text-[11px] text-slate-500 truncate mt-0.5">
+                ${s.isMakeup ? '原班級：' + s.class : '家長：' + s.parent}
+              </div>
+              <p class="text-xs text-orange-600 font-extrabold mt-0.5 whitespace-nowrap">剩餘堂數：${s.lessons} 堂</p>
             </div>
-            <div class="flex items-center space-x-1.5">
-              <button onclick="setStudentStatus(${s.id}, '出席')" class="px-3.5 py-1.5 text-xs ${isPresent ? 'bg-emerald-500 text-white shadow font-bold' : 'bg-slate-200 text-slate-600'} rounded-lg transition">出席</button>
-              <button onclick="setStudentStatus(${s.id}, '請假')" class="px-3.5 py-1.5 text-xs ${isLeave ? 'bg-amber-500 text-white shadow font-bold' : 'bg-slate-200 text-slate-600'} rounded-lg transition">請假</button>
+            <div class="flex items-center space-x-1.5 shrink-0">
+              <button onclick="setStudentStatus(${s.id}, '出席')" class="px-3 py-1.5 text-xs whitespace-nowrap ${isPresent ? 'bg-emerald-500 text-white shadow font-bold' : 'bg-slate-200 text-slate-600'} rounded-lg transition">出席</button>
+              <button onclick="setStudentStatus(${s.id}, '請假')" class="px-3 py-1.5 text-xs whitespace-nowrap ${isLeave ? 'bg-amber-500 text-white shadow font-bold' : 'bg-slate-200 text-slate-600'} rounded-lg transition">請假</button>
             </div>
           </div>
         `;
@@ -508,7 +511,7 @@
             coachName: coach
           })
         });
-        alert(`✅ 打卡成功！\n已即時將【${coach}】今日出勤時間寫入試算表「教練出勤紀錄」。`);
+        alert(`✅ 打卡成功！\n已將【${coach}】今日出勤時間寫入試算表「教練出勤紀錄」。`);
       } catch (e) {
         alert("❌ 打卡連線異常，請稍後再試：" + e);
       }
@@ -556,7 +559,7 @@
         }
         
         const names = activeStudents.map(s => s.name).join('、');
-        alert(`✅ 已完成點名：【${names}】共 ${activeStudents.length} 位！\n未到的學生不會被送出或扣堂數。`);
+        alert(`✅ 已完成點名：【${names}】共 ${activeStudents.length} 位！\n未到的學生不會扣除堂數。`);
         setTimeout(fetchStudentsData, 1200);
 
       } catch(e) {
@@ -613,7 +616,7 @@
       alert("✅ 審核完成！");
     }
 
-    // 初始化讀取資料
+    // 初始化載入
     fetchStudentsData();
   </script>
 </body>

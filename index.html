@@ -6,39 +6,226 @@
 <title>永不平凡籃球營</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
-:root{--o:#e8793a;--ink:#1c2433;--mut:#6b7585;--bg:#eef1f6;--card:#fff;--line:#d9dee8;--ok:#1f9d63;--bad:#d64545;--warn:#b7791f}
-*{box-sizing:border-box}[hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
-header{position:sticky;top:0;z-index:5;background:var(--card);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:12px}
-.logo{width:40px;height:40px;border-radius:50%;background:var(--o);color:#fff;display:grid;place-items:center;font-size:22px}
-header b{display:block;font-size:17px}#who{font-size:13px;color:var(--mut)}
-.test-bar{font-size:12px;background:#fff3cd;padding:4px 8px;border-radius:8px;border:1px solid #ffeeba}
-.test-bar select{margin:0;padding:2px 6px;font-size:12px;width:auto}
-main{padding:14px;max-width:560px;margin:0 auto}
-.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px;border:1px solid var(--line)}
-h2{margin:0 0 12px;font-size:17px;display:flex;justify-content:space-between;align-items:center;gap:8px}
-input,select{width:100%;font:inherit;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:#f8f9fb;margin:0 0 10px;color:var(--ink)}
-input[type=date]{display:block;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none;min-height:46px;text-align:left}
-input[type=checkbox]{width:auto;margin:0 8px 0 0}
-button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 14px}
-button:disabled{opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f6b48a;outline-offset:1px}
-.pri{width:100%;background:var(--o);color:#fff;font-weight:700}.ghost{background:#eef1f6;color:var(--ink)}
-.row,.item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
-.row:first-of-type{border-top:0}.item{display:block}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.two>*{margin-bottom:10px}
-.muted{color:var(--mut);font-size:14px;margin:0 0 8px}
-.pill{font-size:13px;padding:3px 10px;border-radius:99px;background:#e7f6ee;color:var(--ok);white-space:nowrap}
-.pill.warn{background:#fdf1dc;color:var(--warn)}.pill.bad{background:#fbe6e6;color:var(--bad)}
-.chk label{display:flex;align-items:center;padding:6px 0}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}.stat b{font-size:26px;display:block}
-.seg{display:flex;gap:6px}.seg button{padding:8px 11px;background:#eef1f6;color:var(--ink);font-size:14px}
-.seg button.on[data-s="出席"]{background:var(--ok);color:#fff}.seg button.on[data-s="請假"]{background:var(--warn);color:#fff}.seg button.on[data-s="缺席"]{background:var(--bad);color:#fff}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;background:none;padding:14px 4px;color:var(--mut);border-radius:0}nav button.on{color:var(--o);font-weight:700;box-shadow:inset 0 3px 0 var(--o)}
-#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
-#toast.show{opacity:1}code{background:#eef1f6;padding:2px 6px;border-radius:6px;word-break:break-all;font-size:13px}
+:root {
+  --pri: #ff6b00;
+  --pri-light: #fff5ed;
+  --pri-gradient: linear-gradient(135deg, #ff8a00 0%, #ff5500 100%);
+  --ink: #1e293b;
+  --mut: #64748b;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --line: #edf2f7;
+  --ok: #10b981;
+  --ok-bg: #ecfdf5;
+  --bad: #f43f5e;
+  --bad-bg: #fff1f2;
+  --warn: #f59e0b;
+  --warn-bg: #fffbeb;
+  --shadow: 0 4px 18px rgba(148, 163, 184, 0.12);
+  --radius: 16px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Noto Sans TC", sans-serif;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+  padding: calc(12px + env(safe-area-inset-top)) 18px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 10px rgba(0,0,0,0.03);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--pri-gradient);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  box-shadow: 0 6px 14px rgba(255, 107, 0, 0.28);
+}
+header b { font-size: 18px; font-weight: 800; color: var(--ink); }
+#who { font-size: 13px; color: var(--pri); font-weight: 600; display: block; margin-top: 1px; }
+main { padding: 16px; max-width: 520px; margin: 0 auto; }
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+h2 {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+input, select {
+  width: 100%;
+  font: inherit;
+  font-size: 15px;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 13px;
+  background: #fdfefe;
+  margin: 0 0 12px;
+  color: var(--ink);
+  transition: all 0.2s ease;
+}
+input:focus, select:focus {
+  border-color: var(--pri);
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 3.5px rgba(255, 107, 0, 0.15);
+}
+input[type=date] { min-height: 48px; }
+input[type=checkbox] { width: 18px; height: 18px; margin: 0 8px 0 0; accent-color: var(--pri); }
+button {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border: 0;
+  border-radius: 13px;
+  padding: 13px 16px;
+  transition: transform 0.1s ease, opacity 0.2s;
+}
+button:active { transform: scale(0.98); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.pri {
+  width: 100%;
+  background: var(--pri-gradient);
+  color: #fff;
+  box-shadow: 0 5px 16px rgba(255, 107, 0, 0.3);
+}
+.ghost {
+  background: #f1f5f9;
+  color: #334155;
+}
+.ghost:active { background: #e2e8f0; }
+.row, .item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid #f1f5f9;
+}
+.row:first-of-type, .item:first-of-type { border-top: 0; }
+.item { display: block; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+.two > * { margin-bottom: 0; }
+.muted { color: var(--mut); font-size: 14px; margin: 0 0 8px; }
+.pill {
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--ok-bg);
+  color: var(--ok);
+  white-space: nowrap;
+}
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+.chk label { display: flex; align-items: center; padding: 7px 0; font-weight: 500; }
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.stat {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+.stat b { font-size: 27px; font-weight: 800; color: var(--pri); line-height: 1.1; display: block; margin-bottom: 3px; }
+.stat span { font-size: 13px; color: var(--mut); font-weight: 600; }
+.seg { display: flex; gap: 6px; margin-top: 10px; }
+.seg button {
+  flex: 1;
+  padding: 9px 0;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 14px;
+  border-radius: 11px;
+}
+.seg button.on[data-s="出席"] { background: var(--ok); color: #fff; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35); }
+.seg button.on[data-s="請假"] { background: var(--warn); color: #fff; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.35); }
+.seg button.on[data-s="缺席"] { background: var(--bad); color: #fff; box-shadow: 0 3px 10px rgba(244, 63, 94, 0.35); }
+nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -3px 15px rgba(0, 0, 0, 0.03);
+}
+nav button {
+  flex: 1;
+  background: none;
+  padding: 14px 4px;
+  color: #94a3b8;
+  border-radius: 0;
+  font-size: 15px;
+}
+nav button.on {
+  color: var(--pri);
+  font-weight: 800;
+  box-shadow: inset 0 3.5px 0 var(--pri);
+}
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  background: rgba(30, 41, 59, 0.94);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  padding: 11px 20px;
+  border-radius: 99px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  max-width: 88%;
+  text-align: center;
+  font-size: 14.5px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+code {
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 8px;
+  word-break: break-all;
+  font-size: 13.5px;
+  color: var(--pri);
+  font-weight: 700;
+}
 </style>
 </head>
 <body>
@@ -47,15 +234,6 @@ nav button{flex:1;background:none;padding:14px 4px;color:var(--mut);border-radiu
     <div class="logo">🏀</div>
     <div><b>永不平凡籃球營</b><span id="who">載入中…</span></div>
   </div>
-  <div class="test-bar" id="mockBar" hidden>
-    測試身分:
-    <select id="mockRoleSelect" onchange="switchMockRole(this.value)">
-      <option value="admin">總教練</option>
-      <option value="coach">教練</option>
-      <option value="parent">家長</option>
-      <option value="guest">訪客</option>
-    </select>
-  </div>
 </header>
 <main id="app"><p class="muted">載入中…</p></main>
 <nav id="nav"></nav><div id="toast"></div>
@@ -63,44 +241,12 @@ nav button{flex:1;background:none;padding:14px 4px;color:var(--mut);border-radiu
 <script>
 // ==================== 參數設定區 ====================
 const CONFIG = {
-  TEST_MODE: false, // 已替換真實後端，設定為 false 進行真實 LINE LIFF 連線
+  TEST_MODE: false,
   LIFF_ID: '2012507478-35PGiqXO',
   API_URL: 'https://script.google.com/macros/s/AKfycbwXzUnQ1zvcQhCHZs3ezX5tGsJzTCkbQVJij4ID7dWD7kgPFsWFYbySGoqBA8nSasGUzQ/exec',
   BANK: '匯款帳號：822 中國信託 1234-5678-9012（戶名：永不平凡籃球營）'
 };
 // ====================================================
-
-// --- 測試用模擬資料（本機 TEST_MODE 為 true 時備用）---
-let currentMockRole = 'admin';
-const MOCK_DB = {
-  roles: {
-    admin: { id: 'U_ADMIN_01', name: '佳茹總教練', role: 'admin', classes: [{ classId: 'C1', name: '週六初階A班' }, { classId: 'C2', name: '週日進階B班' }] },
-    coach: { id: 'U_COACH_01', name: '陳教練', role: 'coach', classes: [{ classId: 'C1', name: '週六初階A班' }] },
-    parent: { id: 'U_PARENT_01', name: '王爸爸', role: 'parent', students: [{ studentId: 'S1', name: '王小明', className: '週六初階A班', balance: 4 }, { studentId: 'S2', name: '王小華', className: '週日進階B班', balance: 1 }] },
-    guest: { id: 'U_GUEST_01', name: '訪客家長', role: 'guest' }
-  },
-  classes: [{ classId: 'C1', name: '週六初階A班' }, { classId: 'C2', name: '週日進階B班' }],
-  roster: [
-    { studentId: 'S1', name: '王小明', balance: 4, makeup: false, saved: null, leave: false },
-    { studentId: 'S3', name: '李大同', balance: 2, makeup: true, saved: null, leave: false },
-    { studentId: 'S4', name: '張小美', balance: 1, makeup: false, saved: null, leave: true }
-  ],
-  adminData: {
-    stats: { pendingPay: 1, pendingLeave: 1, todayPresent: 14, todayTotal: 16, low: 3 },
-    payments: [{ id: 'PAY01', parentName: '王爸爸', studentNames: '王小明', amount: 3200, last5: '12345', transferDate: '2026-11-09' }],
-    leaves: [{ id: 'LV01', studentName: '張小美', date: '2026-11-15', className: '週日進階B班' }],
-    students: [
-      { name: '王小明', className: '週六初階A班', balance: 4, bound: true },
-      { name: '李大同', className: '週六初階A班', balance: 2, bound: true },
-      { name: '陳小豪', className: '週六初階A班', balance: 0, bound: false }
-    ],
-    recent: [{ date: '2026-11-08', name: '王小明', className: '週六初階A班', by: '陳教練', status: '出席' }]
-  },
-  parentHistory: {
-    payments: [{ id: 'PAY01', amount: 3200, studentNames: '王小明', status: '待審核' }],
-    leaves: [{ id: 'LV00', type: '請假', date: '2026-11-08', studentName: '王小明', status: '已核准' }]
-  }
-};
 
 const $ = s => document.querySelector(s);
 const S = { me: null, tab: null, cls: null, date: null, list: [] };
@@ -113,23 +259,6 @@ async function run(btn, fn) { btn.disabled = true; try { await fn(); } catch (e)
 async function safe(fn) { try { await fn(); } catch (e) { $('#app').innerHTML = card('載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); } }
 
 async function api(action, data = {}) {
-  if (CONFIG.TEST_MODE) {
-    console.log(`[測試模式 API] ${action}`, data);
-    await new Promise(r => setTimeout(r, 120));
-    if (action === 'me') return MOCK_DB.roles[currentMockRole];
-    if (action === 'classes') return MOCK_DB.classes;
-    if (action === 'roster') return MOCK_DB.roster;
-    if (action === 'admin') return MOCK_DB.adminData;
-    if (action === 'history') return MOCK_DB.parentHistory;
-    if (action === 'bind') return true;
-    if (action === 'coachCheckin') return true;
-    if (action === 'saveAttendance') return true;
-    if (action === 'pay') return true;
-    if (action === 'leave') return true;
-    if (action === 'reviewPay' || action === 'reviewLeave') return true;
-    return true;
-  }
-
   const token = (typeof liff !== 'undefined' && liff.isLoggedIn()) ? liff.getIDToken() : '';
   const r = await fetch(CONFIG.API_URL, {
     method: 'POST',
@@ -146,22 +275,7 @@ async function api(action, data = {}) {
   return j.data;
 }
 
-function switchMockRole(role) {
-  currentMockRole = role;
-  S.me = MOCK_DB.roles[role];
-  S.tab = null;
-  render();
-}
-
 async function init() {
-  if (CONFIG.TEST_MODE) {
-    $('#mockBar').hidden = false;
-    S.me = await api('me');
-    render();
-    return;
-  }
-
-  $('#mockBar').hidden = true;
   try {
     await liff.init({ liffId: CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
@@ -210,7 +324,7 @@ async function viewParent() {
   const opt = st.map(s => `<option value="${s.studentId}">${esc(s.name)}</option>`).join('');
 
   $('#app').innerHTML =
-    card('孩子的課務', st.map(s => `<div class="row"><div><b>${esc(s.name)}</b><div class="muted" style="margin:0">${esc(s.className)}</div></div><span class="pill ${s.balance <= 1 ? 'warn' : ''}">剩餘 ${s.balance} 堂</span></div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
+    card('孩子的課務', st.map(s => `<div class="row"><div><b style="font-size:16px">${esc(s.name)}</b><div class="muted" style="margin:2px 0 0">${esc(s.className)}</div></div><span class="pill ${s.balance <= 1 ? 'warn' : ''}">剩餘 ${s.balance} 堂</span></div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
     card('匯款對帳', `<p class="muted">${esc(CONFIG.BANK)}</p>
       <div class="chk">${st.map(s => `<label><input type="checkbox" value="${s.studentId}">${esc(s.name)}</label>`).join('')}</div>
       <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額"><input id="l5" maxlength="5" inputmode="numeric" placeholder="帳號後五碼"></div>
@@ -260,20 +374,22 @@ async function viewCoach() {
     card('班級點名', `
       <select onchange="S.cls=this.value;render()">${cs.map(c => `<option value="${c.classId}" ${c.classId === S.cls ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
       <input type="date" value="${S.date}" ${isAdmin ? '' : 'disabled'} onchange="S.date=this.value;render()">
-      <button class="ghost" style="width:100%;margin-bottom:10px" onclick="setAll('出席')">全班設為出席</button>
+      <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">全班設為出席</button>
       <div id="roster">${rosterHtml()}</div>
-      <button class="pri" onclick="run(this,doSaveAttendance)">儲存點名結果</button>`);
+      <button class="pri" style="margin-top:10px" onclick="run(this,doSaveAttendance)">儲存點名結果</button>`);
 }
 
 function rosterHtml() {
   if (!S.list.length) return '<p class="muted">此班級今日無學員名單</p>';
   return S.list.map((x, i) => `
     <div class="item">
-      <div>
-        <b>${esc(x.name)}</b> 
-        ${x.makeup ? '<span class="pill warn">補課</span>' : ''} 
-        ${x.saved ? '<span class="pill">已點名</span>' : ''} 
-        <span class="muted">剩 ${x.balance} 堂</span>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <b style="font-size:16px">${esc(x.name)}</b> 
+          ${x.makeup ? '<span class="pill warn">補課</span>' : ''} 
+          ${x.saved ? '<span class="pill">已點名</span>' : ''}
+        </div>
+        <span class="muted" style="font-weight:600;margin:0">剩 ${x.balance} 堂</span>
       </div>
       <div class="seg">${ATT_STATUS.map(s => `<button data-s="${s}" class="${x.v === s ? 'on' : ''}" onclick="pickStatus(${i},'${s}')">${s}</button>`).join('')}</div>
     </div>`).join('');
@@ -292,19 +408,19 @@ async function doSaveAttendance() {
 async function viewAdmin() {
   const a = await api('admin');
   const s = a.stats || {};
-  const box = (n, t) => `<div class="stat"><b>${n}</b>${t}</div>`;
+  const box = (n, t) => `<div class="stat"><b>${n}</b><span>${t}</span></div>`;
 
   $('#app').innerHTML =
     `<div class="stats">
       ${box(s.pendingPay ?? 0, '待審核匯款')}
       ${box(s.pendingLeave ?? 0, '待審核補課')}
       ${box((s.todayPresent ?? 0) + '/' + (s.todayTotal ?? 0), '今日出席')}
-      ${box(s.low ?? 0, '剩餘堂數 ≤ 1')}
+      ${box(s.low ?? 0, '堂數 ≤ 1 堂')}
     </div>` +
     card('待審核匯款', (a.payments || []).map(p => `
       <div class="item">
-        <b>${esc(p.parentName)}</b>（學員：${esc(p.studentNames)}）
-        <div class="muted">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜轉帳日 ${esc(p.transferDate)}</div>
+        <b style="font-size:16px">${esc(p.parentName)}</b>（學員：${esc(p.studentNames)}）
+        <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜轉帳日 ${esc(p.transferDate)}</div>
         <div class="two">
           <input id="ls_${p.id}" type="number" inputmode="numeric" placeholder="每位加幾堂（例：4）">
           <input id="nt_${p.id}" placeholder="退回說明（選填）">
@@ -316,20 +432,20 @@ async function viewAdmin() {
       </div>`).join('') || '<p class="muted">目前沒有待審核的匯款</p>') +
     card('待審核補課', (a.leaves || []).map(l => `
       <div class="item">
-        <b>${esc(l.studentName)}</b> 申請於 <b>${esc(l.date)}</b> 補課（${esc(l.className)}）
-        <div class="two" style="margin-top:8px">
+        <b style="font-size:16px">${esc(l.studentName)}</b> 申請於 <b>${esc(l.date)}</b> 補課（${esc(l.className)}）
+        <div class="two" style="margin-top:10px">
           <button class="pri" onclick="run(this,()=>reviewLeave('${l.id}','pass'))">核准補課</button>
           <button class="ghost" onclick="run(this,()=>reviewLeave('${l.id}','reject'))">婉拒申請</button>
         </div>
       </div>`).join('') || '<p class="muted">目前沒有待審核的補課</p>') +
     card('學員堂數總覽', (a.students || []).map(x => `
       <div class="row">
-        <span>${esc(x.name)} <span class="muted">${esc(x.className)}${x.bound ? '' : '・未綁定'}</span></span>
+        <span><b style="font-size:15px">${esc(x.name)}</b> <span class="muted" style="margin-left:4px">${esc(x.className)}${x.bound ? '' : '・未綁定'}</span></span>
         <span class="pill ${x.balance <= 1 ? 'warn' : ''}">${x.balance} 堂</span>
       </div>`).join('') || '<p class="muted">尚無學員資料</p>') +
     card('最近點名動態', (a.recent || []).map(r => `
       <div class="row">
-        <span>${esc(r.date)} ${esc(r.name)} <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>
+        <span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted" style="margin-left:4px">${esc(r.className)}・${esc(r.by)}</span></span>
         ${pill(r.status)}
       </div>`).join('') || '<p class="muted">尚無點名動態</p>');
 }
@@ -346,7 +462,6 @@ async function reviewLeave(id, decision) {
   render();
 }
 
-// 啟動應用程式
 init();
 </script>
 </body>

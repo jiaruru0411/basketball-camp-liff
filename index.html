@@ -463,8 +463,12 @@ async function viewParent() {
     `) +
 
     card('🏀 預約補課', `
-      <p class="muted">補課限定於週日開課時段</p>
+      <p class="muted" style="margin-bottom:6px">請選擇補課學員與補課假別</p>
       <select id="mk_sid">${opt}</select>
+      <select id="mk_reason_type">
+        <option value="事假補課">🚗 事假補課（每期上限 1 次，4 週內完成）</option>
+        <option value="病假補課">🤒 病假補課（4 週內完成）</option>
+      </select>
       <select id="mk_cls">${cl.map(c => `<option value="${c.classId}">${esc(c.name)} (${c.hours || 2}h)</option>`).join('')}</select>
       <p class="muted" style="font-size:13px;margin:4px 0 2px">選擇週日補課日期</p>
       <input id="mk_date" type="date" min="${today()}">
@@ -473,8 +477,8 @@ async function viewParent() {
       <div class="rules-box">
         <b>📌 請假補課規範：</b>
         <ol>
-          <li><b>病假</b>：請提供收據（接受上課日前後二日）[cite: 1]。</li>
-          <li><b>事假</b>：私人因素每期<b>僅限補課 1 次</b>，逾期視同放棄[cite: 1]。</li>
+          <li><b>病假</b>：請提供收據（接受上課日前後二日）。</li>
+          <li><b>事假</b>：私人因素每期<b>僅限補課 1 次</b>，逾期視同放棄。</li>
           <li><b>補課期限</b>：請於原請假上課日後<b>『四週內』</b>完成[cite: 1]。</li>
           <li><b>時段限定</b>：補課一律安排於<b>每週日開課時段</b>[cite: 1]。</li>
         </ol>
@@ -545,7 +549,7 @@ async function doSubmitMakeup() {
     studentId: $('#mk_sid').value,
     targetClassId: $('#mk_cls').value,
     targetDate: $('#mk_date').value,
-    reasonType: '事假補課'
+    reasonType: $('#mk_reason_type').value
   });
   toast('補課預約已送出');
   S.parentData = null;

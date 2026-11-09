@@ -183,7 +183,7 @@
           <span id="warningText">提示：您僅能點名您負責的班級。</span>
         </div>
 
-        <!-- 學生清單 -->
+        <!-- 學生清單（含跨班補課學員置頂） -->
         <div class="space-y-3 max-h-72 overflow-y-auto pr-1" id="coachStudentList">
           <p class="text-xs text-slate-400 text-center py-4">正在載入學生清單...</p>
         </div>
@@ -235,17 +235,19 @@
     
     let currentRole = 'admin';
     let allStudents = [];
+    let allMakeups = [];
 
     document.getElementById('currentDateDisplay').innerText = new Date().toISOString().split('T')[0];
 
     async function fetchStudentsData() {
       try {
-        const response = await fetch(`${GAS_API_URL}?action=getStudents`);
-        const rawData = await response.json();
+        // 1. 同步讀取學員名單
+        const resStudents = await fetch(`${GAS_API_URL}?action=getStudents`);
+        const rawStudents = await resStudents.json();
         
         allStudents = [];
-        for (let i = 1; i < rawData.length; i++) {
-          const row = rawData[i];
+        for (let i = 1; i < rawStudents.length; i++) {
+          const row = rawStudents[i];
           if (row[1]) {
             allStudents.push({
               id: i,
@@ -257,6 +259,27 @@
             });
           }
         }
+
+        // 2. 同步讀取請假補課預約資料
+        try {
+          const resMakeups = await fetch(`${GAS_API_URL}?action=getMakeups`);
+          const rawMakeups = await resMakeups.json();
+          allMakeups = [];
+          for (let k = 1; k < rawMakeups.length; k++) {
+            const mRow = rawMakeups[k];
+            if (mRow[1] && mRow[4] && mRow[5]) {
+              const mDate = String(mRow[5]).split('T')[0].split(' ')[0];
+              allMakeups.push({
+                name: mRow[1],
+                makeupClass: mRow[4],
+                makeupDate: mDate
+              });
+            }
+          }
+        } catch (err) {
+          console.warn("無法取得補課清單：", err);
+        }
+
         filterStudentsByClass();
         updateParentView();
       } catch (e) {
@@ -352,27 +375,44 @@
       }
     }
 
+    // 班級點名清單：整合常態學生與「當日跨班補課」學員
     function filterStudentsByClass() {
       const selectedClass = document.getElementById('classSelector').value;
       const container = document.getElementById('coachStudentList');
-      const filtered = allStudents.filter(s => s.class === selectedClass);
-      
-      if(filtered.length === 0) {
+      const today = new Date().toISOString().split('T')[0];
+
+      // 1. 本班常態學生
+      const regularStudents = allStudents.filter(s => s.class === selectedClass);
+
+      // 2. 跨班補課學生比對
+      const makeupStudentNames = allMakeups
+        .filter(m => m.makeupClass === selectedClass && m.makeupDate === today)
+        .map(m => m.name);
+
+      const makeupStudents = allStudents
+        .filter(s => makeupStudentNames.includes(s.name) && s.class !== selectedClass)
+        .map(s => ({ ...s, isMakeup: true }));
+
+      // 合併：跨班補課優先排在最前面
+      const displayList = [...makeupStudents, ...regularStudents];
+
+      if (displayList.length === 0) {
         container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">此班級目前無學生資料</p>`;
         return;
       }
 
-      container.innerHTML = filtered.map(s => {
+      container.innerHTML = displayList.map(s => {
         const isPresent = s.status === '出席';
         const isLeave = s.status === '請假';
         const isPending = s.status === '未到';
 
         return `
-          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+          <div class="p-3 ${s.isMakeup ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-200'} border rounded-xl flex items-center justify-between">
             <div>
               <p class="font-bold text-slate-800 text-xs flex items-center">
-                ${s.name} 
-                <span class="text-[10px] text-slate-500 font-normal ml-1">(家長: ${s.parent})</span>
+                ${s.name}
+                ${s.isMakeup ? '<span class="ml-1.5 text-[9px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-md">跨班補課</span>' : ''}
+                <span class="text-[10px] text-slate-500 font-normal ml-1">(${s.isMakeup ? '原班: ' + s.class : '家長: ' + s.parent})</span>
                 ${isPending ? '<span class="ml-1.5 text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">未到</span>' : ''}
               </p>
               <p class="text-xs text-orange-600 font-extrabold mt-0.5">剩餘堂數：${s.lessons} 堂</p>
@@ -429,10 +469,9 @@
       filterStudentsByClass();
     }
 
-    // 教練即時出勤打卡：串接後端 addCoachCheckIn
+    // 教練即時出勤打卡
     async function coachCheckIn() {
       const coach = currentRole === 'coach_sat' ? '張教練' : '總教練';
-      
       try {
         await fetch(GAS_API_URL, {
           method: 'POST',
@@ -449,20 +488,32 @@
       }
     }
 
+    // 送出點名（支援跨班補課自動註記）
     async function submitAttendance() {
       const selectedClass = document.getElementById('classSelector').value;
-      const activeStudents = allStudents.filter(s => s.class === selectedClass && s.status !== '未到');
+      const today = new Date().toISOString().split('T')[0];
+
+      // 取得包含補課學員中非「未到」名單
+      const makeupStudentNames = allMakeups
+        .filter(m => m.makeupClass === selectedClass && m.makeupDate === today)
+        .map(m => m.name);
+
+      const activeStudents = allStudents.filter(s => {
+        const isThisClass = s.class === selectedClass;
+        const isMakeup = makeupStudentNames.includes(s.name);
+        return (isThisClass || isMakeup) && s.status !== '未到';
+      });
       
       if(activeStudents.length === 0) {
         alert("⚠️ 目前沒有任何學生被標記為出席或請假（皆為未到狀態），無需送出。");
         return;
       }
 
-      const today = new Date().toISOString().split('T')[0];
       const coach = currentRole === 'coach_sat' ? '張教練' : '總教練';
 
       try {
         for(let s of activeStudents) {
+          const isMakeup = s.class !== selectedClass;
           const payload = {
             action: 'addAttendance',
             date: today,
@@ -470,7 +521,7 @@
             coachName: coach,
             studentName: s.name,
             status: s.status,
-            note: '現場點名'
+            note: isMakeup ? `跨班補課(原班:${s.class})` : '現場點名'
           };
           await fetch(GAS_API_URL, {
             method: 'POST',
@@ -531,12 +582,14 @@
       } catch(err){}
       alert("✅ 請假與補課申請已成功送出！");
       document.getElementById('leaveMakeupForm').reset();
+      fetchStudentsData();
     }
 
     function approveRemittance() {
       alert("✅ 審核完成！");
     }
 
+    // 初始化讀取資料
     fetchStudentsData();
   </script>
 </body>

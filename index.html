@@ -477,8 +477,8 @@ async function viewParent() {
       <div class="rules-box">
         <b>📌 請假補課規範：</b>
         <ol>
-          <li><b>病假</b>：請提供收據（接受上課日前後二日）。</li>
-          <li><b>事假</b>：私人因素每期<b>僅限補課 1 次</b>，逾期視同放棄。</li>
+          <li><b>病假</b>：請提供收據（接受上課日前後二日）[cite: 1]。</li>
+          <li><b>事假</b>：私人因素每期<b>僅限補課 1 次</b>，逾期視同放棄[cite: 1]。</li>
           <li><b>補課期限</b>：請於原請假上課日後<b>『四週內』</b>完成[cite: 1]。</li>
           <li><b>時段限定</b>：補課一律安排於<b>每週日開課時段</b>[cite: 1]。</li>
         </ol>
@@ -566,6 +566,7 @@ async function viewCoach() {
   S.date = S.date || today();
   const isAdmin = (S.me.role === 'admin' || S.me.realRole === 'admin');
 
+  // 強制重新拉取點名名單
   S.list = await api('roster', { classId: S.cls, date: S.date });
   S.list.forEach(x => { if (!x.v) x.v = x.saved || (x.leave ? '請假' : '未到'); });
 
@@ -577,12 +578,33 @@ async function viewCoach() {
       </div>
     `) +
     card('🏀 課堂學員點名', `
-      <select onchange="S.cls=this.value;render()">${cs.map(c => `<option value="${c.classId}" ${c.classId === S.cls ? 'selected' : ''}>${esc(c.name)} (${c.hours || 2}h)</option>`).join('')}</select>
-      <input type="date" value="${S.date}" ${isAdmin ? '' : 'disabled'} onchange="S.date=this.value;render()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span class="muted" style="margin:0">選擇點名班級與日期</span>
+        <button class="ghost" style="padding:4px 10px;font-size:12px" onclick="reloadRoster()">🔄 重新整理名冊</button>
+      </div>
+      <select onchange="changeClass(this.value)">${cs.map(c => `<option value="${c.classId}" ${c.classId === S.cls ? 'selected' : ''}>${esc(c.name)} (${c.hours || 2}h)</option>`).join('')}</select>
+      <input type="date" value="${S.date}" ${isAdmin ? '' : 'disabled'} onchange="changeDate(this.value)">
       <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">⚡ 一鍵全班設為出席</button>
       <div id="roster">${rosterHtml()}</div>
       <button class="pri" style="margin-top:8px" onclick="confirmAndSaveAttendance()">🌟 儲存點名結果（未到不扣堂）</button>
     `);
+}
+
+async function changeClass(val) {
+  S.cls = val;
+  await reloadRoster();
+}
+
+async function changeDate(val) {
+  S.date = val;
+  await reloadRoster();
+}
+
+async function reloadRoster() {
+  S.list = await api('roster', { classId: S.cls, date: S.date });
+  S.list.forEach(x => { if (!x.v) x.v = x.saved || (x.leave ? '請假' : '未到'); });
+  const el = $('#roster');
+  if (el) el.innerHTML = rosterHtml();
 }
 
 function rosterHtml() {

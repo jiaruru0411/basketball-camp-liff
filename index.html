@@ -70,7 +70,7 @@
         </div>
       </div>
 
-      <!-- 匯款回條提交 -->
+      <!-- 學費匯款回條提交 -->
       <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
         <h2 class="font-bold text-slate-800 text-sm mb-3 flex items-center">
           <i class="fa-solid fa-file-invoice-dollar text-blue-600 mr-2 text-base"></i>學費匯款回條提交
@@ -264,7 +264,7 @@
       }
     }
 
-    // 核心身分切換邏輯：動態隱藏/顯示按鈕，始終保持橫向排列
+    // 核心身分切換邏輯
     function switchRole(role) {
       currentRole = role;
       const bannerText = document.getElementById('roleBannerText');
@@ -282,7 +282,6 @@
         if (warningBox) warningBox.classList.add('hidden');
         if (coachNameLabel) coachNameLabel.innerText = '總教練';
 
-        // 總教練：三個選單全部橫向並排顯示
         navAttendance.classList.remove('hidden');
         navStudent.classList.remove('hidden');
         navAdmin.classList.remove('hidden');
@@ -300,7 +299,6 @@
         const warningText = document.getElementById('warningText');
         if (warningText) warningText.innerText = "提示：您為週六班專責教練，僅能點名週六上午班學生。";
 
-        // 張教練：僅開放點名打卡
         navAttendance.classList.remove('hidden');
         navStudent.classList.add('hidden');
         navAdmin.classList.add('hidden');
@@ -310,7 +308,6 @@
       } else if (role === 'parent') {
         bannerText.innerHTML = '<i class="fa-solid fa-user-circle mr-1.5 text-blue-600"></i> 目前身分：<b>陳媽媽</b>（家長：已綁定學員）';
 
-        // 陳媽媽（家長）：僅保留學員專區，點名打卡與後台審核完全隱藏
         navAttendance.classList.add('hidden');
         navAdmin.classList.add('hidden');
         navStudent.classList.remove('hidden');
@@ -432,8 +429,24 @@
       filterStudentsByClass();
     }
 
-    function coachCheckIn() {
-      alert("✅ 打卡成功！簽到時間已記錄。");
+    // 教練即時出勤打卡：串接後端 addCoachCheckIn
+    async function coachCheckIn() {
+      const coach = currentRole === 'coach_sat' ? '張教練' : '總教練';
+      
+      try {
+        await fetch(GAS_API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'addCoachCheckIn',
+            coachName: coach
+          })
+        });
+        alert(`✅ 打卡成功！\n已即時將【${coach}】今日出勤時間寫入試算表「教練出勤紀錄」。`);
+      } catch (e) {
+        alert("❌ 打卡連線異常，請稍後再試：" + e);
+      }
     }
 
     async function submitAttendance() {
@@ -524,7 +537,6 @@
       alert("✅ 審核完成！");
     }
 
-    // 初始化執行
     fetchStudentsData();
   </script>
 </body>

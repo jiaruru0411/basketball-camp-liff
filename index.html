@@ -1,594 +1,173 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>永不平凡籃球營 - 線上管理系統</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
-    body { 
-      font-family: 'Noto Sans TC', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>永不平凡籃球營</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+:root{--o:#e8793a;--ink:#1c2433;--mut:#6b7585;--bg:#eef1f6;--card:#fff;--line:#d9dee8;--ok:#1f9d63;--bad:#d64545;--warn:#b7791f}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:var(--card);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}
+.logo{width:40px;height:40px;border-radius:50%;background:var(--o);color:#fff;display:grid;place-items:center;font-size:22px}
+header b{display:block;font-size:17px}#who{font-size:13px;color:var(--mut)}
+main{padding:14px;max-width:560px;margin:0 auto}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px;border:1px solid var(--line)}
+h2{margin:0 0 12px;font-size:17px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+input,select{width:100%;font:inherit;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:#f8f9fb;margin:0 0 10px;color:var(--ink)}
+input[type=checkbox]{width:auto;margin:0 8px 0 0}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 14px}
+button:disabled{opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f6b48a;outline-offset:1px}
+.pri{width:100%;background:var(--o);color:#fff;font-weight:700}.ghost{background:#eef1f6;color:var(--ink)}
+.row,.item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}.item{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.two>*{margin-bottom:10px}
+.muted{color:var(--mut);font-size:14px;margin:0 0 8px}
+.pill{font-size:13px;padding:3px 10px;border-radius:99px;background:#e7f6ee;color:var(--ok);white-space:nowrap}
+.pill.warn{background:#fdf1dc;color:var(--warn)}.pill.bad{background:#fbe6e6;color:var(--bad)}
+.chk label{display:flex;align-items:center;padding:6px 0}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}.stat b{font-size:26px;display:block}
+.seg{display:flex;gap:6px}.seg button{padding:8px 11px;background:#eef1f6;font-size:14px}
+.seg button.on[data-s="出席"]{background:var(--ok);color:#fff}.seg button.on[data-s="請假"]{background:var(--warn);color:#fff}.seg button.on[data-s="缺席"]{background:var(--bad);color:#fff}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;padding:14px 4px;color:var(--mut);border-radius:0}nav button.on{color:var(--o);font-weight:700;box-shadow:inset 0 3px 0 var(--o)}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
+#toast.show{opacity:1}code{background:#eef1f6;padding:2px 6px;border-radius:6px;word-break:break-all;font-size:13px}
+</style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-28">
+<body>
+<header><div class="logo">🏀</div><div><b>永不平凡籃球營</b><span id="who">載入中…</span></div></header>
+<main id="app"><p class="muted">載入中…</p></main>
+<nav id="nav"></nav><div id="toast"></div>
+<script>
+// ====== 只需要改這裡 ======
+const CONFIG = {
+  LIFF_ID: '2012507478-35PGiqXO',
+  API_URL: 'https://script.google.com/macros/s/AKfycbyIO6FGb6iWX2_jmzpScdNmQP3re4ILjfRzBJjRqsmRUv3B_5f_NwhBBWz7NE27ewbVJQ/exec',
+  BANK: '匯款帳號：請填入銀行代碼與帳號（戶名：○○○）'
+};
+// ==========================
+const $ = s => document.querySelector(s);
+const S = { me: null, tab: null, cls: null, date: null };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const card = (t, b, x = '') => `<section class="card"><h2>${t}${x}</h2>${b}</section>`;
+const pill = s => `<span class="pill ${/退回|拒絕|缺席/.test(s) ? 'bad' : /待/.test(s) ? 'warn' : ''}">${esc(s)}</span>`;
+function toast(m) { const t = $('#toast'); t.textContent = m; t.className = 'show'; setTimeout(() => t.className = '', 2600); }
+async function run(btn, fn) { btn.disabled = true; try { await fn(); } catch (e) { toast(e.message); } finally { btn.disabled = false; } }
+async function safe(fn) { try { await fn(); } catch (e) { $('#app').innerHTML = card('載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); } }
 
-  <!-- 頂部 Header -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-2.5">
-        <div class="w-10 h-10 rounded-full bg-orange-500 text-white font-bold flex items-center justify-center text-lg shadow-md">
-          <i class="fa-solid font-black fa-basketball"></i>
-        </div>
-        <div>
-          <h1 class="font-bold text-slate-800 text-sm leading-tight">永不平凡籃球營</h1>
-          <p class="text-[11px] text-slate-500">LINE 官方線上學務系統</p>
-        </div>
-      </div>
-      <span class="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-2 py-0.5 rounded">系統在線</span>
-    </div>
-  </header>
+async function api(action, data = {}) {
+  const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token: liff.getIDToken(), ...data }) });
+  const j = await r.json();
+  if (!j.ok) { if (/登入/.test(j.error)) { liff.logout(); liff.login(); } throw new Error(j.error); }
+  return j.data;
+}
 
-  <!-- 主要內容區 -->
-  <main class="max-w-md mx-auto px-4 pt-4 space-y-3">
+async function init() {
+  try {
+    await liff.init({ liffId: CONFIG.LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    S.me = await api('me'); render();
+  } catch (e) { $('#app').innerHTML = card('無法開啟', `<p>${esc(e.message)}</p><button class="pri" onclick="init()">重試</button>`); }
+}
 
-    <!-- 身分切換控制盒 -->
-    <div class="bg-amber-50 border border-amber-300 p-3 rounded-2xl shadow-sm flex items-center justify-between">
-      <div class="flex items-center space-x-1.5 text-amber-900 text-xs font-bold">
-        <i class="fa-solid fa-sliders text-amber-600 text-sm"></i>
-        <span>切換測試身分：</span>
-      </div>
-      <select id="roleSelector" onchange="switchRole(this.value)" class="bg-white border border-amber-400 text-amber-900 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none font-bold shadow-sm">
-        <option value="admin">總教練 / 管理員 (全域)</option>
-        <option value="coach_sat" selected>張教練 (僅週六班)</option>
-        <option value="parent">陳媽媽 (家長專區)</option>
-      </select>
-    </div>
+function render() {
+  const r = S.me.role;
+  const tabs = { guest: [['bind', '綁定']], parent: [['parent', '學員專區']], coach: [['coach', '點名打卡']], admin: [['admin', '後台總覽'], ['coach', '點名打卡']] }[r];
+  if (!tabs.some(t => t[0] == S.tab)) S.tab = tabs[0][0];
+  $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] == S.tab ? 'on' : ''}" onclick="S.tab='${t[0]}';render()">${t[1]}</button>`).join('');
+  $('#who').textContent = `${S.me.name}・${{ guest: '訪客', parent: '家長', coach: '教練', admin: '總教練' }[r]}`;
+  safe({ bind: viewBind, parent: viewParent, coach: viewCoach, admin: viewAdmin }[S.tab]);
+}
 
-    <!-- 身分告示牌 -->
-    <div id="roleBanner" class="bg-blue-50 border border-blue-200 text-blue-800 text-xs px-3.5 py-2.5 rounded-xl flex items-center justify-between shadow-sm">
-      <span id="roleBannerText"><i class="fa-solid fa-user-ninja mr-1.5 text-blue-600"></i> 目前身分：<b>張教練</b>（僅限點名：週六班）</span>
-    </div>
+// ---------- 綁定 ----------
+const bindBox = () => card('綁定學員', `<p class="muted">輸入營隊給你的綁定碼，就能看到孩子的堂數。</p><input id="code" placeholder="綁定碼"><button class="pri" onclick="run(this,doBind)">綁定</button>`);
+async function doBind() {
+  const code = $('#code').value.trim(); if (!code) throw Error('請輸入綁定碼');
+  await api('bind', { code }); S.me = await api('me'); toast('綁定成功'); render();
+}
+function viewBind() {
+  $('#app').innerHTML = bindBox() + card('我是教練或總教練', `<p class="muted">請把這串 ID 傳給總教練，開通後重新開啟即可：</p><code>${esc(S.me.id)}</code>`);
+}
 
-    <!-- 1. 學員專區 (家長畫面) -->
-    <section id="sectionStudent" class="hidden space-y-4">
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <h2 class="font-bold text-slate-800 text-sm flex items-center">
-            <i class="fa-solid fa-id-card text-orange-500 mr-2 text-base"></i>名下學員課務狀態
-          </h2>
-          <span class="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">已綁定 LINE</span>
-        </div>
-        <div class="space-y-2.5" id="parentChildrenCards">
-          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between animate-pulse">
-            <p class="text-xs text-slate-400">正在讀取學員資料...</p>
-          </div>
-        </div>
-      </div>
+// ---------- 家長 ----------
+async function viewParent() {
+  const [h, cl] = await Promise.all([api('history'), api('classes')]);
+  const st = S.me.students;
+  const opt = st.map(s => `<option value="${s.studentId}">${esc(s.name)}</option>`).join('');
+  $('#app').innerHTML =
+    card('孩子的課務', st.map(s => `<div class="row"><div><b>${esc(s.name)}</b><div class="muted" style="margin:0">${esc(s.className)}</div></div><span class="pill ${s.balance <= 1 ? 'warn' : ''}">剩 ${s.balance} 堂</span></div>`).join('')) +
+    card('匯款對帳', `<p class="muted">${esc(CONFIG.BANK)}</p><div class="chk">${st.map(s => `<label><input type="checkbox" value="${s.studentId}">${esc(s.name)}</label>`).join('')}</div>
+      <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額"><input id="l5" maxlength="5" inputmode="numeric" placeholder="帳號後五碼"></div>
+      <p class="muted">轉帳日期</p><input id="pdate" type="date" value="${today()}"><button class="pri" onclick="run(this,doPay)">送出對帳資料</button>`) +
+    card('請假與補課', `<select id="lst">${opt}</select><select id="ltype" onchange="$('#lclsw').hidden=this.value!='補課'"><option>請假</option><option>補課</option></select>
+      <div id="lclsw" hidden><select id="lcls">${cl.map(c => `<option value="${c.classId}">${esc(c.name)}</option>`).join('')}</select></div>
+      <input id="ldate" type="date" min="${today()}" value="${today()}"><input id="lrsn" placeholder="原因（選填）"><button class="pri" onclick="run(this,doLeave)">送出申請</button>`) +
+    card('最近紀錄', h.payments.map(p => `<div class="row"><span>匯款 $${esc(p.amount)}・${esc(p.studentNames)}</span>${pill(p.status)}</div>`).join('') + h.leaves.map(l => `<div class="row"><span>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</span>${pill(l.status)}</div>`).join('') || '<p class="muted">還沒有紀錄</p>') +
+    bindBox();
+}
+async function doPay() {
+  const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
+  await api('pay', { studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value });
+  toast('已送出，等待總教練確認'); render();
+}
+async function doLeave() {
+  await api('leave', { studentId: $('#lst').value, type: $('#ltype').value, classId: $('#lcls').value, date: $('#ldate').value, reason: $('#lrsn').value });
+  toast('已送出'); render();
+}
 
-      <!-- 學費匯款回條提交 -->
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-        <h2 class="font-bold text-slate-800 text-sm mb-3 flex items-center">
-          <i class="fa-solid fa-file-invoice-dollar text-blue-600 mr-2 text-base"></i>學費匯款回條提交
-        </h2>
-        <form id="remittanceForm" onsubmit="handleRemittanceSubmit(event)" class="space-y-3 text-xs">
-          <div>
-            <label class="block text-slate-600 font-bold mb-1">家長姓名</label>
-            <input type="text" id="remitParent" required value="陳媽媽" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-          </div>
-          <div>
-            <label class="block text-slate-600 font-bold mb-1">繳費學員姓名</label>
-            <input type="text" id="remitStudent" required value="林小明、林小華" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-          </div>
-          <div class="grid grid-cols-2 gap-2.5">
-            <div>
-              <label class="block text-slate-600 font-bold mb-1">匯款金額 ($)</label>
-              <input type="number" id="remitAmount" required placeholder="10000" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-            </div>
-            <div>
-              <label class="block text-slate-600 font-bold mb-1">帳號後五碼</label>
-              <input type="text" id="remitCode" maxlength="5" required placeholder="12345" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-            </div>
-          </div>
-          <div>
-            <label class="block text-slate-600 font-bold mb-1">轉帳日期</label>
-            <input type="date" id="remitDate" required class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-          </div>
-          <button type="submit" class="w-full bg-orange-500 active:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-md text-sm mt-1">
-            <i class="fa-solid fa-paper-plane mr-1"></i> 確認送出對帳資料
-          </button>
-        </form>
-      </div>
+// ---------- 點名（教練只看到自己的班，總教練看全部）----------
+const ST = ['出席', '請假', '缺席'];
+async function viewCoach() {
+  const cs = S.me.classes;
+  if (!cs.length) { $('#app').innerHTML = card('還沒有指派班級', '<p class="muted">請總教練在試算表的 Classes 設定你的 ID。</p>'); return; }
+  if (!cs.some(c => c.classId == S.cls)) S.cls = cs[0].classId;
+  S.date = S.date || today();
+  const isAdmin = S.me.role == 'admin';
+  S.list = await api('roster', { classId: S.cls, date: S.date });
+  S.list.forEach(x => x.v = x.saved || (x.leave ? '請假' : '出席'));
+  $('#app').innerHTML =
+    card('教練打卡', `<div class="row"><span>${today()}</span><button class="ghost" onclick="run(this,doCheckin)">當日簽到</button></div>`) +
+    card('班級點名', `<select onchange="S.cls=this.value;render()">${cs.map(c => `<option value="${c.classId}" ${c.classId == S.cls ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+      <input type="date" value="${S.date}" ${isAdmin ? '' : 'disabled'} onchange="S.date=this.value;render()">
+      <button class="ghost" style="width:100%;margin-bottom:10px" onclick="setAll('出席')">全班設為出席</button>
+      <div id="roster">${rosterHtml()}</div><button class="pri" onclick="run(this,doSave)">儲存點名</button>`);
+}
+function rosterHtml() {
+  if (!S.list.length) return '<p class="muted">這個班目前沒有學員</p>';
+  return S.list.map((x, i) => `<div class="item"><div><b>${esc(x.name)}</b> ${x.makeup ? '<span class="pill warn">補課</span>' : ''} ${x.saved ? '<span class="pill">已點名</span>' : ''} <span class="muted">剩 ${x.balance} 堂</span></div>
+    <div class="seg">${ST.map(s => `<button data-s="${s}" class="${x.v == s ? 'on' : ''}" onclick="pick(${i},'${s}')">${s}</button>`).join('')}</div></div>`).join('');
+}
+function pick(i, s) { S.list[i].v = s; $('#roster').innerHTML = rosterHtml(); }
+function setAll(s) { S.list.forEach(x => x.v = s); $('#roster').innerHTML = rosterHtml(); }
+async function doCheckin() { await api('coachCheckin'); toast('已簽到'); }
+async function doSave() {
+  await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v })) });
+  toast('點名已儲存'); render();
+}
 
-      <!-- 請假與補課申請表單 -->
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-        <h2 class="font-bold text-slate-800 text-sm mb-3 flex items-center">
-          <i class="fa-solid fa-calendar-xmark text-amber-500 mr-2 text-base"></i>線上請假與補課預約
-        </h2>
-        <form id="leaveMakeupForm" onsubmit="handleLeaveMakeupSubmit(event)" class="space-y-3 text-xs">
-          <div>
-            <label class="block text-slate-600 font-bold mb-1">學員姓名</label>
-            <input type="text" id="leaveStudent" required value="林小明" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
-          </div>
-          <div>
-            <label class="block text-slate-600 font-bold mb-1">原請假日期</label>
-            <input type="date" id="leaveDate" required class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
-          </div>
-          <div>
-            <label class="block text-slate-600 font-bold mb-1">請假事由</label>
-            <input type="text" id="leaveReason" required placeholder="例如：感冒看診" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
-          </div>
-          <div>
-            <label class="block text-slate-600 font-bold mb-1">預約補課班級</label>
-            <select id="makeupClass" class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold">
-              <option value="週六上午國小基礎班">週六上午國小基礎班</option>
-              <option value="週日下午國中進階班">週日下午國中進階班</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-slate-600 font-bold mb-1">預約補課日期</label>
-            <input type="date" id="makeupDate" required class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
-          </div>
-          <button type="submit" class="w-full bg-amber-500 active:bg-amber-600 text-white font-bold py-3 rounded-xl transition shadow-md text-sm mt-1">
-            <i class="fa-solid fa-paper-plane mr-1"></i> 送出請假與補課申請
-          </button>
-        </form>
-      </div>
-    </section>
+// ---------- 總教練後台 ----------
+async function viewAdmin() {
+  const a = await api('admin'), s = a.stats;
+  const box = (n, t) => `<div class="stat"><b>${n}</b>${t}</div>`;
+  $('#app').innerHTML =
+    `<div class="stats">${box(s.pendingPay, '待審核匯款')}${box(s.pendingLeave, '待審核補課')}${box(s.todayPresent + '/' + s.todayTotal, '今日出席')}${box(s.low, '堂數 ≤ 1')}</div>` +
+    card('待審核匯款', a.payments.map(p => `<div class="item"><b>${esc(p.parentName)}</b>（${esc(p.studentNames)}）<div class="muted">$${esc(p.amount)}｜後五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
+      <div class="two"><input id="ls${p.id}" type="number" inputmode="numeric" placeholder="每位加幾堂"><input id="nt${p.id}" placeholder="退回原因"></div>
+      <div class="two"><button class="pri" onclick="run(this,()=>reviewPay('${p.id}','pass'))">通過</button><button class="ghost" onclick="run(this,()=>reviewPay('${p.id}','reject'))">退回</button></div></div>`).join('') || '<p class="muted">沒有待處理的匯款</p>') +
+    card('待審核補課', a.leaves.map(l => `<div class="item"><b>${esc(l.studentName)}</b> 想補 ${esc(l.date)}・${esc(l.className)}<div class="two" style="margin-top:8px"><button class="pri" onclick="run(this,()=>reviewLeave('${l.id}','pass'))">核准</button><button class="ghost" onclick="run(this,()=>reviewLeave('${l.id}','reject'))">拒絕</button></div></div>`).join('') || '<p class="muted">沒有待處理的補課</p>') +
+    card('全部學員', a.students.map(x => `<div class="row"><span>${esc(x.name)} <span class="muted">${esc(x.className)}${x.bound ? '' : '・未綁定'}</span></span><span class="pill ${x.balance <= 1 ? 'warn' : ''}">${x.balance} 堂</span></div>`).join('')) +
+    card('最近點名紀錄', a.recent.map(r => `<div class="row"><span>${esc(r.date)} ${esc(r.name)} <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>${pill(r.status)}</div>`).join('') || '<p class="muted">還沒有紀錄</p>');
+}
+async function reviewPay(id, decision) {
+  await api('reviewPay', { id, decision, lessons: $('#ls' + id).value, note: $('#nt' + id).value }); toast('已處理'); render();
+}
+async function reviewLeave(id, decision) { await api('reviewLeave', { id, decision }); toast('已處理'); render(); }
 
-    <!-- 2. 點名與簽到區 (教練介面) -->
-    <section id="sectionAttendance" class="space-y-4">
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
-          <h2 class="font-bold text-slate-800 text-sm flex items-center">
-            <i class="fa-solid fa-user-check text-orange-500 mr-2 text-base"></i>教練出勤打卡
-          </h2>
-          <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-bold" id="currentDateDisplay">--</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-[11px] text-slate-500">當前打卡身分</p>
-            <p class="font-bold text-slate-800 text-sm" id="coachNameLabel">張教練</p>
-          </div>
-          <button onclick="coachCheckIn()" class="bg-orange-500 active:bg-orange-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow">
-            <i class="fa-solid fa-location-dot mr-1"></i> 當日打卡簽到
-          </button>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
-        <div class="flex items-center justify-between">
-          <h2 class="font-bold text-slate-800 text-sm flex items-center">
-            <i class="fa-solid fa-clipboard-user text-blue-600 mr-2 text-base"></i>學生班級點名
-          </h2>
-          <select id="classSelector" onchange="filterStudentsByClass()" class="text-xs border border-slate-300 rounded-xl px-2.5 py-1.5 bg-slate-50 font-bold">
-            <option value="週六上午國小基礎班">週六上午國小基礎班</option>
-            <option value="週日下午國中進階班">週日下午國中進階班</option>
-          </select>
-        </div>
-
-        <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
-          <span class="text-slate-500 font-bold">快捷操作：</span>
-          <button onclick="markAll('出席')" class="bg-emerald-100 text-emerald-700 active:bg-emerald-200 px-3 py-1.5 rounded-lg font-bold transition shadow-sm">
-            <i class="fa-solid fa-check-double mr-1"></i>全班皆設為出席
-          </button>
-        </div>
-
-        <div id="coachClassWarning" class="bg-amber-50 border border-amber-200 text-amber-700 text-xs p-2.5 rounded-xl flex items-center font-bold">
-          <i class="fa-solid fa-triangle-exclamation mr-1.5 text-base"></i>
-          <span id="warningText">提示：您為週六班專責教練，僅能點名週六上午班學生。</span>
-        </div>
-
-        <!-- 學生清單（補課學員置頂） -->
-        <div class="space-y-3 max-h-80 overflow-y-auto pr-1" id="coachStudentList">
-          <p class="text-xs text-slate-400 text-center py-4">正在載入學生清單...</p>
-        </div>
-
-        <!-- 送出按鈕 -->
-        <button onclick="submitAttendance()" class="w-full bg-blue-600 active:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs shadow-md transition flex items-center justify-center mt-2">
-          <i class="fa-solid fa-paper-plane mr-1.5 text-sm"></i> 送出已點名學員 (未到者不送出)
-        </button>
-      </div>
-    </section>
-
-    <!-- 3. 管理員後台審核區 -->
-    <section id="sectionAdmin" class="hidden space-y-4">
-      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-        <h2 class="font-bold text-slate-800 text-sm mb-3 flex items-center justify-between">
-          <span><i class="fa-solid fa-tasks text-orange-500 mr-2 text-base"></i>全營隊待審核匯款紀錄</span>
-        </h2>
-        <div class="space-y-2.5 text-xs" id="remittanceList">
-          <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <p class="font-bold text-slate-800 text-sm">陳媽媽（學員：林小明、林小華）</p>
-              <p class="text-xs text-slate-500 mt-0.5">金額: $10000 | 後五碼: <span class="font-mono font-bold text-blue-600 text-sm">12345</span></p>
-            </div>
-            <button onclick="alert('✅ 審核完成！')" class="px-3.5 py-2 bg-emerald-500 active:bg-emerald-600 text-white font-bold rounded-xl text-xs shadow">通過審核</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- 手機底部導覽列 -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-50 shadow-lg pb-safe">
-    <div id="bottomNavContainer" class="max-w-md mx-auto flex items-center justify-around text-center text-xs py-1">
-      <button onclick="showTab('attendance')" id="navAttendance" class="flex-1 py-2 text-orange-500 font-bold transition flex flex-col items-center justify-center">
-        <i class="fa-solid fa-clipboard-check text-lg mb-0.5"></i> 點名打卡
-      </button>
-      <button onclick="showTab('student')" id="navStudent" class="flex-1 py-2 text-slate-400 hover:text-slate-600 transition flex flex-col items-center justify-center">
-        <i class="fa-solid fa-user-shield text-lg mb-0.5"></i> 學員專區
-      </button>
-      <button onclick="showTab('admin')" id="navAdmin" class="flex-1 py-2 text-slate-400 hover:text-slate-600 transition flex flex-col items-center justify-center">
-        <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i> 後台審核
-      </button>
-    </div>
-  </nav>
-
-  <script>
-    // ⚠️ 請在此處填入從 Google Apps Script「管理部署」複製下來的正式網址
-    const GAS_API_URL = "請在此填入你的AppsScript網址";
-    
-    let currentRole = 'coach_sat';
-    let allStudents = [];
-    let allMakeups = [];
-
-    function getTodayString() {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = String(now.getMonth() + 1).padStart(2, '0');
-      const d = String(now.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    }
-
-    const todayDateStr = getTodayString();
-    document.getElementById('currentDateDisplay').innerText = todayDateStr;
-
-    function parseDateString(val) {
-      if (!val) return "";
-      if (typeof val === 'string') {
-        const cleaned = val.replace(/\//g, '-').trim();
-        return cleaned.split('T')[0].split(' ')[0];
-      }
-      try {
-        const d = new Date(val);
-        if (!isNaN(d.getTime())) {
-          const y = d.getFullYear();
-          const m = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
-          return `${y}-${m}-${day}`;
-        }
-      } catch(e) {}
-      return String(val).trim();
-    }
-
-    async function fetchStudentsData() {
-      try {
-        const resStudents = await fetch(`${GAS_API_URL}?action=getStudents`);
-        const rawStudents = await resStudents.json();
-        
-        allStudents = [];
-        for (let i = 1; i < rawStudents.length; i++) {
-          const row = rawStudents[i];
-          if (row[1]) {
-            allStudents.push({
-              id: i,
-              name: String(row[1]).trim(),
-              parent: String(row[2] || '未填寫').trim(),
-              class: String(row[3] || '未分班').trim(),
-              lessons: Number(row[4]) || 0,
-              status: "未到"
-            });
-          }
-        }
-
-        try {
-          const resMakeups = await fetch(`${GAS_API_URL}?action=getMakeups`);
-          const rawMakeups = await resMakeups.json();
-          allMakeups = [];
-          for (let k = 1; k < rawMakeups.length; k++) {
-            const mRow = rawMakeups[k];
-            if (mRow[1] && mRow[4] && mRow[5]) {
-              allMakeups.push({
-                name: String(mRow[1]).trim(),
-                makeupClass: String(mRow[4]).trim(),
-                makeupDate: parseDateString(mRow[5])
-              });
-            }
-          }
-        } catch (err) {
-          console.warn("無法取得補課清單：", err);
-        }
-
-        filterStudentsByClass();
-        updateParentView();
-      } catch (e) {
-        console.error("無法同步最新學員資料：", e);
-      }
-    }
-
-    function switchRole(role) {
-      currentRole = role;
-      const bannerText = document.getElementById('roleBannerText');
-      const classSelector = document.getElementById('classSelector');
-      const warningBox = document.getElementById('coachClassWarning');
-      const coachNameLabel = document.getElementById('coachNameLabel');
-
-      const navAttendance = document.getElementById('navAttendance');
-      const navStudent = document.getElementById('navStudent');
-      const navAdmin = document.getElementById('navAdmin');
-
-      if (role === 'admin') {
-        bannerText.innerHTML = '<i class="fa-solid fa-user-shield mr-1.5 text-blue-600"></i> 目前身分：<b>總教練 / 管理員</b>（全域最高權限）';
-        if (classSelector) {
-          classSelector.disabled = false;
-          if (!classSelector.value) classSelector.value = "週六上午國小基礎班";
-        }
-        if (warningBox) warningBox.classList.add('hidden');
-        if (coachNameLabel) coachNameLabel.innerText = '總教練';
-
-        navAttendance.classList.remove('hidden');
-        navStudent.classList.remove('hidden');
-        navAdmin.classList.remove('hidden');
-        showTab('attendance');
-
-      } else if (role === 'coach_sat') {
-        bannerText.innerHTML = '<i class="fa-solid fa-user-ninja mr-1.5 text-blue-600"></i> 目前身分：<b>張教練</b>（僅限點名：週六班）';
-        if (classSelector) {
-          classSelector.value = "週六上午國小基礎班";
-          classSelector.disabled = true;
-        }
-        if (warningBox) warningBox.classList.remove('hidden');
-        if (coachNameLabel) coachNameLabel.innerText = '張教練';
-        const warningText = document.getElementById('warningText');
-        if (warningText) warningText.innerText = "提示：您為週六班專責教練，僅能點名週六上午班學生。";
-
-        navAttendance.classList.remove('hidden');
-        navStudent.classList.add('hidden');
-        navAdmin.classList.add('hidden');
-        showTab('attendance');
-
-      } else if (role === 'parent') {
-        bannerText.innerHTML = '<i class="fa-solid fa-user-circle mr-1.5 text-blue-600"></i> 目前身分：<b>陳媽媽</b>（家長：已綁定學員）';
-        navAttendance.classList.add('hidden');
-        navAdmin.classList.add('hidden');
-        navStudent.classList.remove('hidden');
-        showTab('student');
-        updateParentView();
-      }
-
-      filterStudentsByClass();
-    }
-
-    function showTab(tab) {
-      if (tab === 'admin' && currentRole !== 'admin') {
-        alert("⚠️ 權限不足：您不是總教練，無法存取管理後台！");
-        return;
-      }
-      if (tab === 'attendance' && currentRole === 'parent') {
-        alert("⚠️ 權限不足：家長無法進行教練點名打卡！");
-        return;
-      }
-
-      document.getElementById('sectionAttendance').classList.add('hidden');
-      document.getElementById('sectionStudent').classList.add('hidden');
-      document.getElementById('sectionAdmin').classList.add('hidden');
-
-      ['navAttendance', 'navStudent', 'navAdmin'].forEach(id => {
-        document.getElementById(id).className = "flex-1 py-2 text-slate-400 hover:text-slate-600 transition flex flex-col items-center justify-center";
-      });
-
-      if (tab === 'attendance') {
-        document.getElementById('sectionAttendance').classList.remove('hidden');
-        document.getElementById('navAttendance').className = "flex-1 py-2 text-orange-500 font-bold transition flex flex-col items-center justify-center";
-        fetchStudentsData();
-      } else if (tab === 'student') {
-        document.getElementById('sectionStudent').classList.remove('hidden');
-        document.getElementById('navStudent').className = "flex-1 py-2 text-orange-500 font-bold transition flex flex-col items-center justify-center";
-        fetchStudentsData();
-      } else if (tab === 'admin') {
-        document.getElementById('sectionAdmin').classList.remove('hidden');
-        document.getElementById('navAdmin').className = "flex-1 py-2 text-orange-500 font-bold transition flex flex-col items-center justify-center";
-      }
-    }
-
-    function filterStudentsByClass() {
-      const selectedClass = document.getElementById('classSelector').value;
-      const container = document.getElementById('coachStudentList');
-
-      const regularStudents = allStudents.filter(s => s.class === selectedClass);
-
-      const makeupStudentNames = allMakeups
-        .filter(m => m.makeupClass === selectedClass && m.makeupDate === todayDateStr)
-        .map(m => m.name);
-
-      const makeupStudents = allStudents
-        .filter(s => makeupStudentNames.includes(s.name) && s.class !== selectedClass)
-        .map(s => ({ ...s, isMakeup: true }));
-
-      const displayList = [...makeupStudents, ...regularStudents];
-
-      if (displayList.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">此班級今日無學生資料</p>`;
-        return;
-      }
-
-      container.innerHTML = displayList.map(s => {
-        const isPresent = s.status === '出席';
-        const isLeave = s.status === '請假';
-        const isPending = s.status === '未到';
-
-        return `
-          <div class="p-3 ${s.isMakeup ? 'bg-purple-50/90 border-purple-300 ring-1 ring-purple-200' : 'bg-slate-50 border-slate-200'} border rounded-xl flex items-center justify-between gap-2.5">
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="font-bold text-slate-800 text-sm whitespace-nowrap">${s.name}</span>
-                ${s.isMakeup ? '<span class="text-[10px] bg-purple-600 text-white font-bold px-1.5 py-0.5 rounded whitespace-nowrap">跨班補課</span>' : ''}
-                ${isPending ? '<span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded whitespace-nowrap">未到</span>' : ''}
-              </div>
-              <div class="text-[11px] text-slate-500 truncate mt-0.5">
-                ${s.isMakeup ? '原班級：' + s.class : '家長：' + s.parent}
-              </div>
-              <p class="text-xs text-orange-600 font-extrabold mt-0.5 whitespace-nowrap">剩餘堂數：${s.lessons} 堂</p>
-            </div>
-            <div class="flex items-center space-x-1.5 shrink-0">
-              <button onclick="setStudentStatus(${s.id}, '出席')" class="px-3 py-1.5 text-xs whitespace-nowrap ${isPresent ? 'bg-emerald-500 text-white shadow font-bold' : 'bg-slate-200 text-slate-600'} rounded-lg transition">出席</button>
-              <button onclick="setStudentStatus(${s.id}, '請假')" class="px-3 py-1.5 text-xs whitespace-nowrap ${isLeave ? 'bg-amber-500 text-white shadow font-bold' : 'bg-slate-200 text-slate-600'} rounded-lg transition">請假</button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function updateParentView() {
-      const container = document.getElementById('parentChildrenCards');
-      const parentName = "陳媽媽";
-      const myChildren = allStudents.filter(s => s.parent === parentName);
-
-      if(myChildren.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">查無名下學員資料</p>`;
-        return;
-      }
-
-      container.innerHTML = myChildren.map(child => `
-        <div class="bg-gradient-to-r from-slate-50 to-orange-50/30 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between shadow-xs">
-          <div>
-            <p class="font-bold text-slate-800 text-sm">${child.name} <span class="text-xs font-normal text-slate-500">(${child.class})</span></p>
-            <p class="text-xs text-orange-600 font-extrabold mt-0.5">剩餘堂數：${child.lessons} 堂</p>
-          </div>
-          <span class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg font-bold">在訓中</span>
-        </div>
-      `).join('');
-    }
-
-    function setStudentStatus(id, newStatus) {
-      const student = allStudents.find(s => s.id === id);
-      if(student) {
-        student.status = (student.status === newStatus) ? '未到' : newStatus;
-        filterStudentsByClass();
-      }
-    }
-
-    function markAll(status) {
-      const selectedClass = document.getElementById('classSelector').value;
-      allStudents.forEach(s => {
-        if(s.class === selectedClass) s.status = status;
-      });
-      filterStudentsByClass();
-    }
-
-    async function coachCheckIn() {
-      const coach = currentRole === 'coach_sat' ? '張教練' : '總教練';
-      try {
-        await fetch(GAS_API_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'addCoachCheckIn', coachName: coach })
-        });
-        alert(`✅ 打卡成功！\n已將【${coach}】今日出勤時間寫入試算表「教練出勤紀錄」。`);
-      } catch (e) {
-        alert("❌ 打卡連線異常：" + e);
-      }
-    }
-
-    async function submitAttendance() {
-      const selectedClass = document.getElementById('classSelector').value;
-      const makeupStudentNames = allMakeups
-        .filter(m => m.makeupClass === selectedClass && m.makeupDate === todayDateStr)
-        .map(m => m.name);
-
-      const activeStudents = allStudents.filter(s => {
-        const isThisClass = s.class === selectedClass;
-        const isMakeup = makeupStudentNames.includes(s.name);
-        return (isThisClass || isMakeup) && s.status !== '未到';
-      });
-      
-      if(activeStudents.length === 0) {
-        alert("⚠️ 目前沒有任何學生被標記為出席或請假（皆為未到狀態），無需送出。");
-        return;
-      }
-
-      const coach = currentRole === 'coach_sat' ? '張教練' : '總教練';
-
-      try {
-        for(let s of activeStudents) {
-          const isMakeup = s.class !== selectedClass;
-          const payload = {
-            action: 'addAttendance',
-            date: todayDateStr,
-            className: selectedClass,
-            coachName: coach,
-            studentName: s.name,
-            status: s.status,
-            note: isMakeup ? `跨班補課(原班:${s.class})` : '現場點名'
-          };
-          await fetch(GAS_API_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-        }
-        
-        const names = activeStudents.map(s => s.name).join('、');
-        alert(`✅ 已完成點名：【${names}】共 ${activeStudents.length} 位！\n未到的學生不會扣除堂數。`);
-        setTimeout(fetchStudentsData, 1200);
-      } catch(e) {
-        alert("❌ 傳送失敗：" + e);
-      }
-    }
-
-    async function handleRemittanceSubmit(e) {
-      e.preventDefault();
-      const payload = {
-        action: 'addRemittance',
-        parentName: document.getElementById('remitParent').value,
-        studentName: document.getElementById('remitStudent').value,
-        amount: document.getElementById('remitAmount').value,
-        last5Code: document.getElementById('remitCode').value,
-        transferDate: document.getElementById('remitDate').value
-      };
-      try {
-        await fetch(GAS_API_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } catch(err){}
-      alert("✅ 匯款回條已成功提交！");
-      document.getElementById('remittanceForm').reset();
-    }
-
-    async function handleLeaveMakeupSubmit(e) {
-      e.preventDefault();
-      const payload = {
-        action: 'addLeaveMakeup',
-        studentName: document.getElementById('leaveStudent').value,
-        leaveDate: document.getElementById('leaveDate').value,
-        reason: document.getElementById('leaveReason').value,
-        makeupClass: document.getElementById('makeupClass').value,
-        makeupDate: document.getElementById('makeupDate').value
-      };
-      try {
-        await fetch(GAS_API_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } catch(err){}
-      alert("✅ 請假與補課申請已成功送出！");
-      document.getElementById('leaveMakeupForm').reset();
-      fetchStudentsData();
-    }
-
-    fetchStudentsData();
-  </script>
+init();
+</script>
 </body>
 </html>

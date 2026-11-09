@@ -6,7 +6,7 @@
 <title>永不平凡籃球營</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
-:root{--o:#e8793a;--ink:#1c2433;--mut:#6b7585;--bg:#eef1f6;--card:#fff;--line:#d9dee8;--ok:#1f9d63;--bad:#d64545;--warn:#b7791f}
+:root{--o:#e8793a;--ink:#1c2433;--mut:#6b7585;--bg:#eef1f6;--card:#fff;--line:#d9dee8;--ok:#1f9d63;--bad:#d64545;--warn:#b7791f;--purple:#7c3aed}
 *{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:5;background:var(--card);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}
@@ -21,37 +21,45 @@ input[type=checkbox]{width:auto;margin:0 8px 0 0}
 button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:12px 14px}
 button:disabled{opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f6b48a;outline-offset:1px}
 .pri{width:100%;background:var(--o);color:#fff;font-weight:700}.ghost{background:#eef1f6;color:var(--ink)}
-.row,.item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
-.row:first-of-type{border-top:0}.item{display:block}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.item{padding:12px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.roster-card{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.roster-card:first-of-type{border-top:0}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.two>*{margin-bottom:10px}
 .muted{color:var(--mut);font-size:14px;margin:0 0 8px}
-.pill{font-size:13px;padding:3px 10px;border-radius:99px;background:#e7f6ee;color:var(--ok);white-space:nowrap}
+.pill{font-size:12px;padding:3px 8px;border-radius:99px;background:#e7f6ee;color:var(--ok);white-space:nowrap;font-weight:600}
 .pill.warn{background:#fdf1dc;color:var(--warn)}.pill.bad{background:#fbe6e6;color:var(--bad)}
+.pill.makeup{background:#f3e8ff;color:var(--purple);border:1px solid #d8b4fe}
 .chk label{display:flex;align-items:center;padding:6px 0}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}.stat b{font-size:26px;display:block}
-.seg{display:flex;gap:6px}.seg button{padding:8px 11px;background:#eef1f6;color:var(--ink);font-size:14px}
+.seg{display:flex;gap:6px;flex-shrink:0}.seg button{padding:7px 10px;background:#eef1f6;color:var(--ink);font-size:13px;border-radius:8px;font-weight:600}
 .seg button.on[data-s="出席"]{background:var(--ok);color:#fff}.seg button.on[data-s="請假"]{background:var(--warn);color:#fff}.seg button.on[data-s="缺席"]{background:var(--bad);color:#fff}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:10}
 nav button{flex:1;background:none;padding:14px 4px;color:var(--mut);border-radius:0}nav button.on{color:var(--o);font-weight:700;box-shadow:inset 0 3px 0 var(--o)}
-#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center;z-index:20}
 #toast.show{opacity:1}code{background:#eef1f6;padding:2px 6px;border-radius:6px;word-break:break-all;font-size:13px}
 </style>
 </head>
 <body>
-<header><div class="logo">🏀</div><div><b>永不平凡籃球營</b><span id="who">載入中…</span></div></header>
-<main id="app"><p class="muted">載入中…</p></main>
+<header><div class="logo">🏀</div><div><b>永不平凡籃球營</b><span id="who">連線中…</span></div></header>
+<main id="app"><p class="muted">資料同步中，請稍候…</p></main>
 <nav id="nav"></nav><div id="toast"></div>
+
 <script>
-// ====== 只需要改這裡 ======
+// ====== 系統連線設定 ======
 const CONFIG = {
   LIFF_ID: '2012507478-35PGiqXO',
-  API_URL: 'https://script.google.com/macros/s/AKfycbyIO6FGb6iWX2_jmzpScdNmQP3re4ILjfRzBJjRqsmRUv3B_5f_NwhBBWz7NE27ewbVJQ/exec',
-  BANK: '匯款帳號：請填入銀行代碼與帳號（戶名：○○○）'
+  // ⚠️ 請填入你的最新 Apps Script 部署網址（結尾為 /exec）
+  API_URL: 'https://script.google.com/macros/s/AKfycbwi628w2ufe6yKZ_uufuG1YQcQ7jTVIErzDnGBSu8DQeLwuyl2oEXywl1WYmWlclY0tBA/exec',
+  BANK: '匯款帳號：台北富邦 (012) 帳號 1234-5678-9012（戶名：永不平凡籃球營）'
 };
 // ==========================
+
 const $ = s => document.querySelector(s);
-const S = { me: null, tab: null, cls: null, date: null };
+const S = { me: null, tab: null, cls: null, date: null, list: [] };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
 const card = (t, b, x = '') => `<section class="card"><h2>${t}${x}</h2>${b}</section>`;
@@ -61,112 +69,234 @@ async function run(btn, fn) { btn.disabled = true; try { await fn(); } catch (e)
 async function safe(fn) { try { await fn(); } catch (e) { $('#app').innerHTML = card('載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); } }
 
 async function api(action, data = {}) {
-  const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token: liff.getIDToken(), ...data }) });
+  const token = (typeof liff !== 'undefined' && liff.isLoggedIn()) ? liff.getIDToken() : null;
+  const r = await fetch(CONFIG.API_URL, { 
+    method: 'POST', 
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, token, ...data }) 
+  });
   const j = await r.json();
-  if (!j.ok) { if (/登入/.test(j.error)) { liff.logout(); liff.login(); } throw new Error(j.error); }
+  if (!j.ok) { 
+    if (/登入/.test(j.error) && typeof liff !== 'undefined') { liff.logout(); liff.login(); } 
+    throw new Error(j.error); 
+  }
   return j.data;
 }
 
 async function init() {
   try {
     await liff.init({ liffId: CONFIG.LIFF_ID });
-    if (!liff.isLoggedIn()) { liff.login(); return; }
-    S.me = await api('me'); render();
-  } catch (e) { $('#app').innerHTML = card('無法開啟', `<p>${esc(e.message)}</p><button class="pri" onclick="init()">重試</button>`); }
+    if (!liff.isLoggedIn()) { 
+      liff.login(); 
+      return; 
+    }
+    S.me = await api('me'); 
+    render();
+  } catch (e) { 
+    $('#app').innerHTML = card('系統載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="init()">重新連線</button>`); 
+  }
 }
 
 function render() {
   const r = S.me.role;
-  const tabs = { guest: [['bind', '綁定']], parent: [['parent', '學員專區']], coach: [['coach', '點名打卡']], admin: [['admin', '後台總覽'], ['coach', '點名打卡']] }[r];
+  const tabs = { 
+    guest: [['bind', '綁定']], 
+    parent: [['parent', '學員專區']], 
+    coach: [['coach', '點名打卡']], 
+    admin: [['admin', '後台總覽'], ['coach', '點名打卡']] 
+  }[r] || [['bind', '綁定']];
+
   if (!tabs.some(t => t[0] == S.tab)) S.tab = tabs[0][0];
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] == S.tab ? 'on' : ''}" onclick="S.tab='${t[0]}';render()">${t[1]}</button>`).join('');
-  $('#who').textContent = `${S.me.name}・${{ guest: '訪客', parent: '家長', coach: '教練', admin: '總教練' }[r]}`;
+  $('#who').textContent = `${S.me.name}・${{ guest: '訪客', parent: '家長', coach: '教練', admin: '總教練' }[r] || '學員'}`;
   safe({ bind: viewBind, parent: viewParent, coach: viewCoach, admin: viewAdmin }[S.tab]);
 }
 
-// ---------- 綁定 ----------
-const bindBox = () => card('綁定學員', `<p class="muted">輸入營隊給你的綁定碼，就能看到孩子的堂數。</p><input id="code" placeholder="綁定碼"><button class="pri" onclick="run(this,doBind)">綁定</button>`);
+// ---------- 綁定專區 ----------
+const bindBox = () => card('綁定學員', `<p class="muted">輸入營隊提供的學員專屬綁定碼，即可查看剩餘堂數與即時出勤。</p><input id="code" placeholder="請輸入綁定碼"><button class="pri" onclick="run(this,doBind)">立即綁定</button>`);
+
 async function doBind() {
-  const code = $('#code').value.trim(); if (!code) throw Error('請輸入綁定碼');
-  await api('bind', { code }); S.me = await api('me'); toast('綁定成功'); render();
-}
-function viewBind() {
-  $('#app').innerHTML = bindBox() + card('我是教練或總教練', `<p class="muted">請把這串 ID 傳給總教練，開通後重新開啟即可：</p><code>${esc(S.me.id)}</code>`);
+  const code = $('#code').value.trim(); 
+  if (!code) throw Error('請輸入綁定碼');
+  await api('bind', { code }); 
+  S.me = await api('me'); 
+  toast('綁定成功'); 
+  render();
 }
 
-// ---------- 家長 ----------
+function viewBind() {
+  $('#app').innerHTML = bindBox() + card('教練與工作人員認證', `<p class="muted">如您為帶班教練或營隊總教練，請將下方 LINE ID 傳給系統管理員開通權限：</p><code>${esc(S.me.id)}</code>`);
+}
+
+// ---------- 家長學員專區 ----------
 async function viewParent() {
   const [h, cl] = await Promise.all([api('history'), api('classes')]);
-  const st = S.me.students;
+  const st = S.me.students || [];
   const opt = st.map(s => `<option value="${s.studentId}">${esc(s.name)}</option>`).join('');
+  
   $('#app').innerHTML =
-    card('孩子的課務', st.map(s => `<div class="row"><div><b>${esc(s.name)}</b><div class="muted" style="margin:0">${esc(s.className)}</div></div><span class="pill ${s.balance <= 1 ? 'warn' : ''}">剩 ${s.balance} 堂</span></div>`).join('')) +
-    card('匯款對帳', `<p class="muted">${esc(CONFIG.BANK)}</p><div class="chk">${st.map(s => `<label><input type="checkbox" value="${s.studentId}">${esc(s.name)}</label>`).join('')}</div>
-      <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額"><input id="l5" maxlength="5" inputmode="numeric" placeholder="帳號後五碼"></div>
-      <p class="muted">轉帳日期</p><input id="pdate" type="date" value="${today()}"><button class="pri" onclick="run(this,doPay)">送出對帳資料</button>`) +
-    card('請假與補課', `<select id="lst">${opt}</select><select id="ltype" onchange="$('#lclsw').hidden=this.value!='補課'"><option>請假</option><option>補課</option></select>
-      <div id="lclsw" hidden><select id="lcls">${cl.map(c => `<option value="${c.classId}">${esc(c.name)}</option>`).join('')}</select></div>
-      <input id="ldate" type="date" min="${today()}" value="${today()}"><input id="lrsn" placeholder="原因（選填）"><button class="pri" onclick="run(this,doLeave)">送出申請</button>`) +
-    card('最近紀錄', h.payments.map(p => `<div class="row"><span>匯款 $${esc(p.amount)}・${esc(p.studentNames)}</span>${pill(p.status)}</div>`).join('') + h.leaves.map(l => `<div class="row"><span>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</span>${pill(l.status)}</div>`).join('') || '<p class="muted">還沒有紀錄</p>') +
+    card('孩子的課務狀態', st.map(s => `
+      <div class="row">
+        <div>
+          <b style="font-size:15px">${esc(s.name)}</b>
+          <div class="muted" style="margin:2px 0 0 0">${esc(s.className)}</div>
+        </div>
+        <span class="pill ${s.balance <= 1 ? 'warn' : ''}">剩餘 ${s.balance} 堂</span>
+      </div>
+    `).join('')) +
+    card('學費匯款對帳', `
+      <p class="muted">${esc(CONFIG.BANK)}</p>
+      <div class="chk">${st.map(s => `<label><input type="checkbox" value="${s.studentId}"> ${esc(s.name)}</label>`).join('')}</div>
+      <div class="two">
+        <input id="amt" type="number" inputmode="numeric" placeholder="匯款金額">
+        <input id="l5" maxlength="5" inputmode="numeric" placeholder="帳號後五碼">
+      </div>
+      <p class="muted" style="margin-bottom:4px">轉帳日期</p>
+      <input id="pdate" type="date" value="${today()}">
+      <button class="pri" onclick="run(this,doPay)">確認送出對帳資料</button>
+    `) +
+    card('線上請假與補課預約', `
+      <label class="muted">選擇學員</label>
+      <select id="lst">${opt}</select>
+      <label class="muted">申請類型</label>
+      <select id="ltype" onchange="$('#lclsw').hidden=this.value!='補課'"><option>請假</option><option>補課</option></select>
+      <div id="lclsw" hidden>
+        <label class="muted">欲補課班級</label>
+        <select id="lcls">${cl.map(c => `<option value="${c.classId}">${esc(c.name)}</option>`).join('')}</select>
+      </div>
+      <label class="muted">日期</label>
+      <input id="ldate" type="date" min="${today()}" value="${today()}">
+      <input id="lrsn" placeholder="原因說明（選填）">
+      <button class="pri" onclick="run(this,doLeave)">確認送出申請</button>
+    `) +
+    card('最近申請紀錄', 
+      h.payments.map(p => `<div class="row"><span>匯款 $${esc(p.amount)}（${esc(p.studentNames)}）</span>${pill(p.status)}</div>`).join('') + 
+      h.leaves.map(l => `<div class="row"><span>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</span>${pill(l.status)}</div>`).join('') || 
+      '<p class="muted">尚無申請紀錄</p>'
+    ) +
     bindBox();
 }
+
 async function doPay() {
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
+  if (!ids.length) throw Error('請至少勾選一位學員');
   await api('pay', { studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value });
-  toast('已送出，等待總教練確認'); render();
-}
-async function doLeave() {
-  await api('leave', { studentId: $('#lst').value, type: $('#ltype').value, classId: $('#lcls').value, date: $('#ldate').value, reason: $('#lrsn').value });
-  toast('已送出'); render();
+  toast('已提交對帳，等待總教練核准'); 
+  render();
 }
 
-// ---------- 點名（教練只看到自己的班，總教練看全部）----------
+async function doLeave() {
+  await api('leave', { studentId: $('#lst').value, type: $('#ltype').value, classId: $('#lcls').value, date: $('#ldate').value, reason: $('#lrsn').value });
+  toast('申請已送出'); 
+  render();
+}
+
+// ---------- 點名打卡 (教練/管理員) ----------
 const ST = ['出席', '請假', '缺席'];
+
 async function viewCoach() {
-  const cs = S.me.classes;
-  if (!cs.length) { $('#app').innerHTML = card('還沒有指派班級', '<p class="muted">請總教練在試算表的 Classes 設定你的 ID。</p>'); return; }
+  const cs = S.me.classes || [];
+  if (!cs.length) { 
+    $('#app').innerHTML = card('尚未指派執教班級', '<p class="muted">請聯繫總教練在試算表的「班級清單」設定指派您的 LINE ID。</p>'); 
+    return; 
+  }
   if (!cs.some(c => c.classId == S.cls)) S.cls = cs[0].classId;
   S.date = S.date || today();
   const isAdmin = S.me.role == 'admin';
+  
   S.list = await api('roster', { classId: S.cls, date: S.date });
   S.list.forEach(x => x.v = x.saved || (x.leave ? '請假' : '出席'));
+
   $('#app').innerHTML =
-    card('教練打卡', `<div class="row"><span>${today()}</span><button class="ghost" onclick="run(this,doCheckin)">當日簽到</button></div>`) +
-    card('班級點名', `<select onchange="S.cls=this.value;render()">${cs.map(c => `<option value="${c.classId}" ${c.classId == S.cls ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+    card('教練出勤打卡', `<div class="row"><span>今日日期：<b>${today()}</b></span><button class="ghost" onclick="run(this,doCheckin)">當日簽到</button></div>`) +
+    card('學生出勤點名', `
+      <label class="muted">授課班級</label>
+      <select onchange="S.cls=this.value;render()">${cs.map(c => `<option value="${c.classId}" ${c.classId == S.cls ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+      <label class="muted">點名日期</label>
       <input type="date" value="${S.date}" ${isAdmin ? '' : 'disabled'} onchange="S.date=this.value;render()">
-      <button class="ghost" style="width:100%;margin-bottom:10px" onclick="setAll('出席')">全班設為出席</button>
-      <div id="roster">${rosterHtml()}</div><button class="pri" onclick="run(this,doSave)">儲存點名</button>`);
-}
-function rosterHtml() {
-  if (!S.list.length) return '<p class="muted">這個班目前沒有學員</p>';
-  return S.list.map((x, i) => `<div class="item"><div><b>${esc(x.name)}</b> ${x.makeup ? '<span class="pill warn">補課</span>' : ''} ${x.saved ? '<span class="pill">已點名</span>' : ''} <span class="muted">剩 ${x.balance} 堂</span></div>
-    <div class="seg">${ST.map(s => `<button data-s="${s}" class="${x.v == s ? 'on' : ''}" onclick="pick(${i},'${s}')">${s}</button>`).join('')}</div></div>`).join('');
-}
-function pick(i, s) { S.list[i].v = s; $('#roster').innerHTML = rosterHtml(); }
-function setAll(s) { S.list.forEach(x => x.v = s); $('#roster').innerHTML = rosterHtml(); }
-async function doCheckin() { await api('coachCheckin'); toast('已簽到'); }
-async function doSave() {
-  await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v })) });
-  toast('點名已儲存'); render();
+      <button class="ghost" style="width:100%;margin-bottom:12px;font-weight:600" onclick="setAll('出席')">全班標記為出席</button>
+      <div id="roster">${rosterHtml()}</div>
+      <button class="pri" style="margin-top:14px" onclick="run(this,doSave)">儲存並送出點名</button>
+    `);
 }
 
-// ---------- 總教練後台 ----------
+function rosterHtml() {
+  if (!S.list.length) return '<p class="muted" style="text-align:center;padding:12px 0">此班級今日尚無學員</p>';
+  return S.list.map((x, i) => `
+    <div class="roster-card">
+      <div style="min-width:0;flex:1">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <b style="font-size:15px;white-space:nowrap">${esc(x.name)}</b>
+          ${x.makeup ? '<span class="pill makeup">跨班補課</span>' : ''}
+          ${x.saved ? '<span class="pill">已存</span>' : ''}
+        </div>
+        <div class="muted" style="margin:2px 0 0 0;font-size:13px">剩餘堂數：<b>${x.balance}</b> 堂</div>
+      </div>
+      <div class="seg">
+        ${ST.map(s => `<button data-s="${s}" class="${x.v == s ? 'on' : ''}" onclick="pick(${i},'${s}')">${s}</button>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function pick(i, s) { S.list[i].v = s; $('#roster').innerHTML = rosterHtml(); }
+function setAll(s) { S.list.forEach(x => x.v = s); $('#roster').innerHTML = rosterHtml(); }
+async function doCheckin() { await api('coachCheckin'); toast('簽到成功'); }
+async function doSave() {
+  await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v })) });
+  toast('點名紀錄已儲存！'); 
+  render();
+}
+
+// ---------- 總教練管理後台 ----------
 async function viewAdmin() {
   const a = await api('admin'), s = a.stats;
-  const box = (n, t) => `<div class="stat"><b>${n}</b>${t}</div>`;
+  const box = (n, t) => `<div class="stat"><b>${n}</b><span class="muted" style="margin:0">${t}</span></div>`;
+  
   $('#app').innerHTML =
-    `<div class="stats">${box(s.pendingPay, '待審核匯款')}${box(s.pendingLeave, '待審核補課')}${box(s.todayPresent + '/' + s.todayTotal, '今日出席')}${box(s.low, '堂數 ≤ 1')}</div>` +
-    card('待審核匯款', a.payments.map(p => `<div class="item"><b>${esc(p.parentName)}</b>（${esc(p.studentNames)}）<div class="muted">$${esc(p.amount)}｜後五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
-      <div class="two"><input id="ls${p.id}" type="number" inputmode="numeric" placeholder="每位加幾堂"><input id="nt${p.id}" placeholder="退回原因"></div>
-      <div class="two"><button class="pri" onclick="run(this,()=>reviewPay('${p.id}','pass'))">通過</button><button class="ghost" onclick="run(this,()=>reviewPay('${p.id}','reject'))">退回</button></div></div>`).join('') || '<p class="muted">沒有待處理的匯款</p>') +
-    card('待審核補課', a.leaves.map(l => `<div class="item"><b>${esc(l.studentName)}</b> 想補 ${esc(l.date)}・${esc(l.className)}<div class="two" style="margin-top:8px"><button class="pri" onclick="run(this,()=>reviewLeave('${l.id}','pass'))">核准</button><button class="ghost" onclick="run(this,()=>reviewLeave('${l.id}','reject'))">拒絕</button></div></div>`).join('') || '<p class="muted">沒有待處理的補課</p>') +
-    card('全部學員', a.students.map(x => `<div class="row"><span>${esc(x.name)} <span class="muted">${esc(x.className)}${x.bound ? '' : '・未綁定'}</span></span><span class="pill ${x.balance <= 1 ? 'warn' : ''}">${x.balance} 堂</span></div>`).join('')) +
-    card('最近點名紀錄', a.recent.map(r => `<div class="row"><span>${esc(r.date)} ${esc(r.name)} <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>${pill(r.status)}</div>`).join('') || '<p class="muted">還沒有紀錄</p>');
+    `<div class="stats">${box(s.pendingPay, '待審核匯款')}${box(s.pendingLeave, '待審核補課')}${box(s.todayTotal, '在訓學員總數')}${box(s.low, '堂數 ≤ 1 堂')}</div>` +
+    card('待審核匯款紀錄', a.payments.map(p => `
+      <div class="item">
+        <b style="font-size:15px">${esc(p.studentNames)}</b>
+        <div class="muted">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
+        <div class="two" style="margin-top:8px">
+          <input id="ls${p.id}" type="number" inputmode="numeric" placeholder="每位加幾堂">
+          <input id="nt${p.id}" placeholder="備註或退回說明">
+        </div>
+        <div class="two">
+          <button class="pri" onclick="run(this,()=>reviewPay('${p.id}','pass'))">核准並加堂</button>
+          <button class="ghost" onclick="run(this,()=>reviewPay('${p.id}','reject'))">退回款項</button>
+        </div>
+      </div>
+    `).join('') || '<p class="muted">目前沒有待處理的匯款</p>') +
+    card('待審核請假與補課', a.leaves.map(l => `
+      <div class="item">
+        <b>${esc(l.studentName)}</b> 預約補課：${esc(l.date)}・${esc(l.className)}
+        <div class="two" style="margin-top:8px">
+          <button class="pri" onclick="run(this,()=>reviewLeave('${l.id}','pass'))">核准補課</button>
+          <button class="ghost" onclick="run(this,()=>reviewLeave('${l.id}','reject'))">退回申請</button>
+        </div>
+      </div>
+    `).join('') || '<p class="muted">目前沒有待處理的補課</p>') +
+    card('全營隊在訓學員', a.students.map(x => `
+      <div class="row">
+        <span><b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}${x.bound ? '・已綁定' : '・未綁定'}</span></span>
+        <span class="pill ${x.balance <= 1 ? 'warn' : ''}">剩 ${x.balance} 堂</span>
+      </div>
+    `).join(''));
 }
+
 async function reviewPay(id, decision) {
-  await api('reviewPay', { id, decision, lessons: $('#ls' + id).value, note: $('#nt' + id).value }); toast('已處理'); render();
+  await api('reviewPay', { id, decision, lessons: $('#ls' + id).value, note: $('#nt' + id).value }); 
+  toast('匯款審核完成'); 
+  render();
 }
-async function reviewLeave(id, decision) { await api('reviewLeave', { id, decision }); toast('已處理'); render(); }
+
+async function reviewLeave(id, decision) { 
+  await api('reviewLeave', { id, decision }); 
+  toast('補課審核完成'); 
+  render(); 
+}
 
 init();
 </script>

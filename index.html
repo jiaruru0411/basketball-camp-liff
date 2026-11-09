@@ -192,7 +192,6 @@ button:disabled{ opacity: .5; cursor: not-allowed; }
 .stat b{ font-size: 27px; font-weight: 900; color: var(--pri); display: block; line-height: 1.1; margin-bottom: 4px; }
 .stat span{ font-size: 13px; color: var(--mut); font-weight: 700; }
 
-/* 4 顆點名狀態按鈕 (含未到) */
 .seg{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
 .seg button{
   padding: 9px 0;
@@ -203,9 +202,9 @@ button:disabled{ opacity: .5; cursor: not-allowed; }
   border-radius: 10px;
 }
 .seg button.on[data-s="未到"]{ background: #64748b; color: #fff; box-shadow: 0 3px 8px rgba(100, 116, 139, 0.35); }
-.seg button.on[data-s="出席"]{ background: #10b981; color: #fff; box-shadow: 0 3px 8px rgba(16, 185, 129, 0.35); }
-.seg button.on[data-s="請假"]{ background: #f59e0b; color: #fff; box-shadow: 0 3px 8px rgba(245, 158, 11, 0.35); }
-.seg button.on[data-s="缺席"]{ background: #ef4444; color: #fff; box-shadow: 0 3px 8px rgba(239, 68, 68, 0.35); }
+.seg button.on[data-s="出席"]{ background: #10b981; color: #fff; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35); }
+.seg button.on[data-s="請假"]{ background: #f59e0b; color: #fff; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.35); }
+.seg button.on[data-s="缺席"]{ background: #ef4444; color: #fff; box-shadow: 0 3px 10px rgba(239, 68, 68, 0.35); }
 
 .kid-tabs{
   display: flex;
@@ -342,7 +341,15 @@ function updateGreeting() {
   $('#greet').textContent = `${S.me ? S.me.name + '・' + roleName + ' ' : ''}${w}`;
 }
 
+// 防無限循環登入 (最多自動嘗試 1 次)
 function reLogin() {
+  const retry = sessionStorage.getItem('relogin_attempt') || '0';
+  if (parseInt(retry, 10) >= 1) {
+    sessionStorage.removeItem('relogin_attempt');
+    $('#app').innerHTML = card('驗證逾期', '<p class="muted">登入逾時，請點下方按鈕重新驗證 LINE。</p><button class="pri" onclick="liff.login()">重新登入 LINE</button>');
+    return;
+  }
+  sessionStorage.setItem('relogin_attempt', '1');
   try { liff.logout(); } catch (e) {}
   liff.login();
 }
@@ -367,6 +374,7 @@ async function api(action, data = {}) {
     }
     throw new Error(j.error);
   }
+  sessionStorage.removeItem('relogin_attempt'); // 呼叫成功則清除計數
   return j.data;
 }
 
@@ -517,7 +525,6 @@ async function doLeave() {
   render();
 }
 
-// 支援「未到」
 const ATT_STATUS = [
   { k: '未到', l: '⏳ 未到' },
   { k: '出席', l: '✓ 出席' },
@@ -536,8 +543,6 @@ async function viewCoach() {
   const isAdmin = S.me.role === 'admin';
 
   S.list = await api('roster', { classId: S.cls, date: S.date });
-  
-  // 關鍵：如果今天還沒點過，預設就是「未到」！
   S.list.forEach(x => { 
     if (!x.v) x.v = x.saved || (x.leave ? '請假' : '未到'); 
   });
@@ -574,7 +579,7 @@ async function viewCoach() {
       <input type="date" value="${S.date}" ${isAdmin ? '' : 'disabled'} onchange="S.date=this.value;render()">
       <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">⚡ 一鍵全班設為出席</button>
       <div id="roster">${rosterHtml()}</div>
-      <button class="pri" style="margin-top:8px" onclick="run(this,doSaveAttendance)">🌟 儲存點名結果（僅儲存已到/請假）</button>
+      <button class="pri" style="margin-top:8px" onclick="run(this,doSaveAttendance)">🌟 儲存點名結果（未到不扣堂）</button>
     `);
 }
 
@@ -623,7 +628,7 @@ async function doCheckin() {
 async function doSaveAttendance() {
   await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v })) });
   toast('點名紀錄已儲存！');
-  S.list = []; // 清除快取以重新取得最新 saved 狀態
+  S.list = [];
   render();
 }
 
@@ -636,11 +641,11 @@ async function viewAdmin() {
   $('#app').innerHTML =
     `<div class="stats">
       ${box(s.pendingPay ?? 0, '💳 待審核匯款')}
-      ${box(s.pendingLeave ?? 0, '📅 待審核補課')}
+      ${box(s.pendingLeave ?? 0, '📅 待審核請假/補課')}
       ${box(s.low ?? 0, '⚠️ 堂數 ≤ 1 堂')}
-      ${box('$' + totalSal.toLocaleString(), '💰 預計總薪資')}
+      ${box('$' + totalSal.toLocaleString(), `${s.month || '當月'} 預計總薪資`)}
     </div>` +
-    card('💵 教練授課時數與時薪試算', (a.coaches || []).map(c => `
+    card(`💵 ${s.month || '當月'} 教練授課時數與薪資試算`, (a.coaches || []).map(c => `
       <div class="item">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
@@ -650,7 +655,8 @@ async function viewAdmin() {
           <b style="font-size:18px;color:var(--pri)">$${c.totalSalary.toLocaleString()}</b>
         </div>
         <div class="muted" style="margin:6px 0 0;font-size:13.5px">
-          授課時數：<b>${c.totalHours}</b> 小時（共 ${c.lessonCount} 堂）｜ 時薪：$${c.hourlyRate}/hr
+          授課時數：<b>${c.totalHours}</b> 小時（共 ${c.lessonCount} 堂）｜ 
+          時薪：${c.rateMissing ? '<span style="color:var(--bad);font-weight:700">⚠️ 未設定時薪</span>' : `$${c.hourlyRate}/hr`}
         </div>
       </div>`).join('') || '<p class="muted">尚無教練資料</p>') +
     card('💳 待審核匯款', (a.payments || []).map(p => `
@@ -666,14 +672,15 @@ async function viewAdmin() {
           <button class="ghost" onclick="run(this,()=>reviewPay('${p.id}','reject'))">退回款項</button>
         </div>
       </div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>') +
-    card('📅 待審核補課', (a.leaves || []).map(l => `
+    card('📅 待審核請假與補課', (a.leaves || []).map(l => `
       <div class="item">
-        <b>${esc(l.studentName)}</b> 申請補 <b>${esc(l.date)}</b>・${esc(l.className)}
+        <b>${esc(l.studentName)}</b> 申請 <b>【${esc(l.type)}】</b> ${esc(l.date)}・${esc(l.className)}
+        ${l.reason ? `<div class="muted" style="margin:4px 0 0">原因：${esc(l.reason)}</div>` : ''}
         <div class="two" style="margin-top:10px">
-          <button class="pri" onclick="run(this,()=>reviewLeave('${l.id}','pass'))">核准補課 ➜</button>
+          <button class="pri" onclick="run(this,()=>reviewLeave('${l.id}','pass'))">核准申請 ➜</button>
           <button class="ghost" onclick="run(this,()=>reviewLeave('${l.id}','reject'))">婉拒申請</button>
         </div>
-      </div>`).join('') || '<p class="muted">目前沒有待處理的補課</p>') +
+      </div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>') +
     card('⛹️ 全部學員名單', (a.students || []).map(x => `
       <div class="row">
         <span><b>${esc(x.name)}</b> <span class="muted" style="margin-left:4px">${esc(x.className)}${x.bound ? '' : '・未綁定'}</span></span>
@@ -689,7 +696,7 @@ async function reviewPay(id, decision) {
 
 async function reviewLeave(id, decision) {
   await api('reviewLeave', { id, decision });
-  toast('補課已審核處理');
+  toast('申請已審核處理');
   render();
 }
 

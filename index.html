@@ -622,7 +622,7 @@ async function confirmAndSaveAttendance() {
   render();
 }
 
-// ==================== 總教練後台 (已修復按鈕引號衝突) ====================
+// 總教練後台 (顯示姓名＋代號)
 async function viewAdmin() {
   const a = await api('admin');
   const s = a.stats || {};
@@ -642,12 +642,15 @@ async function viewAdmin() {
         <b>${esc(p.parentName)}</b>｜期別：<b>${esc(p.period)}</b>
         <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
         
-        <div style="background:#f1eae2;padding:10px;border-radius:10px;margin-bottom:8px">
-          <div style="font-size:13.5px;font-weight:700;margin-bottom:6px">分別設定增加堂數：</div>
-          ${p.studentIds.map(sid => `
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-              <span style="font-size:14px">${esc(sid)}</span>
-              <input class="add-lesson-input" data-sid="${esc(sid)}" type="number" style="width:110px!important;padding:6px;margin:0" placeholder="增加堂數">
+        <div style="background:#f1eae2;padding:12px;border-radius:12px;margin-bottom:8px">
+          <div style="font-size:13.5px;font-weight:700;margin-bottom:8px;color:#475569">分別設定增加堂數：</div>
+          ${(p.students || []).map(st => `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div>
+                <b style="font-size:14.5px;color:#1e293b">${esc(st.name)}</b>
+                <span class="muted" style="margin-left:4px;font-size:12px">(${esc(st.id)})</span>
+              </div>
+              <input class="add-lesson-input" data-sid="${esc(st.id)}" type="number" style="width:105px!important;padding:6px 10px;margin:0;font-size:14px" placeholder="加幾堂">
             </div>
           `).join('')}
         </div>
@@ -676,7 +679,6 @@ async function viewAdmin() {
       </div>`).join(''));
 }
 
-// 安全版審核處理函式
 async function reviewPaySafe(id, decision) {
   const addMap = {};
   if (decision === 'pass') {

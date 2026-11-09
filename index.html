@@ -204,7 +204,6 @@ button:disabled{ opacity: .5; cursor: not-allowed; }
 .seg button.on[data-s="請假"]{ background: var(--warn); color: #fff; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.35); }
 .seg button.on[data-s="缺席"]{ background: var(--bad); color: #fff; box-shadow: 0 3px 10px rgba(244, 63, 94, 0.35); }
 
-/* 多寶切換標籤樣式 */
 .kid-tabs{
   display: flex;
   gap: 8px;
@@ -231,7 +230,6 @@ button:disabled{ opacity: .5; cursor: not-allowed; }
   box-shadow: 0 4px 12px rgba(255, 115, 21, 0.28);
 }
 
-/* 營隊請假與退費規則區塊 */
 .rules-box{
   background: #fffaf0;
   border: 1.5px solid #fed7aa;
@@ -314,13 +312,11 @@ code{
 <nav id="nav"></nav><div id="toast"></div>
 
 <script>
-// ==================== 參數設定區 ====================
 const CONFIG = {
   LIFF_ID: '2012507478-35PGiqXO',
   API_URL: 'https://script.google.com/macros/s/AKfycbwXzUnQ1zvcQhCHZs3ezX5tGsJzTCkbQVJij4ID7dWD7kgPFsWFYbySGoqBA8nSasGUzQ/exec',
   BANK: '匯款帳號：822 中國信託 1234-5678-9012（戶名：永不平凡籃球營）'
 };
-// ====================================================
 
 const $ = s => document.querySelector(s);
 const S = { me: null, tab: null, cls: null, date: null, list: [], curKid: 'ALL', parentData: null };
@@ -405,7 +401,6 @@ function render() {
   safe({ bind: viewBind, parent: viewParent, coach: viewCoach, admin: viewAdmin }[S.tab]);
 }
 
-// ---------- 1. 綁定 ----------
 const bindBox = () => card('🎒 綁定學員', `<p class="muted">輸入營隊提供的 6 碼綁定碼，立即查詢堂數與請假。</p><input id="code" placeholder="請輸入 6 碼綁定碼"><button class="pri" onclick="run(this,doBind)">立即綁定學員 ➜</button>`);
 
 async function doBind() {
@@ -421,7 +416,6 @@ function viewBind() {
   $('#app').innerHTML = bindBox() + card('📋 教練權限開通', `<p class="muted">教練請將以下 LINE ID 提供給總教練，在試算表設定權限後即可使用：</p><code>${esc(S.me.id)}</code>`);
 }
 
-// ---------- 2. 家長專區（多寶切換、出勤明細、請假須知） ----------
 async function viewParent() {
   if (!S.parentData) {
     const [h, cl] = await Promise.all([api('history'), api('classes')]);
@@ -430,7 +424,6 @@ async function viewParent() {
   const { h, cl } = S.parentData;
   const st = S.me.students || [];
 
-  // 1. 多孩子切換標籤
   let kidTabsHtml = '';
   if (st.length > 1) {
     kidTabsHtml = `<div class="kid-tabs">
@@ -439,11 +432,9 @@ async function viewParent() {
     </div>`;
   }
 
-  // 篩選學員與資料
   const visibleStudents = S.curKid === 'ALL' ? st : st.filter(s => s.studentId === S.curKid);
   const opt = st.map(s => `<option value="${s.studentId}" ${s.studentId === S.curKid ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
 
-  // 點名出勤紀錄過濾
   const attList = (h.attendances || []).filter(a => S.curKid === 'ALL' || a.studentId === S.curKid);
   const attHtml = attList.map(a => `
     <div class="row">
@@ -455,7 +446,6 @@ async function viewParent() {
     </div>
   `).join('') || '<p class="muted">尚無課堂出勤紀錄</p>';
 
-  // 請假紀錄過濾
   const leaveList = (h.leaves || []).filter(l => S.curKid === 'ALL' || l.studentId === S.curKid);
   const payList = h.payments || [];
 
@@ -470,10 +460,8 @@ async function viewParent() {
         <span class="pill ${s.balance <= 1 ? 'warn' : ''}">${s.balance <= 1 ? '⚠️ 剩 ' : '剩餘 '}${s.balance} 堂</span>
       </div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
 
-    // 出缺席明細核對卡片
     card('📋 上課出勤明細', attHtml) +
 
-    // 請假申請與營隊規則說明
     card('📅 請假與補課申請', `
       <select id="lst">${opt}</select>
       <select id="ltype" onchange="$('#lclsw').hidden = this.value !== '補課'"><option value="請假">📝 我要請假</option><option value="補課">🏀 申請補課</option></select>
@@ -482,7 +470,6 @@ async function viewParent() {
       <input id="lrsn" placeholder="原因說明（選填）">
       <button class="pri" onclick="run(this,doLeave)">確認送出申請 ➜</button>
 
-      <!-- 營隊請假須知 -->
       <div class="rules-box">
         <b>📌 請假注意事項：</b>
         <ol>
@@ -527,7 +514,6 @@ async function doLeave() {
   render();
 }
 
-// ---------- 3. 教練專區 ----------
 const ATT_STATUS = [
   { k: '出席', l: '✓ 出席' },
   { k: '請假', l: '📝 請假' },
@@ -567,12 +553,15 @@ async function viewCoach() {
     `) +
     card('📋 我的排班班級', cs.map(c => `
       <div class="row">
-        <b>${esc(c.name)}</b>
+        <div>
+          <b>${esc(c.name)}</b>
+          <div class="muted" style="margin:2px 0 0">單堂時長：${c.hours || 2} 小時</div>
+        </div>
         <span class="pill" style="background:#e0f2fe;color:#0284c7">負責教練</span>
       </div>
     `).join('')) +
     card('🏀 課堂學員點名', `
-      <select onchange="S.cls=this.value;render()">${cs.map(c => `<option value="${c.classId}" ${c.classId === S.cls ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+      <select onchange="S.cls=this.value;render()">${cs.map(c => `<option value="${c.classId}" ${c.classId === S.cls ? 'selected' : ''}>${esc(c.name)} (${c.hours || 2}h)</option>`).join('')}</select>
       <input type="date" value="${S.date}" ${isAdmin ? '' : 'disabled'} onchange="S.date=this.value;render()">
       <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">⚡ 一鍵全班設為出席</button>
       <div id="roster">${rosterHtml()}</div>
@@ -598,14 +587,18 @@ function rosterHtml() {
 
 function pickStatus(i, s) { S.list[i].v = s; $('#roster').innerHTML = rosterHtml(); }
 function setAll(s) { S.list.forEach(x => x.v = s); $('#roster').innerHTML = rosterHtml(); }
-async function doCheckin() { await api('coachCheckin'); toast('簽到打卡成功！💪'); }
+async function doCheckin() { 
+  await api('coachCheckin', { classId: S.cls }); 
+  toast('簽到打卡成功！💪'); 
+  S.me = await api('me');
+  render();
+}
 async function doSaveAttendance() {
   await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v })) });
   toast('點名紀錄已儲存！');
   render();
 }
 
-// ---------- 4. 總教練後台 ----------
 async function viewAdmin() {
   const a = await api('admin');
   const s = a.stats || {};
@@ -619,7 +612,7 @@ async function viewAdmin() {
       ${box(s.low ?? 0, '⚠️ 堂數 ≤ 1 堂')}
       ${box('$' + totalSal.toLocaleString(), '💰 預計總薪資')}
     </div>` +
-    card('💵 教練堂數與薪資試算', (a.coaches || []).map(c => `
+    card('💵 教練授課時數與時薪試算', (a.coaches || []).map(c => `
       <div class="item">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
@@ -629,7 +622,7 @@ async function viewAdmin() {
           <b style="font-size:18px;color:var(--pri)">$${c.totalSalary.toLocaleString()}</b>
         </div>
         <div class="muted" style="margin:6px 0 0;font-size:13.5px">
-          累計上課：<b>${c.lessonCount}</b> 堂 ｜ 單堂鐘點：$${c.rate}
+          授課時數：<b>${c.totalHours}</b> 小時（共 ${c.lessonCount} 堂）｜ 時薪：$${c.hourlyRate}/hr
         </div>
       </div>`).join('') || '<p class="muted">尚無教練資料</p>') +
     card('💳 待審核匯款', (a.payments || []).map(p => `

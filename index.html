@@ -158,8 +158,10 @@ async function run(btn, fn) {
 }
 
 async function safe(fn) {
+  showLoading('載入中…');
   try { await fn(); }
   catch (e) { $('#app').innerHTML = card('載入失敗', `<p style="color:var(--bad);font-weight:700">${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); }
+  finally { hideLoading(); }
 }
 
 function modal(html) {
@@ -202,6 +204,8 @@ function menu(title, items) {
   });
 }
 
+function forceReLogin() { try { liff.logout(); } catch (e) {} liff.login(); }
+
 async function api(action, data = {}, silent = false) {
   let token = '';
   try { if (liff.isLoggedIn()) token = liff.getIDToken() || ''; } catch (e) {}
@@ -211,6 +215,11 @@ async function api(action, data = {}, silent = false) {
     const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
     const j = await r.json();
     if (!j.ok) {
+      if (/登入驗證失敗/.test(j.error || '')) { // 只自動重新登入一次，避免無限循環
+        let n = 0; try { n = Number(sessionStorage.getItem('relogin') || 0); } catch (e) {}
+        if (n < 1) { try { sessionStorage.setItem('relogin', String(n + 1)); } catch (e) {} forceReLogin(); return new Promise(() => {}); }
+        throw new Error('登入已過期，請關閉後從 LINE 重新開啟');
+      }
       throw new Error(j.error || '伺服器處理失敗');
     }
     return j.data;
@@ -230,11 +239,13 @@ async function init() {
     if (!liff.isLoggedIn()) { liff.login(); return; }
     // 首次載入靜默不轉圈
     S.me = await api('me', {}, true);
+    try { sessionStorage.removeItem('relogin'); } catch (e) {}
     render();
   } catch (e) {
     $('#app').innerHTML = card('系統連線異常', `
       <p class="muted" style="color:var(--bad);font-weight:600">${esc(e.message)}</p>
-      <button class="pri" onclick="location.reload()">重新整理 ➜</button>`);
+      <button class="pri" onclick="forceReLogin()">重新登入 LINE ➜</button>
+      <button class="ghost" style="width:100%;margin-top:10px" onclick="location.reload()">重新整理</button>`);
   }
 }
 

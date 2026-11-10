@@ -505,7 +505,7 @@ async function doSaveAttendance() {
   setTimeout(() => toast('點名完成並儲存！'), 100);
 }
 
-// ===================== 總教練後台 =====================
+// ===================== 總教練後台 (精準綁定真實學員 ID) =====================
 async function viewAdmin() {
   S.month = S.month || today().slice(0, 7);
   const a = await api('admin', { month: S.month }, true);
@@ -572,7 +572,10 @@ async function reviewPaySafe(id, decision) {
   const addMap = {};
   const box = document.getElementById('pay_item_' + id), nt = document.getElementById('nt_' + id);
   if (decision === 'pass') {
-    box.querySelectorAll('.add-lesson-input').forEach(inp => { const v = Number(inp.value); if (v > 0) addMap[inp.getAttribute('data-sid')] = v; });
+    box.querySelectorAll('.add-lesson-input').forEach(inp => { 
+      const v = Number(inp.value); 
+      if (v > 0) addMap[inp.getAttribute('data-sid')] = v; 
+    });
     if (!Object.keys(addMap).length) throw new Error('請至少為一位學員填寫要加的堂數');
   } else if (!nt.value.trim()) throw new Error('退回請填寫原因');
   await api('reviewPay', { id, decision, studentAddLessons: addMap, note: nt.value });

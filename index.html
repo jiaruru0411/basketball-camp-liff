@@ -63,7 +63,7 @@ button:active{transform:scale(.97)}button:disabled{opacity:.5;cursor:not-allowed
 .kid-btn.active{background:var(--pri-grad);border-color:transparent;color:#fff;font-weight:800}
 .rules-box{background:#fffaf0;border:1.5px solid #fed7aa;border-radius:16px;padding:14px;margin-top:12px;font-size:13.5px;color:#7c2d12;line-height:1.65}
 .rules-box b{color:#9a3412;font-size:14px}.rules-box ol{margin:8px 0 0;padding-left:18px}
-.lockbar{background:#fff7ed;border:1.5px solid #fed7aa;color:#9a3412;padding:10px 12px;border-radius:12px;font-size:13.5px;font-weight:700;margin-bottom:10px}
+.lockbar{background:#fff7ed;border:1.5px solid #fed7aa;color:#9a3412;padding:12px;border-radius:14px;font-size:14px;font-weight:800;margin-bottom:12px;line-height:1.4}
 .safe{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;font-size:13px}
 .safe a{color:var(--pri);font-weight:700;text-decoration:none}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(255,255,255,.95);backdrop-filter:blur(16px);
@@ -81,7 +81,7 @@ nav button.on{color:var(--pri);font-weight:800;box-shadow:inset 0 3.5px 0 var(--
 .menu-btn{width:100%;margin-bottom:8px;text-align:left}
 code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;font-size:13px;color:var(--pri);font-weight:700}
 
-/* 全螢幕載入旋轉遮罩 (高層級，防止重複點擊) */
+/* 全螢幕載入旋轉遮罩 */
 #loading-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -137,7 +137,6 @@ const bal = b => (b <= 1 ? '⚠️ ' : '') + balT(b);
 const balPill = b => `<span class="pill ${b < 0 ? 'bad' : b <= 1 ? 'warn' : ''}">${bal(b)}</span>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.className = 'show'; setTimeout(() => t.className = '', 2800); }
 
-// 控制全螢幕載入遮罩
 function showLoading(msg = '資料處理中，請稍候…') {
   const o = $('#loading-overlay'), m = $('#loading-msg');
   if (m) m.textContent = msg;
@@ -148,7 +147,7 @@ function hideLoading() {
   if (o) o.classList.remove('active');
 }
 
-// 修正：run 函式不提前蓋遮罩，讓彈窗正常出現，交由真正的 API 送出動作呼叫 showLoading
+// run 函式：僅負責按鈕防呆，彈窗未按確認前絕不提早轉圈
 async function run(btn, fn) {
   if (btn) btn.disabled = true;
   try {
@@ -207,7 +206,7 @@ function menu(title, items) {
 
 function forceReLogin() { try { liff.logout(); } catch (e) {} liff.login(); }
 
-// 核心改進：在 API 呼叫期間精準開啟全螢幕轉圈，回傳後立即關閉
+// 核心：在真正的網路請求中呼叫全螢幕旋轉遮罩
 async function api(action, data = {}) {
   let token = '';
   try { if (liff.isLoggedIn()) token = liff.getIDToken() || ''; } catch (e) {}
@@ -250,7 +249,7 @@ async function init() {
   }
 }
 
-// 事件代理總管理
+// 統一事件代理
 const ACT = {
   switchKid: d => switchKid(d.id),
   cancel: d => cancelReq(d.id),
@@ -528,6 +527,7 @@ async function viewAdmin() {
     ${(c.adjustments || []).map(j => `<div class="row" style="padding:4px 0;border-top:0"><span class="muted" style="margin:0;font-size:13px">${esc(j.type)} ${j.amount > 0 ? '+' : ''}${j.amount}${j.note ? '・' + esc(j.note) : ''}</span>
       ${locked ? '' : `<button class="ghost mini" data-act="delAdj" data-id="${esc(j.id)}">刪除</button>`}</div>`).join('')}</div>`).join('') || '<p class="muted">尚無教練資料</p>';
 
+  // 精準根據 locked 存在與否渲染按鈕
   const salaryBtns = locked
     ? `<button class="ghost" data-act="unlockMonth">🔓 解除鎖定</button><button class="ghost" data-act="copySalary">📋 複製薪資表</button>`
     : `<button class="ghost" data-act="addAdj">➕ 代課／獎金／扣款</button><button class="ghost" data-act="adminCheckin">🕘 補簽到</button>
@@ -667,18 +667,22 @@ async function adminCheckinUi() {
   toast('已補登簽到'); render();
 }
 
+// 核心修正：鎖定操作先彈窗確認，點確定後才呼叫 API 顯示轉圈並精準重整
 async function lockMonthUi() {
-  const m = (S.adm && S.adm.stats && S.adm.stats.month) || S.month || today().slice(0, 7);
-  if (!(await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後該月份不能再簽到、調整，金額也會固定。需要時可以解除鎖定。`))) return;
+  const m = S.month || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
+  const ok = await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後該月份不能再簽到、調整，金額也會固定。`);
+  if (!ok) return;
   await api('lockMonth', { month: m });
-  toast('已鎖定');
+  toast('已成功鎖定！');
   render();
 }
+
 async function unlockMonthUi() {
-  const m = (S.adm && S.adm.stats && S.adm.stats.month) || S.month || today().slice(0, 7);
-  if (!(await ask(`確定解除 ${m} 的鎖定嗎？`))) return;
+  const m = S.month || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
+  const ok = await ask(`確定解除 ${m} 的鎖定嗎？`);
+  if (!ok) return;
   await api('unlockMonth', { month: m });
-  toast('已解除鎖定');
+  toast('已成功解除鎖定！');
   render();
 }
 
@@ -695,7 +699,7 @@ function copyText(t) {
     try { document.execCommand('copy'); toast('已複製，可貼到 Excel／Google 試算表'); } catch (e) { toast('複製失敗，請改用手動複製'); }
     ta.remove();
   };
-  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(() => toast('已複製，可貼到 Excel／Google 試算表')).catch(fallback);
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(() => toast('已複製，可貼到 Excel／Google 追蹤表')).catch(fallback);
   else fallback();
 }
 

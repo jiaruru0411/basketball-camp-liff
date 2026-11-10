@@ -96,7 +96,6 @@ code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;f
 const CONFIG = {
   LIFF_ID: '2012507478-35PGiqXO',
   API_URL: 'https://script.google.com/macros/s/AKfycbwXzUnQ1zvcQhCHZs3ezX5tGsJzTCkbQVJij4ID7dWD7kgPFsWFYbySGoqBA8nSasGUzQ/exec',
-  // ⚠️ 上線前請改成真實匯款帳號
   BANK: '匯款帳號：822 中國信託 1234-5678-9012（戶名：永不平凡籃球營）'
 };
 
@@ -121,7 +120,6 @@ async function safe(fn) {
   catch (e) { $('#app').innerHTML = card('載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); }
 }
 
-// ---------- 頁面內的小視窗（比 confirm()/prompt() 在 LINE 裡更穩定） ----------
 function modal(html) {
   const w = document.createElement('div'); w.className = 'modal';
   w.innerHTML = `<div class="box">${html}</div>`;
@@ -139,7 +137,7 @@ function info(msg) {
     w.onclick = e => { if (e.target.dataset && e.target.dataset.x) { w.remove(); res(); } };
   });
 }
-function dialog(title, fields, okText) { // fields: [{key,label,type,ph,value,options:[[v,label]]}]；取消回傳 null
+function dialog(title, fields, okText) {
   return new Promise(res => {
     const body = fields.map(f => {
       const lab = `<div class="lab">${esc(f.label)}</div>`;
@@ -155,14 +153,13 @@ function dialog(title, fields, okText) { // fields: [{key,label,type,ph,value,op
     };
   });
 }
-function menu(title, items) { // items: [[key,label]]；取消回傳 null
+function menu(title, items) {
   return new Promise(res => {
     const w = modal(`<p style="font-weight:800;margin-bottom:12px">${esc(title)}</p>${items.map(i => `<button class="ghost menu-btn" data-x="${esc(i[0])}">${esc(i[1])}</button>`).join('')}<button class="ghost menu-btn" data-x="__no" style="text-align:center">取消</button>`);
     w.onclick = e => { const x = e.target.dataset && e.target.dataset.x; if (x) { w.remove(); res(x === '__no' ? null : x); } };
   });
 }
 
-// ---------- 登入與 API ----------
 function forceReLogin() { try { liff.logout(); } catch (e) {} liff.login(); }
 
 async function api(action, data = {}) {
@@ -171,7 +168,7 @@ async function api(action, data = {}) {
   const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
   const j = await r.json();
   if (!j.ok) {
-    if (/登入驗證失敗/.test(j.error)) { // 只自動重新登入一次，避免無限循環
+    if (/登入驗證失敗/.test(j.error)) {
       let n = 0; try { n = Number(sessionStorage.getItem('relogin') || 0); } catch (e) {}
       if (n < 1) { try { sessionStorage.setItem('relogin', String(n + 1)); } catch (e) {} forceReLogin(); return new Promise(() => {}); }
       throw new Error('登入已過期，請關閉後從 LINE 重新開啟');
@@ -201,7 +198,6 @@ async function init() {
   }
 }
 
-// 動態按鈕一律用 data-act + data-* 屬性，不把資料塞進 onclick 字串
 const ACT = {
   switchKid: d => switchKid(d.id),
   cancel: d => cancelReq(d.id),
@@ -231,7 +227,7 @@ function render() {
 }
 
 // ===================== 綁定 =====================
-const bindBox = () => card('🎒 綁定學員', `<p class="muted">輸入營隊提供的綁定碼，立即查詢堂數與請假。爸爸媽媽可以各用自己的 LINE 綁定同一位學員。</p>
+const bindBox = () => card('🎒 綁定學員', `<p class="muted">輸入營隊提供的綁定碼，立即查詢堂數與請假。</p>
   <input id="code" placeholder="請輸入綁定碼">
   ${S.me.profile ? '' : `<input id="pname" maxlength="20" placeholder="家長真實姓名（必填，對帳用）"><input id="pphone" type="tel" inputmode="tel" placeholder="聯絡電話（必填）">`}
   <button class="pri" onclick="run(this,doBind)">立即綁定學員 ➜</button>`);
@@ -250,7 +246,7 @@ function viewBind() {
 
 // ===================== 家長 =====================
 function stuById(id) { return (S.me.students || []).find(s => s.studentId === id); }
-function classDates(st, n = 10) { // 該班接下來的上課日
+function classDates(st, n = 10) {
   const out = []; let d = today();
   if (st.classStart && st.classStart > d) d = st.classStart;
   for (let i = 0; i < 180 && out.length < n; i++, d = addDays(d, 1)) {
@@ -267,7 +263,7 @@ function leaveDateHtml(st) {
   return `<select id="leave_date">${ds.map(d => `<option value="${d}">${d}（週${DN[dow(d) - 1]}）</option>`).join('')}</select>`;
 }
 function onLeaveKid(id) { const b = $('#leave_date_box'); if (b) b.innerHTML = leaveDateHtml(stuById(id)); }
-function updateMk() { // 補課日期的可選範圍跟著請假單變動
+function updateMk() {
   const sel = $('#mk_leave'); if (!sel || !sel.selectedOptions[0]) return;
   const op = sel.selectedOptions[0], dt = $('#mk_date'); if (!dt) return;
   const mn = op.dataset.ld > today() ? op.dataset.ld : today();
@@ -279,7 +275,7 @@ function snapForm() {
   document.querySelectorAll('#app [id]').forEach(el => { if (/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) && el.type !== 'checkbox') o[el.id] = el.value; });
   return o;
 }
-function restoreForm(o) { // 切換孩子時保留已填一半的表單
+function restoreForm(o) {
   const set = id => { const el = document.getElementById(id); if (!el || o[id] === undefined) return;
     if (el.tagName === 'SELECT' && ![...el.options].some(x => x.value === o[id])) return; el.value = o[id]; };
   Object.keys(o).forEach(id => { if (id !== 'leave_date' && id !== 'mk_date') set(id); });
@@ -313,7 +309,6 @@ async function viewParent() {
     <select id="mk_cls">${cl.map(c => `<option value="${esc(c.classId)}">${esc(c.name)} (${c.hours}h${c.days && c.days.length ? '・' + dayTxt(c.days) : ''})</option>`).join('')}</select>
     <p class="muted" style="font-size:13px;margin:4px 0 2px">選擇補課日期（限週日）<span id="mk_hint" style="display:block"></span></p>
     <input id="mk_date" type="date" min="${today()}">
-    <p class="muted" style="font-size:13px">補課類型（事假／病假）依原請假單自動判定。</p>
     <button class="pri" onclick="run(this,doSubmitMakeup)">送出補課預約 ➜</button>`
     : '<p class="muted">目前沒有可補課的請假單。請假經總教練核准後，這裡就會出現。</p>';
 
@@ -423,7 +418,7 @@ async function viewCoach() {
 }
 async function changeClass(v) { S.cls = v; await safe(viewCoach); }
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
-function rosterSummary() { // 伺服器上已點名的進度與點名教練
+function rosterSummary() {
   if (!S.list.length) return '';
   const done = S.list.filter(x => x.saved), by = [...new Set(done.map(x => x.by).filter(Boolean))];
   return `<p class="muted" style="font-weight:700;color:${done.length ? 'var(--ok)' : 'var(--mut)'}">已點名 ${done.length}／${S.list.length} 人${by.length ? '・點名教練：' + esc(by.join('、')) : ''}</p>`;
@@ -449,7 +444,7 @@ async function doSaveAttendance() {
   try {
     await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v, expect: x.saved || '' })) });
   } catch (e) {
-    if (/剛被其他教練更新/.test(e.message)) { await info(e.message); await safe(viewCoach); return; } // 顯示誰改了什麼，並自動重新載入最新名單
+    if (/剛被其他教練更新/.test(e.message)) { await info(e.message); await safe(viewCoach); return; }
     throw e;
   }
   toast('點名完成並儲存！'); render();
@@ -540,7 +535,6 @@ async function reviewLeaveUi(id, decision) {
   toast('假單處理完成！'); render();
 }
 
-// ---------- 學員管理 ----------
 async function addStudentUi() {
   const cs = S.me.classes || [];
   const v = await dialog('新增學員', [
@@ -585,7 +579,6 @@ async function manageStudent(id) {
   render();
 }
 
-// ---------- 薪資 ----------
 async function addAdjUi() {
   const cs = S.adm.coaches || [];
   if (!cs.length) throw new Error('尚無教練資料');
@@ -618,13 +611,15 @@ async function lockMonthUi() {
   const m = S.adm.stats.month;
   if (!(await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後該月份不能再簽到、調整，金額也會固定。需要時可以解除鎖定。`))) return;
   await api('lockMonth', { month: m });
-  toast('已鎖定'); render();
+  toast('已鎖定');
+  render();
 }
 async function unlockMonthUi() {
   const m = S.adm.stats.month;
   if (!(await ask(`確定解除 ${m} 的鎖定嗎？`))) return;
   await api('unlockMonth', { month: m });
-  toast('已解除鎖定'); render();
+  toast('已解除鎖定');
+  render(); // 補上自動重新渲染
 }
 function copySalary() {
   const a = S.adm;

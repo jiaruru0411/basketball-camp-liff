@@ -282,8 +282,8 @@ function go(t) { S.tab = t; S.date = null; render(); }
 function render() {
   const tabs = {
     guest: [['bind', '🎒 學員綁定']], parent: [['parent', '🏀 學員專區']], coach: [['coach', '👟 點名打卡']],
-    admin: [['admin', '📊 後台總覽'], ['coach', '👟 點名打卡'], ['bind', '🎒 學員綁定']]
-  }[S.me.role] || [['bind', '🎒 學員綁定']];
+    admin: [['admin', '📊 後台總覽'], ['parent', '🏀 學員專區'], ['coach', '👟 點名打卡'], ['bind', '🎒 學員綁定']]
+  }[S.me.role] || [['bind', '🎒 學員綁定']]
   if (!tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === S.tab ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
   updateGreeting();

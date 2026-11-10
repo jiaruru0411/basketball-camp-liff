@@ -108,7 +108,7 @@ code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;f
 <nav id="nav"></nav>
 <div id="toast"></div>
 
-<!-- 旋轉載入遮罩 HTML -->
+<!-- 全螢幕旋轉遮罩 -->
 <div id="loading-overlay">
   <div class="spinner"></div>
   <div class="loading-text" id="loading-msg">資料處理中，請稍候…</div>
@@ -137,7 +137,6 @@ const bal = b => (b <= 1 ? '⚠️ ' : '') + balT(b);
 const balPill = b => `<span class="pill ${b < 0 ? 'bad' : b <= 1 ? 'warn' : ''}">${bal(b)}</span>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.className = 'show'; setTimeout(() => t.className = '', 2800); }
 
-// 控制全螢幕載入遮罩
 function showLoading(msg = '資料處理中，請稍候…') {
   const o = $('#loading-overlay'), m = $('#loading-msg');
   if (m) m.textContent = msg;
@@ -244,14 +243,21 @@ async function init() {
   }
 }
 
+// 事件代理總管理
 const ACT = {
   switchKid: d => switchKid(d.id),
   cancel: d => cancelReq(d.id),
   reviewPay: d => reviewPaySafe(d.id, d.d),
   reviewLeave: d => reviewLeaveUi(d.id, d.d),
   manageStu: d => manageStudent(d.id),
-  delAdj: d => delAdj(d.id)
+  delAdj: d => delAdj(d.id),
+  lockMonth: () => lockMonthUi(),
+  unlockMonth: () => unlockMonthUi(),
+  addAdj: () => addAdjUi(),
+  adminCheckin: () => adminCheckinUi(),
+  copySalary: () => copySalary()
 };
+
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (!b || b.disabled) return;
@@ -516,9 +522,9 @@ async function viewAdmin() {
       ${locked ? '' : `<button class="ghost mini" data-act="delAdj" data-id="${esc(j.id)}">刪除</button>`}</div>`).join('')}</div>`).join('') || '<p class="muted">尚無教練資料</p>';
 
   const salaryBtns = locked
-    ? `<button class="ghost" onclick="run(this,unlockMonthUi)">🔓 解除鎖定</button><button class="ghost" onclick="copySalary()">📋 複製薪資表</button>`
-    : `<button class="ghost" onclick="run(this,addAdjUi)">➕ 代課／獎金／扣款</button><button class="ghost" onclick="run(this,adminCheckinUi)">🕘 補簽到</button>
-       <button class="ghost" onclick="run(this,lockMonthUi)">🔒 月結鎖定</button><button class="ghost" onclick="copySalary()">📋 複製薪資表</button>`;
+    ? `<button class="ghost" data-act="unlockMonth">🔓 解除鎖定</button><button class="ghost" data-act="copySalary">📋 複製薪資表</button>`
+    : `<button class="ghost" data-act="addAdj">➕ 代課／獎金／扣款</button><button class="ghost" data-act="adminCheckin">🕘 補簽到</button>
+       <button class="ghost" data-act="lockMonth">🔒 月結鎖定</button><button class="ghost" data-act="copySalary">📋 複製薪資表</button>`;
 
   $('#app').innerHTML =
     `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核假單')}${box(s.low ?? 0, '⚠️ 堂數 ≤ 1 堂')}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
@@ -653,20 +659,23 @@ async function adminCheckinUi() {
   await api('adminCheckin', v);
   toast('已補登簽到'); render();
 }
+
+// 薪資鎖定與解鎖（使用保險的備援月份）
 async function lockMonthUi() {
-  const m = S.adm.stats.month;
+  const m = (S.adm && S.adm.stats && S.adm.stats.month) || S.month || today().slice(0, 7);
   if (!(await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後該月份不能再簽到、調整，金額也會固定。需要時可以解除鎖定。`))) return;
   await api('lockMonth', { month: m });
   toast('已鎖定');
   render();
 }
 async function unlockMonthUi() {
-  const m = S.adm.stats.month;
+  const m = (S.adm && S.adm.stats && S.adm.stats.month) || S.month || today().slice(0, 7);
   if (!(await ask(`確定解除 ${m} 的鎖定嗎？`))) return;
   await api('unlockMonth', { month: m });
   toast('已解除鎖定');
   render();
 }
+
 function copySalary() {
   const a = S.adm;
   const rows = [['月份', '姓名', '身分', '授課堂數', '授課時數', '時薪', '基本薪資', '調整合計', '應付薪資']]

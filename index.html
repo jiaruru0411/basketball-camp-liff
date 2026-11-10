@@ -480,6 +480,26 @@ async function viewCoach() {
 }
 async function changeClass(v) { S.cls = v; await safe(viewCoach); }
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
+function leaveListHtml() {
+  const all = (S.adm && S.adm.approvedLeaves) || [], f = S.lvf || { cls: '', when: 'future', ended: false };
+  const t = today();
+  const classes = [...new Map(all.map(l => [l.classId, l.className])).entries()];
+  const rows = all.filter(l => (!f.cls || l.classId === f.cls) && (f.ended || !l.ended) &&
+    (f.when === 'all' || (f.when === 'future' ? l.date >= t : l.date < t)));
+  if (f.when === 'past') rows.reverse();
+  const sel = (v, o) => o.map(x => `<option value="${esc(x[0])}" ${x[0] === v ? 'selected' : ''}>${esc(x[1])}</option>`).join('');
+  return `<div class="two"><select onchange="setLvf('cls',this.value)">${sel(f.cls, [['', '全部班級']].concat(classes))}</select>
+    <select onchange="setLvf('when',this.value)">${sel(f.when, [['future', '今天起'], ['past', '已過'], ['all', '全部']])}</select></div>
+    <label class="muted" style="display:block;margin:6px 0"><input type="checkbox" ${f.ended ? 'checked' : ''} onchange="setLvf('ended',this.checked)" style="width:auto;margin-right:6px">顯示已結業學員／已結業班級</label>
+    <div id="lvlist">` + (rows.map(l => `<div class="row"><div>
+      <b>${esc(l.date)}</b>・${esc(l.studentName)} <span class="pill ${l.type === '補課' ? 'warn' : ''}">${esc(l.type)}</span>${l.ended ? ' <span class="pill">已結業</span>' : ''}
+      <div class="muted" style="margin:0;font-size:12.5px">${esc(l.className)}${l.reason ? '・' + esc(l.reason) : ''}${l.by ? '・' + esc(l.by) + ' 核准' : ''}</div></div></div>`).join('') || '<p class="muted">沒有符合的紀錄</p>') + '</div>';
+}
+function setLvf(k, v) {
+  S.lvf = Object.assign({ cls: '', when: 'future', ended: false }, S.lvf || {}, { [k]: v });
+  const e = document.getElementById('lvlist'), sec = e && e.closest('section'); if (!sec) return;
+  sec.outerHTML = card('✅ 已核准請假／補課', leaveListHtml());
+}
 function leaveBox() { // 教練一眼看到：這天誰請假、誰補課、之後誰要請假
   const lv = S.list.filter(x => x.leave), pend = S.list.filter(x => x.pendingLeave && !x.leave), mk = S.list.filter(x => x.makeup);
   const up = S.upcoming || [];
@@ -576,9 +596,7 @@ async function viewAdmin() {
       <div class="muted" style="margin:4px 0">${esc(l.reason)}</div>
       <div class="two" style="margin-top:10px"><button class="pri" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="pass">核准申請 ➜</button>
         <button class="ghost" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="reject">婉拒申請</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>') +
-    card('✅ 已核准請假／補課（近14天起）', (a.approvedLeaves || []).map(l => `<div class="row"><div>
-        <b>${esc(l.date)}</b>・${esc(l.studentName)} <span class="pill ${l.type === '補課' ? 'warn' : ''}">${esc(l.type)}</span>
-        <div class="muted" style="margin:0;font-size:12.5px">${esc(l.className)}${l.reason ? '・' + esc(l.reason) : ''}${l.by ? '・' + esc(l.by) + ' 核准' : ''}</div></div></div>`).join('') || '<p class="muted">近期沒有已核准的請假或補課</p>') +
+    card('✅ 已核准請假／補課', leaveListHtml()) +
     card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
       ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className).toLowerCase())}"><div>
         <b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}</span>

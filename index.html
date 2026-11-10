@@ -205,11 +205,12 @@ function menu(title, items) {
 
 function forceReLogin() { try { liff.logout(); } catch (e) {} liff.login(); }
 
-async function api(action, data = {}) {
+// 支援 silent 參數：首頁初始化靜默加載，操作送出才啟動轉圈
+async function api(action, data = {}, silent = false) {
   let token = '';
   try { if (liff.isLoggedIn()) token = liff.getIDToken() || ''; } catch (e) {}
   
-  showLoading();
+  if (!silent) showLoading();
   try {
     const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
     const j = await r.json();
@@ -223,7 +224,7 @@ async function api(action, data = {}) {
     }
     return j.data;
   } finally {
-    hideLoading();
+    if (!silent) hideLoading();
   }
 }
 
@@ -236,7 +237,8 @@ async function init() {
   try {
     await liff.init({ liffId: CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
-    S.me = await api('me');
+    // 傳入 true，進站時不黑屏轉圈
+    S.me = await api('me', {}, true);
     try { sessionStorage.removeItem('relogin'); } catch (e) {}
     render();
   } catch (e) {
@@ -340,7 +342,7 @@ function restoreForm(o) {
 
 async function viewParent() {
   if (!S.parentData) {
-    const d = await api('parentHome');
+    const d = await api('parentHome', {}, true);
     S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods };
     updateGreeting();
   }
@@ -450,7 +452,7 @@ async function viewCoach() {
   if (!cs.some(c => c.classId === S.cls)) S.cls = cs[0].classId;
   const isAdmin = S.me.role === 'admin';
   if (!isAdmin || !S.date) S.date = today();
-  const r = await api('roster', { classId: S.cls, date: S.date });
+  const r = await api('roster', { classId: S.cls, date: S.date }, true);
   S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
   S.list.forEach(x => { x.v = x.saved || (x.leave ? '請假' : '未到'); });
   const cur = cs.find(c => c.classId === S.cls), isToday = S.date === today();
@@ -518,7 +520,7 @@ async function doSaveAttendance() {
 // ===================== 總教練後台 =====================
 async function viewAdmin() {
   S.month = S.month || today().slice(0, 7);
-  const a = await api('admin', { month: S.month });
+  const a = await api('admin', { month: S.month }, true);
   S.adm = a;
   const s = a.stats || {}, locked = a.locked;
   const totalSal = (a.coaches || []).reduce((t, c) => t + c.totalSalary, 0);
@@ -680,7 +682,6 @@ async function adminCheckinUi() {
   setTimeout(() => toast('已補登簽到'), 100);
 }
 
-// 修正：轉圈結束且重新渲染完畢後，才跳出提示
 async function lockMonthUi() {
   const m = S.month || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
   const ok = await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後該月份不能再簽到、調整，金額也會固定。`);

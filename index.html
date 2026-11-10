@@ -344,6 +344,8 @@ async function viewParent() {
 
   const vis = S.curKid === 'ALL' ? st : st.filter(s => s.studentId === S.curKid);
   const opt = vis.map(s => `<option value="${esc(s.studentId)}">${esc(s.name)}</option>`).join('');
+  
+  // 家長出勤明細
   const attHtml = (h.attendances || []).filter(a => S.curKid === 'ALL' || a.studentId === S.curKid).map(a => `
     <div class="row"><div><b>${esc(a.date)}</b><div class="muted" style="margin:0">${esc(a.studentName)}・${esc(a.className)}</div></div>
     <span class="pill ${a.status === '出席' ? '' : a.status === '請假' ? 'warn' : 'bad'}">${esc(a.status)}</span></div>`).join('') || '<p class="muted">尚無課堂出勤紀錄</p>';
@@ -433,7 +435,7 @@ async function cancelReq(id) {
   setTimeout(() => toast('已取消'), 100);
 }
 
-// ===================== 教練點名與打卡 =====================
+// ===================== 教練點名與打卡 (事前請假醒目標註) =====================
 async function viewCoach() {
   const cs = S.me.classes || [];
   if (!cs.length) { $('#app').innerHTML = card('📋 尚未指派排班', '<p class="muted">目前無負責的班級，請洽總教練指派。</p>'); return; }
@@ -442,7 +444,12 @@ async function viewCoach() {
   if (!isAdmin || !S.date) S.date = today();
   const r = await api('roster', { classId: S.cls, date: S.date }, true);
   S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
-  S.list.forEach(x => { x.v = x.saved || (x.leave ? '請假' : '未到'); });
+  
+  // 核心邏輯：若已核准請假，未點名時預設選為「請假」
+  S.list.forEach(x => { 
+    x.v = x.saved || (x.leave ? '請假' : '未到'); 
+  });
+
   const cur = cs.find(c => c.classId === S.cls), isToday = S.date === today();
   const logs = (S.me.recentCheckins || []).map(k => `<div class="row" style="padding:6px 0"><span>${esc(k.date)}・${esc(k.className)}</span><span class="pill">已簽到 ${esc(k.time)}</span></div>`).join('') || '<p class="muted" style="margin:4px 0 0">近期尚無簽到紀錄</p>';
 
@@ -476,14 +483,23 @@ function rosterHtml() {
   if (!S.list.length) return '<p class="muted">這個班目前沒有學員</p>';
   return S.list.map((x, i) => `<div class="item">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <div><b>${esc(x.name)}</b> ${x.makeup ? '<span class="pill warn">⭐ 補課</span>' : ''} ${x.saved ? `<span class="pill">${x.saved === '出席' ? '✓ 已出席' : esc(x.saved)}</span>` : ''}</div>
+      <div>
+        <b>${esc(x.name)}</b> 
+        ${x.makeup ? '<span class="pill warn">⭐ 補課</span>' : ''} 
+        ${x.leave ? `<span class="pill warn">📝 事前請假（${esc(x.leaveReason || '已核准')}）</span>` : ''}
+        ${x.saved ? `<span class="pill">${x.saved === '出席' ? '✓ 已出席' : esc(x.saved)}</span>` : ''}
+      </div>
       <span class="muted" style="margin:0;font-weight:700">${bal(x.balance)}</span></div>
     ${x.saved && x.by ? `<div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(x.by)}・${esc(x.at)} 已點名</div>` : ''}
     ${x.note || x.phone ? `<div class="safe">${x.note ? `<span class="pill bad">⚠️ ${esc(x.note)}</span>` : ''}${x.phone ? `<a href="tel:${esc(x.phone.replace(/[^\d+]/g, ''))}">📞 ${esc(x.phone)}</a>` : ''}</div>` : ''}
     <div class="seg">${['未到', '出席', '請假', '缺席'].map(s => `<button type="button" data-s="${s}" class="${x.v === s ? 'on' : ''}" onclick="pickStatus(${i},'${s}')">${{ '未到': '⏳ 未到', '出席': '✓ 出席', '請假': '📝 請假', '缺席': '✕ 缺席' }[s]}</button>`).join('')}</div></div>`).join('');
 }
 function pickStatus(i, s) { if (S.list[i]) { S.list[i].v = s; $('#roster').innerHTML = rosterHtml(); } }
-function setAll(s) { S.list.forEach(x => x.v = s); $('#roster').innerHTML = rosterHtml(); }
+function setAll(s) { 
+  // 一鍵出席時，保留已經請假的學生不被覆蓋
+  S.list.forEach(x => { if (!x.leave) x.v = s; }); 
+  $('#roster').innerHTML = rosterHtml(); 
+}
 async function doCheckin() { 
   await api('coachCheckin', { classId: S.cls }); 
   S.me = await api('me'); 
@@ -505,7 +521,7 @@ async function doSaveAttendance() {
   setTimeout(() => toast('點名完成並儲存！'), 100);
 }
 
-// ===================== 總教練後台 (精準綁定真實學員 ID) =====================
+// ===================== 總教練後台 (已核准名冊備忘) =====================
 async function viewAdmin() {
   S.month = S.month || today().slice(0, 7);
   const a = await api('admin', { month: S.month }, true);
@@ -553,6 +569,15 @@ async function viewAdmin() {
       <div class="muted" style="margin:4px 0">${esc(l.reason)}</div>
       <div class="two" style="margin-top:10px"><button class="pri" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="pass">核准申請 ➜</button>
         <button class="ghost" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="reject">婉拒申請</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>') +
+    // 新增：已核准請假備忘名冊
+    card('📋 近期已核准請假（名單備忘）', (a.approvedLeaves || []).map(l => `
+      <div class="row">
+        <div>
+          <b>${esc(l.studentName)}</b>【${esc(l.type)}】<b>${esc(l.date)}</b>
+          <div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(l.reason || '無備註說明')}</div>
+        </div>
+        <span class="pill">已核准</span>
+      </div>`).join('') || '<p class="muted">近期尚無已核准的請假紀錄</p>') +
     card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
       ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className).toLowerCase())}"><div>
         <b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}</span>

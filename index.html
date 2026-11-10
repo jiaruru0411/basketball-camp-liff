@@ -280,10 +280,11 @@ document.addEventListener('click', e => {
 
 function go(t) { S.tab = t; S.date = null; render(); }
 function render() {
+  // 管理員擁有後台、學員專區、點名打卡、綁定四個入口
   const tabs = {
     guest: [['bind', '🎒 學員綁定']], parent: [['parent', '🏀 學員專區']], coach: [['coach', '👟 點名打卡']],
-   admin: [['admin', '📊 後台總覽'], ['parent', '🏀 學員專區'], ['coach', '👟 點名打卡'], ['bind', '🎒 學員綁定']]
-  }[S.me.role] || [['bind', '🎒 學員綁定']]
+    admin: [['admin', '📊 後台總覽'], ['parent', '🏀 學員專區'], ['coach', '👟 點名打卡'], ['bind', '🎒 學員綁定']]
+  }[S.me.role] || [['bind', '🎒 學員綁定']];
   if (!tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === S.tab ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
   updateGreeting();
@@ -420,14 +421,37 @@ async function viewParent() {
         <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li></ol></div>`) +
     card('💳 匯款對帳回傳', `
       <p class="muted">${esc(CONFIG.BANK)}</p>
+      <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">繳費期別</div>
       <select id="pay_period">${(periods || []).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
-      <div class="two"><select id="pay_identity" onchange="calcPay()"><option value="舊生">舊生續報</option><option value="新生">新生報名</option></select>
-        <select id="pay_terms" onchange="calcPay()"><option value="1">報名 1 期（7 堂）</option><option value="2">一次報名 2 期（14 堂）</option></select></div>
-      <input id="pay_shirts" type="number" inputmode="numeric" min="0" value="0" placeholder="另購營隊短T件數（每件 $450）" oninput="calcPay()">
+      <div class="two">
+        <div>
+          <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">身分</div>
+          <select id="pay_identity" onchange="calcPay()"><option value="舊生">舊生續報</option><option value="新生">新生報名</option></select>
+        </div>
+        <div>
+          <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">報名期數</div>
+          <select id="pay_terms" onchange="calcPay()"><option value="1">第二期（7 堂）</option></select>
+        </div>
+      </div>
+      <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">加購營隊短T件數（每件 $450，無加購填 0）</div>
+      <input id="pay_shirts" type="number" inputmode="numeric" min="0" value="0" placeholder="加購件數" oninput="calcPay()">
       <div class="chk" onchange="calcPay()">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
       <p id="pay_hint" class="muted" style="font-weight:600"></p>
-      <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額 (如: 4200)"><input id="l5" maxlength="5" inputmode="numeric" placeholder="匯款帳號末五碼（若付現金填『現金』）"></div>
-      <p class="muted" style="font-weight:600">轉帳日期</p><input id="pdate" type="date" value="${today()}">
+      <div class="two">
+        <div>
+          <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">匯款金額</div>
+          <input id="amt" type="number" inputmode="numeric" placeholder="例如: 4000">
+        </div>
+        <div>
+          <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">帳號末五碼／現金</div>
+          <input id="l5" maxlength="5" placeholder="5 碼數字或填現金">
+        </div>
+      </div>
+      <p class="muted" style="font-size:13px;color:#d97706;margin:-4px 0 12px;font-weight:600">
+        💡 銀行轉帳請填末五碼；若現場繳交現金給教練請填「現金」。
+      </p>
+      <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">轉帳或付款日期</div>
+      <input id="pdate" type="date" value="${today()}">
       <button class="pri" onclick="run(this,doSubmitPay)">送出對帳資料 ➜</button>`) +
     card('🕒 最近申請進度',
       ((h.payments || []).map(p => `<div class="row"><div><b>繳費 $${esc(p.amount)}・${esc(p.studentNames)}</b>
@@ -456,8 +480,7 @@ function calcPay() {
   if (!ids.length) { hint.textContent = '請先勾選學員'; return; }
   const d = ((pl.discount || {})[id] || {})[terms] || 0;
   const total = fees.reduce((t, x) => t + x * terms - d, 0) + shirts * (pl.shirt || 450);
-  const gift = ((pl.gift || {})[id] || {})[terms] || '';
-  hint.innerHTML = `應繳 <b style="color:var(--pri)">$${total.toLocaleString()}</b>（${ids.length} 人・${terms} 期・${id}優惠 -$${d}／人${shirts ? '・T恤 ' + shirts + ' 件' : ''}）${gift ? '<br>🎁 ' + esc(gift) : ''}`;
+  hint.innerHTML = `應繳 <b style="color:var(--pri)">$${total.toLocaleString()}</b>（${ids.length} 人・${terms} 期・${id}優惠 -$${d}／人${shirts ? '・T恤 ' + shirts + ' 件' : ''}）`;
   const amt = $('#amt'); if (amt) amt.value = total;
 }
 async function switchKid(id) {
@@ -647,11 +670,10 @@ async function cashPayUi() {
     { key: 'studentId', label: '學員', type: 'select', options: stus.map(s => [s.id, `${s.name} (${s.className}・目前剩${s.balance}堂)`]) },
     { key: 'period', label: '繳費期別', type: 'select', options: [
       ['第二期', '第二期（常態 7 堂）'],
-      ['一次報名兩期', '一次報名兩期（14 堂）'],
       ['中途插班', '中途插班繳費（自訂堂數）']
     ]},
-    { key: 'amount', label: '收取現金金額', type: 'number', ph: '例如: 4200 (插班依比例填寫)' },
-    { key: 'lessons', label: '增加堂數', type: 'number', ph: '常態7堂、兩期14堂，插班請自訂', value: '7' },
+    { key: 'amount', label: '收取現金金額', type: 'number', ph: '例如: 4000 (插班依比例填寫)' },
+    { key: 'lessons', label: '增加堂數', type: 'number', ph: '常態7堂，插班請自訂', value: '7' },
     { key: 'note', label: '備註說明', ph: '例如: 現場交付千元大鈔 / 經手人總教練', value: '現場收取現金' }
   ], '確認入帳並加堂');
 

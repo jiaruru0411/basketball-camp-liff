@@ -80,6 +80,21 @@ nav button.on{color:var(--pri);font-weight:800;box-shadow:inset 0 3.5px 0 var(--
 .modal .lab{font-size:13px;font-weight:700;color:var(--mut);margin:0 0 4px}
 .menu-btn{width:100%;margin-bottom:8px;text-align:left}
 code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;font-size:13px;color:var(--pri);font-weight:700}
+
+/* 全螢幕載入旋轉遮罩 */
+#loading-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:999;opacity:0;pointer-events:none;transition:opacity .2s ease;
+}
+#loading-overlay.active{opacity:1;pointer-events:auto;}
+.spinner{
+  width:48px;height:48px;border:4px solid rgba(255,255,255,.3);
+  border-top-color:var(--pri);border-radius:50%;
+  animation:spin 0.8s linear infinite;margin-bottom:14px;
+}
+.loading-text{color:#fff;font-size:15px;font-weight:700;letter-spacing:0.5px;}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -90,7 +105,14 @@ code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;f
   </div>
 </header>
 <main id="app"><p class="muted" style="text-align:center;padding:30px 0">載入中…</p></main>
-<nav id="nav"></nav><div id="toast"></div>
+<nav id="nav"></nav>
+<div id="toast"></div>
+
+<!-- 旋轉載入遮罩 HTML -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-msg">資料處理中，請稍候…</div>
+</div>
 
 <script>
 const CONFIG = {
@@ -114,7 +136,31 @@ const balT = b => b < 0 ? `欠 ${-b} 堂` : `剩 ${b} 堂`;
 const bal = b => (b <= 1 ? '⚠️ ' : '') + balT(b);
 const balPill = b => `<span class="pill ${b < 0 ? 'bad' : b <= 1 ? 'warn' : ''}">${bal(b)}</span>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.className = 'show'; setTimeout(() => t.className = '', 2800); }
-async function run(btn, fn) { btn.disabled = true; try { await fn(); } catch (e) { toast(e.message); } finally { btn.disabled = false; } }
+
+// 控制全螢幕載入遮罩
+function showLoading(msg = '資料處理中，請稍候…') {
+  const o = $('#loading-overlay'), m = $('#loading-msg');
+  if (m) m.textContent = msg;
+  if (o) o.classList.add('active');
+}
+function hideLoading() {
+  const o = $('#loading-overlay');
+  if (o) o.classList.remove('active');
+}
+
+async function run(btn, fn) {
+  if (btn) btn.disabled = true;
+  showLoading();
+  try {
+    await fn();
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    hideLoading();
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function safe(fn) {
   try { await fn(); }
   catch (e) { $('#app').innerHTML = card('載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); }
@@ -619,7 +665,7 @@ async function unlockMonthUi() {
   if (!(await ask(`確定解除 ${m} 的鎖定嗎？`))) return;
   await api('unlockMonth', { month: m });
   toast('已解除鎖定');
-  render(); // 補上自動重新渲染
+  render();
 }
 function copySalary() {
   const a = S.adm;

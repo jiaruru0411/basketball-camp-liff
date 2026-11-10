@@ -453,7 +453,7 @@ async function viewCoach() {
   const isAdmin = S.me.role === 'admin';
   if (!isAdmin || !S.date) S.date = today();
   const r = await api('roster', { classId: S.cls, date: S.date }, true);
-  S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
+  S.upcoming = r.upcoming || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
   S.list.forEach(x => { x.v = x.saved || (x.leave ? '請假' : '未到'); });
   const cur = cs.find(c => c.classId === S.cls), isToday = S.date === today();
   const logs = (S.me.recentCheckins || []).map(k => `<div class="row" style="padding:6px 0"><span>${esc(k.date)}・${esc(k.className)}</span><span class="pill">已簽到 ${esc(k.time)}</span></div>`).join('') || '<p class="muted" style="margin:4px 0 0">近期尚無簽到紀錄</p>';
@@ -472,6 +472,7 @@ async function viewCoach() {
         <span class="muted" style="margin:0">${esc(cur.name)}・${esc(S.date)}</span>
         <button class="ghost mini" onclick="safe(viewCoach)">🔄 重新整理</button></div>
       ${S.needCheckin && !S.checkedIn ? '<p class="muted" style="color:var(--bad);font-weight:700">⚠️ 請先「簽到此班」才能儲存點名</p>' : ''}
+      ${leaveBox()}
       ${rosterSummary()}
       <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">⚡ 一鍵全班設為出席</button>
       <div id="roster">${rosterHtml()}</div>
@@ -479,6 +480,16 @@ async function viewCoach() {
 }
 async function changeClass(v) { S.cls = v; await safe(viewCoach); }
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
+function leaveBox() { // 教練一眼看到：這天誰請假、誰補課、之後誰要請假
+  const lv = S.list.filter(x => x.leave), pend = S.list.filter(x => x.pendingLeave && !x.leave), mk = S.list.filter(x => x.makeup);
+  const up = S.upcoming || [];
+  const line = (t, arr) => arr.length ? `<div style="margin:4px 0">${t}：${arr.map(x => `<b>${esc(x.name)}</b>${x.leaveReason ? `<span class="muted">（${esc(x.leaveReason)}）</span>` : ''}`).join('、')}</div>` : '';
+  const upHtml = up.length ? `<div style="border-top:1px dashed #f0e7dd;margin-top:6px;padding-top:6px"><div class="muted" style="font-weight:700">之後 30 天已核准</div>${up.map(u => `<div class="row" style="padding:5px 0"><span>${esc(u.date)}・<b>${esc(u.name)}</b></span><span class="pill ${u.type === '補課' ? 'warn' : ''}">${esc(u.type)}</span></div>`).join('')}</div>` : '';
+  return `<div class="item" style="background:#fffaf0">
+    <div style="font-weight:800">📝 ${esc(S.date)} 請假／補課</div>
+    ${lv.length || pend.length || mk.length ? line('請假', lv) + line('待審核請假', pend) + line('補課學員', mk) : '<p class="muted" style="margin:4px 0">今天沒有人請假或補課</p>'}
+    ${upHtml}</div>`;
+}
 function rosterSummary() {
   if (!S.list.length) return '';
   const done = S.list.filter(x => x.saved), by = [...new Set(done.map(x => x.by).filter(Boolean))];
@@ -565,6 +576,9 @@ async function viewAdmin() {
       <div class="muted" style="margin:4px 0">${esc(l.reason)}</div>
       <div class="two" style="margin-top:10px"><button class="pri" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="pass">核准申請 ➜</button>
         <button class="ghost" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="reject">婉拒申請</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>') +
+    card('✅ 已核准請假／補課（近14天起）', (a.approvedLeaves || []).map(l => `<div class="row"><div>
+        <b>${esc(l.date)}</b>・${esc(l.studentName)} <span class="pill ${l.type === '補課' ? 'warn' : ''}">${esc(l.type)}</span>
+        <div class="muted" style="margin:0;font-size:12.5px">${esc(l.className)}${l.reason ? '・' + esc(l.reason) : ''}${l.by ? '・' + esc(l.by) + ' 核准' : ''}</div></div></div>`).join('') || '<p class="muted">近期沒有已核准的請假或補課</p>') +
     card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
       ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className).toLowerCase())}"><div>
         <b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}</span>

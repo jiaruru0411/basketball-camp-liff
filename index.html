@@ -81,7 +81,7 @@ nav button.on{color:var(--pri);font-weight:800;box-shadow:inset 0 3.5px 0 var(--
 .menu-btn{width:100%;margin-bottom:8px;text-align:left}
 code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;font-size:13px;color:var(--pri);font-weight:700}
 
-/* 全螢幕載入旋轉遮罩 */
+/* 全螢幕載入旋轉遮罩 (高層級，防止重複點擊) */
 #loading-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -137,6 +137,7 @@ const bal = b => (b <= 1 ? '⚠️ ' : '') + balT(b);
 const balPill = b => `<span class="pill ${b < 0 ? 'bad' : b <= 1 ? 'warn' : ''}">${bal(b)}</span>`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.className = 'show'; setTimeout(() => t.className = '', 2800); }
 
+// 控制全螢幕載入遮罩
 function showLoading(msg = '資料處理中，請稍候…') {
   const o = $('#loading-overlay'), m = $('#loading-msg');
   if (m) m.textContent = msg;
@@ -147,15 +148,14 @@ function hideLoading() {
   if (o) o.classList.remove('active');
 }
 
+// 修正：run 函式不提前蓋遮罩，讓彈窗正常出現，交由真正的 API 送出動作呼叫 showLoading
 async function run(btn, fn) {
   if (btn) btn.disabled = true;
-  showLoading();
   try {
     await fn();
   } catch (e) {
     toast(e.message);
   } finally {
-    hideLoading();
     if (btn) btn.disabled = false;
   }
 }
@@ -207,20 +207,27 @@ function menu(title, items) {
 
 function forceReLogin() { try { liff.logout(); } catch (e) {} liff.login(); }
 
+// 核心改進：在 API 呼叫期間精準開啟全螢幕轉圈，回傳後立即關閉
 async function api(action, data = {}) {
   let token = '';
   try { if (liff.isLoggedIn()) token = liff.getIDToken() || ''; } catch (e) {}
-  const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
-  const j = await r.json();
-  if (!j.ok) {
-    if (/登入驗證失敗/.test(j.error)) {
-      let n = 0; try { n = Number(sessionStorage.getItem('relogin') || 0); } catch (e) {}
-      if (n < 1) { try { sessionStorage.setItem('relogin', String(n + 1)); } catch (e) {} forceReLogin(); return new Promise(() => {}); }
-      throw new Error('登入已過期，請關閉後從 LINE 重新開啟');
+  
+  showLoading();
+  try {
+    const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
+    const j = await r.json();
+    if (!j.ok) {
+      if (/登入驗證失敗/.test(j.error)) {
+        let n = 0; try { n = Number(sessionStorage.getItem('relogin') || 0); } catch (e) {}
+        if (n < 1) { try { sessionStorage.setItem('relogin', String(n + 1)); } catch (e) {} forceReLogin(); return new Promise(() => {}); }
+        throw new Error('登入已過期，請關閉後從 LINE 重新開啟');
+      }
+      throw new Error(j.error);
     }
-    throw new Error(j.error);
+    return j.data;
+  } finally {
+    hideLoading();
   }
-  return j.data;
 }
 
 function updateGreeting() {
@@ -660,7 +667,6 @@ async function adminCheckinUi() {
   toast('已補登簽到'); render();
 }
 
-// 薪資鎖定與解鎖（使用保險的備援月份）
 async function lockMonthUi() {
   const m = (S.adm && S.adm.stats && S.adm.stats.month) || S.month || today().slice(0, 7);
   if (!(await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後該月份不能再簽到、調整，金額也會固定。需要時可以解除鎖定。`))) return;

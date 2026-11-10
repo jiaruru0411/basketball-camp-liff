@@ -81,7 +81,7 @@ nav button.on{color:var(--pri);font-weight:800;box-shadow:inset 0 3.5px 0 var(--
 .menu-btn{width:100%;margin-bottom:8px;text-align:left}
 code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;font-size:13px;color:var(--pri);font-weight:700}
 
-/* 全螢幕載入旋轉遮罩 */
+/* 全螢幕旋轉遮罩 */
 #loading-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -159,7 +159,7 @@ async function run(btn, fn) {
 
 async function safe(fn) {
   try { await fn(); }
-  catch (e) { $('#app').innerHTML = card('載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); }
+  catch (e) { $('#app').innerHTML = card('載入失敗', `<p style="color:var(--bad);font-weight:700">${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); }
 }
 
 function modal(html) {
@@ -202,8 +202,7 @@ function menu(title, items) {
   });
 }
 
-function forceReLogin() { try { liff.logout(); } catch (e) {} liff.login(); }
-
+// 移除無限重整邏輯，純粹回傳錯誤
 async function api(action, data = {}, silent = false) {
   let token = '';
   try { if (liff.isLoggedIn()) token = liff.getIDToken() || ''; } catch (e) {}
@@ -213,12 +212,7 @@ async function api(action, data = {}, silent = false) {
     const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
     const j = await r.json();
     if (!j.ok) {
-      if (/登入驗證失敗/.test(j.error)) {
-        let n = 0; try { n = Number(sessionStorage.getItem('relogin') || 0); } catch (e) {}
-        if (n < 1) { try { sessionStorage.setItem('relogin', String(n + 1)); } catch (e) {} forceReLogin(); return new Promise(() => {}); }
-        throw new Error('登入已過期，請關閉後從 LINE 重新開啟');
-      }
-      throw new Error(j.error);
+      throw new Error(j.error || '伺服器處理失敗');
     }
     return j.data;
   } finally {
@@ -235,14 +229,13 @@ async function init() {
   try {
     await liff.init({ liffId: CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
+    // 首次載入靜默不轉圈
     S.me = await api('me', {}, true);
-    try { sessionStorage.removeItem('relogin'); } catch (e) {}
     render();
   } catch (e) {
-    $('#app').innerHTML = card('需要重新驗證', `
+    $('#app').innerHTML = card('系統連線異常', `
       <p class="muted" style="color:var(--bad);font-weight:600">${esc(e.message)}</p>
-      <button class="pri" onclick="forceReLogin()">重新登入 LINE ➜</button>
-      <button class="ghost" style="width:100%;margin-top:10px" onclick="location.reload()">重新整理</button>`);
+      <button class="pri" onclick="location.reload()">重新整理 ➜</button>`);
   }
 }
 
@@ -271,7 +264,7 @@ function go(t) { S.tab = t; S.date = null; render(); }
 function render() {
   const tabs = {
     guest: [['bind', '🎒 學員綁定']], parent: [['parent', '🏀 學員專區']], coach: [['coach', '👟 點名打卡']],
-    admin: [['admin', '📊 後台總覽'], ['coach', '👟 點名打卡']]
+    admin: [['admin', '📊 後台總覽'], ['coach', '👟 點名打卡'], ['bind', '🎒 學員綁定']] // 總教練常駐綁定
   }[S.me.role] || [['bind', '🎒 學員綁定']];
   if (!tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === S.tab ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
@@ -618,7 +611,6 @@ async function addStudentUi() {
   render();
 }
 
-// 核心修正：樂觀更新（即時計算記憶體堂數，克服 Google 試算表同步延遲）
 async function manageStudent(id) {
   const x = (S.adm.students || []).find(s => s.id === id); if (!x) return;
   const k = await menu(`${x.name}（${x.className}）・${balT(x.balance)}`, [
@@ -634,22 +626,20 @@ async function manageStudent(id) {
     if (!v) return;
     const deltaNum = Number(v.delta);
     await api('adjustBalance', { studentId: id, delta: deltaNum, reason: v.reason });
-    
-    // 👈 樂觀更新：立刻同步記憶體中的學員堂數，不等試算表舊快取
-    x.balance = Number(x.balance || 0) + deltaNum;
+    x.balance = Number(x.balance || 0) + deltaNum; // 樂觀更新
     render();
     setTimeout(() => toast('堂數已調整'), 100);
   } else if (k === 'unbind') {
     if (!(await ask(`確定解除 ${x.name} 的所有家長綁定嗎？\n家長需要重新輸入綁定碼才能再看。`))) return;
     await api('unbind', { studentId: id });
-    x.bound = 0; // 樂觀更新
+    x.bound = 0;
     render();
     setTimeout(() => toast('已解除綁定'), 100);
   } else {
     const next = x.status === '結業' ? '在學' : '結業';
     if (!(await ask(`確定把 ${x.name} 設為「${next}」嗎？\n${next === '結業' ? '結業後不會出現在點名名單。' : ''}`))) return;
     await api('setStudentStatus', { studentId: id, status: next });
-    x.status = next; // 樂觀更新
+    x.status = next;
     render();
     setTimeout(() => toast('已更新狀態'), 100);
   }
@@ -666,7 +656,7 @@ async function addAdjUi() {
   if (!v) return;
   await api('addSalaryAdj', { month: S.adm.stats.month, ...v });
   render();
-  setTimeout(() => toast('已新增'), 100);
+  setTimeout(() => toast('已新增調整項目！'), 100);
 }
 async function delAdj(id) {
   if (!(await ask('確定刪除這筆薪資調整嗎？'))) return;

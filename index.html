@@ -356,9 +356,14 @@ async function viewParent() {
 
   const vis = S.curKid === 'ALL' ? st : st.filter(s => s.studentId === S.curKid);
   const opt = vis.map(s => `<option value="${esc(s.studentId)}">${esc(s.name)}</option>`).join('');
-  const attHtml = (h.attendances || []).filter(a => S.curKid === 'ALL' || a.studentId === S.curKid).map(a => `
+  const af = S.attf || '';
+  const attAll = (h.attendances || []).filter(a => S.curKid === 'ALL' || a.studentId === S.curKid);
+  const cnt = k => attAll.filter(a => a.status === k).length;
+  const attBar = `<div class="two" style="margin-bottom:8px"><select onchange="setAttf(this.value)">${[['', '全部紀錄'], ['請假', '只看請假'], ['缺席', '只看缺席'], ['出席', '只看出席']].map(o => `<option value="${o[0]}" ${o[0] === af ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>
+    <div class="muted" style="margin:0;align-self:center">出席 ${cnt('出席')}・請假 ${cnt('請假')}・缺席 ${cnt('缺席')}</div></div>`;
+  const attHtml = attBar + attAll.filter(a => !af || a.status === af).map(a => `
     <div class="row"><div><b>${esc(a.date)}</b><div class="muted" style="margin:0">${esc(a.studentName)}・${esc(a.className)}</div></div>
-    <span class="pill ${a.status === '出席' ? '' : a.status === '請假' ? 'warn' : 'bad'}">${esc(a.status)}</span></div>`).join('') || '<p class="muted">尚無課堂出勤紀錄</p>';
+    <span class="pill ${a.status === '出席' ? '' : a.status === '請假' ? 'warn' : 'bad'}">${esc(a.status)}</span></div>`).join('') || '<p class="muted">沒有符合的紀錄（堂數用完 14 天後，紀錄會自動隱藏）</p>';
   const mks = (mo || []).filter(x => S.curKid === 'ALL' || x.studentId === S.curKid);
 
   const makeupForm = mks.length ? `
@@ -375,7 +380,7 @@ async function viewParent() {
     card('⛹️ 孩子的課務狀態', vis.map(s => `<div class="row"><div><b>${esc(s.name)}</b>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}
       <div class="muted" style="margin:0">${esc(s.className)}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}</div></div>
       ${balPill(s.balance)}</div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
-    card('📋 上課出勤明細', attHtml) +
+    card('📋 出勤／請假／缺席紀錄', attHtml) +
     card('📝 我要請假', `
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
       <select id="leave_reason_type">
@@ -408,6 +413,12 @@ async function viewParent() {
         ${l.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">婉拒原因：${esc(l.note)}</div>` : ''}${cancelBtn(l)}</div>${pill(l.status)}</div>`).join('')) || '<p class="muted">尚無歷史紀錄</p>') +
     bindBox();
   updateMk();
+}
+async function setAttf(v) {
+  const snap = snapForm();
+  S.attf = v;
+  await viewParent();
+  restoreForm(snap);
 }
 async function switchKid(id) {
   const snap = snapForm();
@@ -490,9 +501,9 @@ function leaveListHtml() {
   const sel = (v, o) => o.map(x => `<option value="${esc(x[0])}" ${x[0] === v ? 'selected' : ''}>${esc(x[1])}</option>`).join('');
   return `<div class="two"><select onchange="setLvf('cls',this.value)">${sel(f.cls, [['', '全部班級']].concat(classes))}</select>
     <select onchange="setLvf('when',this.value)">${sel(f.when, [['future', '今天起'], ['past', '已過'], ['all', '全部']])}</select></div>
-    <label class="muted" style="display:block;margin:6px 0"><input type="checkbox" ${f.ended ? 'checked' : ''} onchange="setLvf('ended',this.checked)" style="width:auto;margin-right:6px">顯示已結業學員／已結業班級</label>
+    <label class="muted" style="display:block;margin:6px 0"><input type="checkbox" ${f.ended ? 'checked' : ''} onchange="setLvf('ended',this.checked)" style="width:auto;margin-right:6px">顯示已過保留期（堂數用完超過14天）／已結業</label>
     <div id="lvlist">` + (rows.map(l => `<div class="row"><div>
-      <b>${esc(l.date)}</b>・${esc(l.studentName)} <span class="pill ${l.type === '補課' ? 'warn' : ''}">${esc(l.type)}</span>${l.ended ? ' <span class="pill">已結業</span>' : ''}
+      <b>${esc(l.date)}</b>・${esc(l.studentName)} <span class="pill ${l.type === '補課' ? 'warn' : ''}">${esc(l.type)}</span>${l.ended ? ' <span class="pill">已過保留期</span>' : ''}
       <div class="muted" style="margin:0;font-size:12.5px">${esc(l.className)}${l.reason ? '・' + esc(l.reason) : ''}${l.by ? '・' + esc(l.by) + ' 核准' : ''}</div></div></div>`).join('') || '<p class="muted">沒有符合的紀錄</p>') + '</div>';
 }
 function setLvf(k, v) {

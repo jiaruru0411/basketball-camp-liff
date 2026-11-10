@@ -27,7 +27,7 @@ header b{font-size:17.5px;font-weight:800;color:#1e293b;display:block;line-heigh
 #greet{font-size:12.5px;color:var(--pri);font-weight:700;margin-top:1px;display:block}
 main{padding:16px;max-width:520px;margin:0 auto}
 .card{background:var(--card);border-radius:var(--radius-lg);padding:18px;margin-bottom:16px;border:1.5px solid var(--line);box-shadow:var(--shadow-sm)}
-h2{margin:0 0 14px;font-size:17px;font-weight:800;color:#1e293b;display:flex;align-items:center;justify-content:space-between;gap:8px}
+h2{margin:0 0 14px;font-size:17px;font-weight:800;color:#1e293b;display:flex;align-items:center;justify-content:space-between}
 input,select{display:block;width:100%!important;font:inherit;font-size:15px;padding:12px 14px;border:1.5px solid #e5e0d8;
   border-radius:var(--radius-md);background:#fdfcf9;margin:0 0 10px;color:var(--ink)}
 input:focus,select:focus{border-color:var(--pri);background:#fff;outline:none;box-shadow:0 0 0 3.5px rgba(255,115,21,.14)}
@@ -37,16 +37,13 @@ button{font:inherit;font-weight:700;cursor:pointer;border:0;border-radius:var(--
 button:active{transform:scale(.97)}button:disabled{opacity:.5;cursor:not-allowed}
 .pri{width:100%;background:var(--pri-grad);color:#fff;box-shadow:0 6px 18px rgba(255,115,21,.28);font-size:16px}
 .ghost{background:#f5efe6;color:#4a5568}
-.mini{width:auto;padding:6px 12px;font-size:13px;border-radius:10px;white-space:nowrap}
-.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
-.btns button{flex:1 1 auto;padding:10px 12px;font-size:14px}
 .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px dashed #f0e7dd}
 .row:first-of-type{border-top:0}
 .item{display:block;background:#fbf9f5;border:1.5px solid #f1eae2;border-radius:16px;padding:14px;margin-bottom:12px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.two>*{margin-bottom:0}
 .muted{color:var(--mut);font-size:14px;margin:0 0 8px}
 .pill{font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--ok-bg);color:var(--ok);white-space:nowrap}
-.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.gray{background:#f1f5f9;color:#64748b}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
 .chk label{display:flex;align-items:center;padding:7px 0;font-size:15px;font-weight:600}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
 .stat{background:var(--card);border:1.5px solid var(--line);border-radius:var(--radius-lg);padding:16px 14px;box-shadow:var(--shadow-sm)}
@@ -63,38 +60,18 @@ button:active{transform:scale(.97)}button:disabled{opacity:.5;cursor:not-allowed
 .kid-btn.active{background:var(--pri-grad);border-color:transparent;color:#fff;font-weight:800}
 .rules-box{background:#fffaf0;border:1.5px solid #fed7aa;border-radius:16px;padding:14px;margin-top:12px;font-size:13.5px;color:#7c2d12;line-height:1.65}
 .rules-box b{color:#9a3412;font-size:14px}.rules-box ol{margin:8px 0 0;padding-left:18px}
-.lockbar{background:#fff7ed;border:1.5px solid #fed7aa;color:#9a3412;padding:12px;border-radius:14px;font-size:14px;font-weight:800;margin-bottom:12px;line-height:1.4}
-.safe{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;font-size:13px}
-.safe a{color:var(--pri);font-weight:700;text-decoration:none}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(255,255,255,.95);backdrop-filter:blur(16px);
   border-top:1.5px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;background:none;padding:14px 4px;color:#9ba7b6;font-size:14.5px;border-radius:0}
 nav button.on{color:var(--pri);font-weight:800;box-shadow:inset 0 3.5px 0 var(--pri)}
 #toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
   background:rgba(35,45,63,.94);color:#fff;padding:11px 22px;border-radius:99px;opacity:0;pointer-events:none;
-  transition:opacity .2s ease;font-size:14px;z-index:1000;max-width:90%;text-align:center}
+  transition:opacity .2s ease;font-size:14px;z-index:99;max-width:90%;text-align:center}
 #toast.show{opacity:1}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:200;padding:20px}
-.modal .box{background:#fff;border-radius:20px;padding:20px;width:100%;max-width:340px;max-height:86vh;overflow:auto}
+.modal .box{background:#fff;border-radius:20px;padding:20px;width:100%;max-width:340px}
 .modal p{margin:0 0 16px;line-height:1.8}
-.modal .lab{font-size:13px;font-weight:700;color:var(--mut);margin:0 0 4px}
-.menu-btn{width:100%;margin-bottom:8px;text-align:left}
 code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;font-size:13px;color:var(--pri);font-weight:700}
-
-/* 全螢幕旋轉遮罩 */
-#loading-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  z-index:999;opacity:0;pointer-events:none;transition:opacity .2s ease;
-}
-#loading-overlay.active{opacity:1;pointer-events:auto;}
-.spinner{
-  width:48px;height:48px;border:4px solid rgba(255,255,255,.3);
-  border-top-color:var(--pri);border-radius:50%;
-  animation:spin 0.8s linear infinite;margin-bottom:14px;
-}
-.loading-text{color:#fff;font-size:15px;font-weight:700;letter-spacing:0.5px;}
-@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -105,127 +82,64 @@ code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;f
   </div>
 </header>
 <main id="app"><p class="muted" style="text-align:center;padding:30px 0">載入中…</p></main>
-<nav id="nav"></nav>
-<div id="toast"></div>
-
-<div id="loading-overlay">
-  <div class="spinner"></div>
-  <div class="loading-text" id="loading-msg">資料處理中，請稍候…</div>
-</div>
+<nav id="nav"></nav><div id="toast"></div>
 
 <script>
 const CONFIG = {
   LIFF_ID: '2012507478-35PGiqXO',
   API_URL: 'https://script.google.com/macros/s/AKfycbwXzUnQ1zvcQhCHZs3ezX5tGsJzTCkbQVJij4ID7dWD7kgPFsWFYbySGoqBA8nSasGUzQ/exec',
-  BANK: '匯款帳號：822 中國信託 1234-5678-9012（戶名：永不平凡籃球營）'
+  BANK: '匯款帳號：822 中國信託 1234-5678-9012（戶名：永不平凡籃球營）',
+  PERIODS: ['常態班 第二期', '單堂體驗', '其他'],   // 第一個是常態班報名（會自動計算應付金額）
+  BROCHURE: [
+    '📍 永平高中綜合大樓3樓室內體育館（每週日上課）',
+    '興趣班（4-6歲）10:00-11:00、14:00-15:00',
+    '基礎班（7-12歲）10:00-12:00、14:00-16:00',
+    '競技班（3-6年級・矮框）10:00-12:00、14:00-16:00',
+    '競技班（6-8年級・高框）16:00-18:00',
+    '💰 興趣班 每期(7堂) 3500 元；基礎班、競技班 每期(7堂) 4200 元；營隊短T 450 元',
+    '📅 第二期：11/15、11/22、11/29、12/6、12/20、12/27、1/10（共 7 堂）'
+  ]
 };
 
 const $ = s => document.querySelector(s);
-const S = { me: null, tab: null, cls: null, date: null, list: [], checkedIn: false, needCheckin: false, curKid: 'ALL', parentData: null, month: null, adm: null };
+const S = { me: null, tab: null, cls: null, date: null, list: [], curKid: 'ALL', parentData: null, month: null };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const DN = '一二三四五六日';
-const dayTxt = d => (d && d.length) ? '週' + d.map(n => DN[n - 1]).join('、') : '';
-const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-const parts = d => d.split('-').map(Number);
-const dow = d => { const [y, m, dd] = parts(d); const w = new Date(Date.UTC(y, m - 1, dd)).getUTCDay(); return w === 0 ? 7 : w; };
-const addDays = (d, n) => { const [y, m, dd] = parts(d); return new Date(Date.UTC(y, m - 1, dd + n)).toISOString().slice(0, 10); };
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
 const card = (t, b, x = '') => `<section class="card"><h2>${t}${x}</h2>${b}</section>`;
-const pill = s => `<span class="pill ${/退回|拒絕|缺席/.test(s) ? 'bad' : /取消/.test(s) ? 'gray' : /待/.test(s) ? 'warn' : ''}">${esc(s)}</span>`;
-const balT = b => b < 0 ? `欠 ${-b} 堂` : `剩 ${b} 堂`;
-const bal = b => (b <= 1 ? '⚠️ ' : '') + balT(b);
-const balPill = b => `<span class="pill ${b < 0 ? 'bad' : b <= 1 ? 'warn' : ''}">${bal(b)}</span>`;
+const pill = s => `<span class="pill ${/退回|拒絕|缺席/.test(s) ? 'bad' : /待/.test(s) ? 'warn' : ''}">${esc(s)}</span>`;
+const bal = b => `${b <= 1 ? '⚠️ ' : ''}剩 ${b} 堂`;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.className = 'show'; setTimeout(() => t.className = '', 2800); }
-
-function showLoading(msg = '資料處理中，請稍候…') {
-  const o = $('#loading-overlay'), m = $('#loading-msg');
-  if (m) m.textContent = msg;
-  if (o) o.classList.add('active');
-}
-function hideLoading() {
-  const o = $('#loading-overlay');
-  if (o) o.classList.remove('active');
-}
-
-async function run(btn, fn) {
-  if (btn) btn.disabled = true;
-  try {
-    await fn();
-  } catch (e) {
-    toast(e.message);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
+async function run(btn, fn) { btn.disabled = true; try { await fn(); } catch (e) { toast(e.message); } finally { btn.disabled = false; } }
 async function safe(fn) {
-  showLoading('載入中…');
   try { await fn(); }
-  catch (e) { $('#app').innerHTML = card('載入失敗', `<p style="color:var(--bad);font-weight:700">${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); }
-  finally { hideLoading(); }
+  catch (e) { $('#app').innerHTML = card('載入失敗', `<p>${esc(e.message)}</p><button class="pri" onclick="render()">重試</button>`); }
 }
-
-function modal(html) {
-  const w = document.createElement('div'); w.className = 'modal';
-  w.innerHTML = `<div class="box">${html}</div>`;
-  document.body.appendChild(w); return w;
-}
-function ask(msg) {
+function ask(msg) { // 頁面內確認視窗（比 confirm() 在 LINE 裡更穩定）
   return new Promise(res => {
-    const w = modal(`<p>${esc(msg).replace(/\n/g, '<br>')}</p><div class="two"><button class="ghost" data-x="no">取消</button><button class="pri" data-x="ok">確認</button></div>`);
-    w.onclick = e => { const x = e.target.dataset && e.target.dataset.x; if (x) { w.remove(); res(x === 'ok'); } };
-  });
-}
-function info(msg) {
-  return new Promise(res => {
-    const w = modal(`<p>${esc(msg).replace(/\n/g, '<br>')}</p><button class="pri" data-x="ok">知道了</button>`);
-    w.onclick = e => { if (e.target.dataset && e.target.dataset.x) { w.remove(); res(); } };
-  });
-}
-function dialog(title, fields, okText) {
-  return new Promise(res => {
-    const body = fields.map(f => {
-      const lab = `<div class="lab">${esc(f.label)}</div>`;
-      if (f.type === 'select') return lab + `<select data-k="${esc(f.key)}">${f.options.map(o => `<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select>`;
-      return lab + `<input data-k="${esc(f.key)}" type="${esc(f.type || 'text')}" placeholder="${esc(f.ph || '')}" value="${esc(f.value ?? '')}">`;
-    }).join('');
-    const w = modal(`<p style="font-weight:800;margin-bottom:12px">${esc(title)}</p>${body}<div class="two" style="margin-top:6px"><button class="ghost" data-x="no">取消</button><button class="pri" data-x="ok">${esc(okText || '確認')}</button></div>`);
-    w.onclick = e => {
-      const x = e.target.dataset && e.target.dataset.x; if (!x) return;
-      if (x === 'no') { w.remove(); res(null); return; }
-      const v = {}; w.querySelectorAll('[data-k]').forEach(i => v[i.dataset.k] = i.value.trim());
-      w.remove(); res(v);
-    };
-  });
-}
-function menu(title, items) {
-  return new Promise(res => {
-    const w = modal(`<p style="font-weight:800;margin-bottom:12px">${esc(title)}</p>${items.map(i => `<button class="ghost menu-btn" data-x="${esc(i[0])}">${esc(i[1])}</button>`).join('')}<button class="ghost menu-btn" data-x="__no" style="text-align:center">取消</button>`);
-    w.onclick = e => { const x = e.target.dataset && e.target.dataset.x; if (x) { w.remove(); res(x === '__no' ? null : x); } };
+    const w = document.createElement('div'); w.className = 'modal';
+    w.innerHTML = `<div class="box"><p>${esc(msg).replace(/\n/g, '<br>')}</p><div class="two"><button class="ghost" id="mNo">取消</button><button class="pri" id="mYes">確認</button></div></div>`;
+    document.body.appendChild(w);
+    w.querySelector('#mYes').onclick = () => { w.remove(); res(true); };
+    w.querySelector('#mNo').onclick = () => { w.remove(); res(false); };
   });
 }
 
 function forceReLogin() { try { liff.logout(); } catch (e) {} liff.login(); }
 
-async function api(action, data = {}, silent = false) {
+async function api(action, data = {}) {
   let token = '';
   try { if (liff.isLoggedIn()) token = liff.getIDToken() || ''; } catch (e) {}
-  
-  if (!silent) showLoading();
-  try {
-    const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
-    const j = await r.json();
-    if (!j.ok) {
-      if (/登入驗證失敗/.test(j.error || '')) { // 只自動重新登入一次，避免無限循環
-        let n = 0; try { n = Number(sessionStorage.getItem('relogin') || 0); } catch (e) {}
-        if (n < 1) { try { sessionStorage.setItem('relogin', String(n + 1)); } catch (e) {} forceReLogin(); return new Promise(() => {}); }
-        throw new Error('登入已過期，請關閉後從 LINE 重新開啟');
-      }
-      throw new Error(j.error || '伺服器處理失敗');
+  const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
+  const j = await r.json();
+  if (!j.ok) {
+    if (/登入驗證失敗/.test(j.error)) { // 只自動重新登入一次，避免無限循環
+      let n = 0; try { n = Number(sessionStorage.getItem('relogin') || 0); } catch (e) {}
+      if (n < 1) { try { sessionStorage.setItem('relogin', String(n + 1)); } catch (e) {} forceReLogin(); return new Promise(() => {}); }
+      throw new Error('登入已過期，請關閉後從 LINE 重新開啟');
     }
-    return j.data;
-  } finally {
-    if (!silent) hideLoading();
+    throw new Error(j.error);
   }
+  return j.data;
 }
 
 function updateGreeting() {
@@ -237,44 +151,22 @@ async function init() {
   try {
     await liff.init({ liffId: CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
-    // 首次載入靜默不轉圈
-    S.me = await api('me', {}, true);
+    S.me = await api('me');
     try { sessionStorage.removeItem('relogin'); } catch (e) {}
     render();
   } catch (e) {
-    $('#app').innerHTML = card('系統連線異常', `
+    $('#app').innerHTML = card('需要重新驗證', `
       <p class="muted" style="color:var(--bad);font-weight:600">${esc(e.message)}</p>
       <button class="pri" onclick="forceReLogin()">重新登入 LINE ➜</button>
       <button class="ghost" style="width:100%;margin-top:10px" onclick="location.reload()">重新整理</button>`);
   }
 }
 
-const ACT = {
-  switchKid: d => switchKid(d.id),
-  cancel: d => cancelReq(d.id),
-  reviewPay: d => reviewPaySafe(d.id, d.d),
-  reviewLeave: d => reviewLeaveUi(d.id, d.d),
-  manageStu: d => manageStudent(d.id),
-  delAdj: d => delAdj(d.id),
-  lockMonth: () => lockMonthUi(),
-  unlockMonth: () => unlockMonthUi(),
-  addAdj: () => addAdjUi(),
-  adminCheckin: () => adminCheckinUi(),
-  copySalary: () => copySalary()
-};
-
-document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act]');
-  if (!b || b.disabled) return;
-  const f = ACT[b.dataset.act];
-  if (f) run(b, () => f(b.dataset, b));
-});
-
-function go(t) { S.tab = t; S.date = null; render(); }
+function go(t) { S.tab = t; render(); }
 function render() {
   const tabs = {
     guest: [['bind', '🎒 學員綁定']], parent: [['parent', '🏀 學員專區']], coach: [['coach', '👟 點名打卡']],
-    admin: [['admin', '📊 後台總覽'], ['coach', '👟 點名打卡'], ['bind', '🎒 學員綁定']]
+    admin: [['admin', '📊 後台總覽'], ['coach', '👟 點名打卡']]
   }[S.me.role] || [['bind', '🎒 學員綁定']];
   if (!tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === S.tab ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
@@ -284,111 +176,68 @@ function render() {
 }
 
 // ===================== 綁定 =====================
-const bindBox = () => card('🎒 綁定學員', `<p class="muted">輸入營隊提供的綁定碼，立即查詢堂數與請假。</p>
-  <input id="code" placeholder="請輸入綁定碼">
-  ${S.me.profile ? '' : `<input id="pname" maxlength="20" placeholder="家長真實姓名（必填，對帳用）"><input id="pphone" type="tel" inputmode="tel" placeholder="聯絡電話（必填）">`}
-  <button class="pri" onclick="run(this,doBind)">立即綁定學員 ➜</button>`);
+const bindBox = () => card('🎒 綁定學員', `<p class="muted">輸入營隊提供的綁定碼，立即查詢堂數與請假。</p><input id="code" placeholder="請輸入綁定碼"><button class="pri" onclick="run(this,doBind)">立即綁定學員 ➜</button>`);
 async function doBind() {
   const code = $('#code').value.trim();
   if (!code) throw new Error('請輸入綁定碼');
-  const nm = $('#pname'), ph = $('#pphone');
-  await api('bind', { code, name: nm ? nm.value.trim() : '', phone: ph ? ph.value.trim() : '' });
+  await api('bind', { code });
   S.me = await api('me');
+  toast('綁定成功！');
   render();
-  setTimeout(() => toast('綁定成功！'), 100);
 }
 function viewBind() {
-  $('#app').innerHTML = bindBox() + card('📋 教練／總教練開通', `<p class="muted">請把下面這串 ID 傳給總教練，開通後重新開啟即可：</p><code>${esc(S.me.id)}</code>`);
+  $('#app').innerHTML = card('📝 報名流程', '<ol style="margin:0;padding-left:18px;font-size:14px;line-height:1.9"><li>先填寫報名表單</li><li>營隊確認名額後，會傳給您「綁定碼」</li><li>在下方輸入綁定碼，綁定孩子</li><li>到「學員專區」匯款並回傳後五碼</li><li>總教練核對後，堂數就會加上</li></ol>') + bindBox() + card('📋 教練／總教練開通', `<p class="muted">請把下面這串 ID 傳給總教練，開通後重新開啟即可：</p><code>${esc(S.me.id)}</code>`);
 }
 
 // ===================== 家長 =====================
-function stuById(id) { return (S.me.students || []).find(s => s.studentId === id); }
-function classDates(st, n = 10) {
-  const out = []; let d = today();
-  if (st.classStart && st.classStart > d) d = st.classStart;
-  for (let i = 0; i < 180 && out.length < n; i++, d = addDays(d, 1)) {
-    if (st.classEnd && d > st.classEnd) break;
-    if ((st.classDays || []).includes(dow(d))) out.push(d);
-  }
-  return out;
-}
-function leaveDateHtml(st) {
-  if (!st) return '';
-  if (!(st.classDays || []).length) return `<input id="leave_date" type="date" min="${today()}" value="${today()}">`;
-  const ds = classDates(st);
-  if (!ds.length) return `<select id="leave_date" disabled><option value="">近期沒有可請假的上課日</option></select>`;
-  return `<select id="leave_date">${ds.map(d => `<option value="${d}">${d}（週${DN[dow(d) - 1]}）</option>`).join('')}</select>`;
-}
-function onLeaveKid(id) { const b = $('#leave_date_box'); if (b) b.innerHTML = leaveDateHtml(stuById(id)); }
-function updateMk() {
-  const sel = $('#mk_leave'); if (!sel || !sel.selectedOptions[0]) return;
-  const op = sel.selectedOptions[0], dt = $('#mk_date'); if (!dt) return;
-  const mn = op.dataset.ld > today() ? op.dataset.ld : today();
-  dt.min = mn; dt.max = op.dataset.dl;
-  const h = $('#mk_hint'); if (h) h.textContent = `可選 ${mn} ～ ${op.dataset.dl} 之間的週日`;
-}
-function snapForm() {
-  const o = {};
-  document.querySelectorAll('#app [id]').forEach(el => { if (/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) && el.type !== 'checkbox') o[el.id] = el.value; });
-  return o;
-}
-function restoreForm(o) {
-  const set = id => { const el = document.getElementById(id); if (!el || o[id] === undefined) return;
-    if (el.tagName === 'SELECT' && ![...el.options].some(x => x.value === o[id])) return; el.value = o[id]; };
-  Object.keys(o).forEach(id => { if (id !== 'leave_date' && id !== 'mk_date') set(id); });
-  if (o.leave_sid !== undefined && $('#leave_sid')) onLeaveKid($('#leave_sid').value);
-  updateMk(); set('leave_date'); set('mk_date');
-}
-
 async function viewParent() {
   if (!S.parentData) {
-    const d = await api('parentHome', {}, true);
-    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods };
+    const d = await api('parentHome');
+    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, ss: d.sessions, fees: d.fees };
     updateGreeting();
   }
-  const { h, cl, mo, periods } = S.parentData;
+  const { h, cl, mo, ss, fees } = S.parentData;
   const st = S.me.students || [];
   if (S.curKid !== 'ALL' && !st.some(s => s.studentId === S.curKid)) S.curKid = 'ALL';
 
   const kidTabs = st.length > 1 ? `<div class="kid-tabs">
-    <button class="kid-btn ${S.curKid === 'ALL' ? 'active' : ''}" data-act="switchKid" data-id="ALL">全部學員 (${st.length})</button>
-    ${st.map(s => `<button class="kid-btn ${S.curKid === s.studentId ? 'active' : ''}" data-act="switchKid" data-id="${esc(s.studentId)}">👦 ${esc(s.name)} (${balT(s.balance)})</button>`).join('')}</div>` : '';
+    <button class="kid-btn ${S.curKid === 'ALL' ? 'active' : ''}" onclick="switchKid('ALL')">全部學員 (${st.length})</button>
+    ${st.map(s => `<button class="kid-btn ${S.curKid === s.studentId ? 'active' : ''}" onclick="switchKid('${esc(s.studentId)}')">👦 ${esc(s.name)} (剩${s.balance}堂)</button>`).join('')}</div>` : '';
 
   const vis = S.curKid === 'ALL' ? st : st.filter(s => s.studentId === S.curKid);
   const opt = vis.map(s => `<option value="${esc(s.studentId)}">${esc(s.name)}</option>`).join('');
-  const af = S.attf || '';
-  const attAll = (h.attendances || []).filter(a => S.curKid === 'ALL' || a.studentId === S.curKid);
-  const cnt = k => attAll.filter(a => a.status === k).length;
-  const attBar = `<div class="two" style="margin-bottom:8px"><select onchange="setAttf(this.value)">${[['', '全部紀錄'], ['請假', '只看請假'], ['缺席', '只看缺席'], ['出席', '只看出席']].map(o => `<option value="${o[0]}" ${o[0] === af ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>
-    <div class="muted" style="margin:0;align-self:center">出席 ${cnt('出席')}・請假 ${cnt('請假')}・缺席 ${cnt('缺席')}</div></div>`;
-  const attHtml = attBar + attAll.filter(a => !af || a.status === af).map(a => `
+  const attHtml = (h.attendances || []).filter(a => S.curKid === 'ALL' || a.studentId === S.curKid).map(a => `
     <div class="row"><div><b>${esc(a.date)}</b><div class="muted" style="margin:0">${esc(a.studentName)}・${esc(a.className)}</div></div>
-    <span class="pill ${a.status === '出席' ? '' : a.status === '請假' ? 'warn' : 'bad'}">${esc(a.status)}</span></div>`).join('') || '<p class="muted">沒有符合的紀錄（堂數用完 14 天後，紀錄會自動隱藏）</p>';
+    <span class="pill ${a.status === '出席' ? '' : a.status === '請假' ? 'warn' : 'bad'}">${esc(a.status)}</span></div>`).join('') || '<p class="muted">尚無課堂出勤紀錄</p>';
   const mks = (mo || []).filter(x => S.curKid === 'ALL' || x.studentId === S.curKid);
+  const leaveDateHtml = (ss && ss.length)
+    ? `<select id="leave_date">${ss.map(x => `<option value="${esc(x.date)}">${esc(x.date)}　${esc(x.term)}</option>`).join('')}</select>`
+    : `<input id="leave_date" type="date" min="${today()}" value="${today()}">`;
 
   const makeupForm = mks.length ? `
-    <select id="mk_leave" onchange="updateMk()">${mks.map(x => `<option value="${esc(x.leaveId)}" data-ld="${esc(x.leaveDate)}" data-dl="${esc(x.deadline)}">${esc(x.studentName)}・${esc(x.leaveDate)} ${esc(x.kind)}（${esc(x.deadline)} 前完成）</option>`).join('')}</select>
-    <select id="mk_cls">${cl.map(c => `<option value="${esc(c.classId)}">${esc(c.name)} (${c.hours}h${c.days && c.days.length ? '・' + dayTxt(c.days) : ''})</option>`).join('')}</select>
-    <p class="muted" style="font-size:13px;margin:4px 0 2px">選擇補課日期（限週日）<span id="mk_hint" style="display:block"></span></p>
+    <select id="mk_leave">${mks.map(x => `<option value="${esc(x.leaveId)}">${esc(x.studentName)}・${esc(x.leaveDate)} 請假（${esc(x.deadline)} 前完成）</option>`).join('')}</select>
+    <select id="mk_reason_type">
+      <option value="事假補課">🚗 事假補課（每期上限 1 次）</option>
+      <option value="病假補課">🤒 病假補課</option>
+    </select>
+    <select id="mk_cls">${cl.map(c => `<option value="${esc(c.classId)}">${esc(c.name)} (${c.hours}h)</option>`).join('')}</select>
+    <p class="muted" style="font-size:13px;margin:4px 0 2px">選擇補課日期（限週日）</p>
     <input id="mk_date" type="date" min="${today()}">
     <button class="pri" onclick="run(this,doSubmitMakeup)">送出補課預約 ➜</button>`
     : '<p class="muted">目前沒有可補課的請假單。請假經總教練核准後，這裡就會出現。</p>';
 
-  const cancelBtn = x => x.canCancel ? `<div><button class="ghost mini" style="margin-top:6px" data-act="cancel" data-id="${esc(x.id)}">取消這筆</button></div>` : '';
-
-  $('#app').innerHTML = kidTabs +
-    card('⛹️ 孩子的課務狀態', vis.map(s => `<div class="row"><div><b>${esc(s.name)}</b>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}
-      <div class="muted" style="margin:0">${esc(s.className)}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}</div></div>
-      ${balPill(s.balance)}</div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
-    card('📋 出勤／請假／缺席紀錄', attHtml) +
+  $('#app').innerHTML = kidTabs + brochureCard() +
+    card('⛹️ 孩子的課務狀態', vis.map(s => `<div class="row"><div><b>${esc(s.name)}</b><div class="muted" style="margin:0">${esc(s.className)}</div></div>
+      <span class="pill ${s.balance <= 1 ? 'warn' : ''}">${bal(s.balance)}</span></div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
+    card('📋 上課出勤明細', attHtml) +
     card('📝 我要請假', `
-      <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
+      <select id="leave_sid">${opt}</select>
       <select id="leave_reason_type">
         <option value="病假">🤒 病假（請備妥看診收據）</option>
         <option value="事假">🚗 私人事假（補課每期上限 1 次）</option>
         <option value="其他">📌 其他公假／天災</option>
       </select>
-      <div id="leave_date_box">${leaveDateHtml(vis[0])}</div>
+      ${leaveDateHtml}
       <input id="leave_rsn" placeholder="原因說明（選填）">
       <button class="pri" onclick="run(this,doSubmitLeave)">送出請假申請 ➜</button>`) +
     card('🏀 預約補課', makeupForm + `
@@ -400,370 +249,179 @@ async function viewParent() {
         <li>請假需經總教練核准後，才能預約補課。</li></ol></div>`) +
     card('💳 匯款對帳回傳', `
       <p class="muted">${esc(CONFIG.BANK)}</p>
-      <select id="pay_period">${(periods || []).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
-      <div class="chk">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
+      <select id="pay_period" onchange="updateFee()">${CONFIG.PERIODS.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select>
+      <div class="chk">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" onchange="updateFee()" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
+      <div id="fee_panel">
+        <select id="pay_kind" onchange="updateFee()"><option value="new">🆕 新生</option><option value="old">👥 舊生續報</option></select>
+        ${fees && fees.openTerms > 1 ? `<select id="pay_terms" onchange="updateFee()"><option value="1">報名一期（${fees.termLessons}堂）</option><option value="2">一次報名兩期（${fees.termLessons * 2}堂）</option></select>` : ''}
+        <input id="pay_shirts" type="number" inputmode="numeric" min="0" value="0" oninput="updateFee()" placeholder="加購營隊 T 恤件數（每件 $${fees ? fees.shirt : 450}）">
+        <p class="muted" id="fee_box"></p>
+      </div>
       <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額"><input id="l5" maxlength="5" inputmode="numeric" placeholder="帳號末五碼"></div>
       <p class="muted" style="font-weight:600">轉帳日期</p><input id="pdate" type="date" value="${today()}">
       <button class="pri" onclick="run(this,doSubmitPay)">送出對帳資料 ➜</button>`) +
     card('🕒 最近申請進度',
       ((h.payments || []).map(p => `<div class="row"><div><b>匯款 $${esc(p.amount)}・${esc(p.studentNames)}</b>
         ${p.logs ? `<div class="muted" style="color:var(--ok);font-size:13px;margin:0">${esc(p.logs)}</div>` : ''}
-        ${p.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">退回：${esc(p.note)}</div>` : ''}${cancelBtn(p)}</div>${pill(p.status)}</div>`).join('') +
-      (h.leaves || []).filter(l => S.curKid === 'ALL' || l.studentId === S.curKid).map(l => `<div class="row"><div><span>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</span>
-        ${l.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">婉拒原因：${esc(l.note)}</div>` : ''}${cancelBtn(l)}</div>${pill(l.status)}</div>`).join('')) || '<p class="muted">尚無歷史紀錄</p>') +
+        ${p.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">退回：${esc(p.note)}</div>` : ''}</div>${pill(p.status)}</div>`).join('') +
+      (h.leaves || []).filter(l => S.curKid === 'ALL' || l.studentId === S.curKid).map(l => `<div class="row"><span>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</span>${pill(l.status)}</div>`).join('')) || '<p class="muted">尚無歷史紀錄</p>') +
     bindBox();
-  updateMk();
+  updateFee();
 }
-async function setAttf(v) {
-  const snap = snapForm();
-  S.attf = v;
-  await viewParent();
-  restoreForm(snap);
+function switchKid(id) { S.curKid = id; viewParent(); }
+
+function brochureCard() {
+  return `<details class="card" style="cursor:pointer"><summary style="font-weight:800;font-size:17px">📣 115年常態班簡章</summary>
+    <div style="margin-top:12px;font-size:14px;line-height:1.9">${CONFIG.BROCHURE.map(l => `<div>${esc(l)}</div>`).join('')}</div></details>`;
 }
-async function switchKid(id) {
-  const snap = snapForm();
-  S.curKid = id;
-  await viewParent();
-  restoreForm(snap);
+function calcFee(ids) { // 與後端 expectedFee_ 規則一致；最後以後端為準
+  const f = S.parentData.fees, terms = Number((($('#pay_terms') || {}).value) || 1);
+  const isOld = $('#pay_kind').value === 'old', shirts = Math.max(0, Number($('#pay_shirts').value) || 0);
+  let total = 0, free = 0;
+  S.me.students.filter(s => ids.includes(s.studentId)).forEach(s => {
+    total += (s.price || 0) * terms;
+    if (f.discountOn) { if (isOld) total -= terms >= 2 ? f.oldTwo : f.oldOne; else if (terms >= 2) free++; else total -= f.newOne; }
+  });
+  return { total: total + Math.max(0, shirts - free) * f.shirt, free };
+}
+function updateFee() {
+  const box = $('#fee_box'); if (!box) return;
+  const isReg = $('#pay_period').value === CONFIG.PERIODS[0];
+  $('#fee_panel').hidden = !isReg;
+  if (!isReg) return;
+  const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
+  if (!ids.length) { box.textContent = '請先勾選學員'; return; }
+  const c = calcFee(ids);
+  box.innerHTML = `應付金額 <b style="color:var(--pri);font-size:18px">$${c.total.toLocaleString()}</b>${c.free ? '（含贈送 T 恤 ' + c.free + ' 件）' : ''}`;
+  $('#amt').value = c.total;
+}
+function feeParams() {
+  if ($('#pay_period').value !== CONFIG.PERIODS[0]) return {};
+  return { terms: Number((($('#pay_terms') || {}).value) || 1), kind: $('#pay_kind').value, shirts: Number($('#pay_shirts').value) || 0 };
 }
 
 async function doSubmitPay() {
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
   if (!ids.length) throw new Error('請勾選繳費的學員');
-  await api('pay', { period: $('#pay_period').value, studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value });
-  render();
-  setTimeout(() => toast('匯款已送出，等待總教練確認！'), 100);
+  await api('pay', { period: $('#pay_period').value, studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value, ...feeParams() });
+  toast('匯款已送出，等待總教練確認！'); render();
 }
 async function doSubmitLeave() {
-  const dt = $('#leave_date');
-  if (!dt || dt.disabled || !dt.value) throw new Error('請選擇請假的上課日');
-  await api('leave', { studentId: $('#leave_sid').value, reasonType: $('#leave_reason_type').value, date: dt.value, reason: $('#leave_rsn').value });
-  render();
-  setTimeout(() => toast('請假申請已送出，等待總教練核准'), 100);
+  await api('leave', { studentId: $('#leave_sid').value, reasonType: $('#leave_reason_type').value, date: $('#leave_date').value, reason: $('#leave_rsn').value });
+  toast('請假申請已送出，等待總教練核准'); render();
 }
 async function doSubmitMakeup() {
   const d = $('#mk_date').value;
   if (!d) throw new Error('請選擇補課日期');
-  if (dow(d) !== 7) throw new Error('補課日期限定為週日');
-  await api('makeup', { leaveId: $('#mk_leave').value, targetClassId: $('#mk_cls').value, targetDate: d });
-  render();
-  setTimeout(() => toast('補課預約已送出'), 100);
-}
-async function cancelReq(id) {
-  if (!(await ask('確定要取消這筆申請嗎？'))) return;
-  await api('cancel', { id });
-  render();
-  setTimeout(() => toast('已取消'), 100);
+  if (new Date(d + 'T00:00:00').getDay() !== 0) throw new Error('補課日期限定為週日');
+  await api('makeup', { leaveId: $('#mk_leave').value, targetClassId: $('#mk_cls').value, targetDate: d, reasonType: $('#mk_reason_type').value });
+  toast('補課預約已送出'); render();
 }
 
 // ===================== 教練點名 =====================
+async function loadRoster() {
+  S.list = await api('roster', { classId: S.cls, date: S.date });
+  S.list.forEach(x => { x.v = x.saved || (x.leave ? '請假' : '未到'); });
+}
 async function viewCoach() {
   const cs = S.me.classes || [];
   if (!cs.length) { $('#app').innerHTML = card('📋 尚未指派排班', '<p class="muted">目前無負責的班級，請洽總教練指派。</p>'); return; }
   if (!cs.some(c => c.classId === S.cls)) S.cls = cs[0].classId;
   const isAdmin = S.me.role === 'admin';
   if (!isAdmin || !S.date) S.date = today();
-  const r = await api('roster', { classId: S.cls, date: S.date }, true);
-  S.upcoming = r.upcoming || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
-  S.list.forEach(x => { x.v = x.saved || (x.leave ? '請假' : '未到'); });
-  const cur = cs.find(c => c.classId === S.cls), isToday = S.date === today();
-  const logs = (S.me.recentCheckins || []).map(k => `<div class="row" style="padding:6px 0"><span>${esc(k.date)}・${esc(k.className)}</span><span class="pill">已簽到 ${esc(k.time)}</span></div>`).join('') || '<p class="muted" style="margin:4px 0 0">近期尚無簽到紀錄</p>';
+  await loadRoster();
+  const logs = (S.me.recentCheckins || []).map(k => `<div class="row" style="padding:6px 0"><span>${esc(k.date)}</span><span class="pill">已簽到 ${esc(k.time)}</span></div>`).join('') || '<p class="muted" style="margin:4px 0 0">近期尚無簽到紀錄</p>';
 
   $('#app').innerHTML =
-    card('🏫 選擇班級' + (isAdmin ? '與日期' : ''), `
-      <select onchange="changeClass(this.value)">${cs.map(c => `<option value="${esc(c.classId)}" ${c.classId === S.cls ? 'selected' : ''}>${esc(c.name)} (${c.hours}h)</option>`).join('')}</select>
-      ${isAdmin ? `<p class="muted" style="margin:0 0 4px">日期（總教練可補點過去的名）</p><input type="date" value="${S.date}" max="${today()}" onchange="changeDate(this.value)">` : `<p class="muted" style="margin:0">今天：${today()}</p>`}`) +
-    card('📍 簽到：' + esc(cur.name), `
-      <div class="row" style="border-top:0">
-        <span>${isToday ? (S.checkedIn ? '<span class="pill">✓ 今日已簽到</span>' : '<span class="pill warn">尚未簽到</span>') : '<span class="muted" style="margin:0">簽到僅限當天</span>'}</span>
-        ${isToday && !S.checkedIn ? '<button class="pri mini" style="width:auto;font-size:14px;padding:10px 16px" onclick="run(this,doCheckin)">📍 簽到此班</button>' : ''}</div>
+    card('👟 今日教練出勤', `<div class="row"><span>今日日期：<b>${today()}</b></span><button class="ghost" onclick="run(this,doCheckin)">📍 當日簽到</button></div>
       <div style="border-top:1px dashed #f0e7dd;padding-top:8px;margin-top:6px"><div class="muted" style="font-weight:700">近期出勤紀錄</div>${logs}</div>`) +
     card('🏀 課堂學員點名', `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span class="muted" style="margin:0">${esc(cur.name)}・${esc(S.date)}</span>
-        <button class="ghost mini" onclick="safe(viewCoach)">🔄 重新整理</button></div>
-      ${S.needCheckin && !S.checkedIn ? '<p class="muted" style="color:var(--bad);font-weight:700">⚠️ 請先「簽到此班」才能儲存點名</p>' : ''}
-      ${leaveBox()}
-      ${rosterSummary()}
+        <span class="muted" style="margin:0">選擇班級與日期</span>
+        <button class="ghost" style="padding:4px 10px;font-size:12px" onclick="reloadRoster()">🔄 重新整理</button></div>
+      <select onchange="changeClass(this.value)">${cs.map(c => `<option value="${esc(c.classId)}" ${c.classId === S.cls ? 'selected' : ''}>${esc(c.name)} (${c.hours}h)</option>`).join('')}</select>
+      <input type="date" value="${S.date}" ${isAdmin ? '' : 'disabled'} onchange="changeDate(this.value)">
       <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">⚡ 一鍵全班設為出席</button>
       <div id="roster">${rosterHtml()}</div>
       <button class="pri" style="margin-top:8px" onclick="run(this,doSaveAttendance)">🌟 儲存點名結果（未到不留紀錄、不扣堂）</button>`);
 }
-async function changeClass(v) { S.cls = v; await safe(viewCoach); }
-async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
-function leaveListHtml() {
-  const all = (S.adm && S.adm.approvedLeaves) || [], f = S.lvf || { cls: '', when: 'future', ended: false };
-  const t = today();
-  const classes = [...new Map(all.map(l => [l.classId, l.className])).entries()];
-  const rows = all.filter(l => (!f.cls || l.classId === f.cls) && (f.ended || !l.ended) &&
-    (f.when === 'all' || (f.when === 'future' ? l.date >= t : l.date < t)));
-  if (f.when === 'past') rows.reverse();
-  const sel = (v, o) => o.map(x => `<option value="${esc(x[0])}" ${x[0] === v ? 'selected' : ''}>${esc(x[1])}</option>`).join('');
-  return `<div class="two"><select onchange="setLvf('cls',this.value)">${sel(f.cls, [['', '全部班級']].concat(classes))}</select>
-    <select onchange="setLvf('when',this.value)">${sel(f.when, [['future', '今天起'], ['past', '已過'], ['all', '全部']])}</select></div>
-    <label class="muted" style="display:block;margin:6px 0"><input type="checkbox" ${f.ended ? 'checked' : ''} onchange="setLvf('ended',this.checked)" style="width:auto;margin-right:6px">顯示已過保留期（堂數用完超過14天）／已結業</label>
-    <div id="lvlist">` + (rows.map(l => `<div class="row"><div>
-      <b>${esc(l.date)}</b>・${esc(l.studentName)} <span class="pill ${l.type === '補課' ? 'warn' : ''}">${esc(l.type)}</span>${l.ended ? ' <span class="pill">已過保留期</span>' : ''}
-      <div class="muted" style="margin:0;font-size:12.5px">${esc(l.className)}${l.reason ? '・' + esc(l.reason) : ''}${l.by ? '・' + esc(l.by) + ' 核准' : ''}</div></div></div>`).join('') || '<p class="muted">沒有符合的紀錄</p>') + '</div>';
+async function reloadRoster() {
+  try { await loadRoster(); const el = $('#roster'); if (el) el.innerHTML = rosterHtml(); } catch (e) { toast(e.message); }
 }
-function setLvf(k, v) {
-  S.lvf = Object.assign({ cls: '', when: 'future', ended: false }, S.lvf || {}, { [k]: v });
-  const e = document.getElementById('lvlist'), sec = e && e.closest('section'); if (!sec) return;
-  sec.outerHTML = card('✅ 已核准請假／補課', leaveListHtml());
-}
-function leaveBox() { // 教練一眼看到：這天誰請假、誰補課、之後誰要請假
-  const lv = S.list.filter(x => x.leave), pend = S.list.filter(x => x.pendingLeave && !x.leave), mk = S.list.filter(x => x.makeup);
-  const up = S.upcoming || [];
-  const line = (t, arr) => arr.length ? `<div style="margin:4px 0">${t}：${arr.map(x => `<b>${esc(x.name)}</b>${x.leaveReason ? `<span class="muted">（${esc(x.leaveReason)}）</span>` : ''}`).join('、')}</div>` : '';
-  const upHtml = up.length ? `<div style="border-top:1px dashed #f0e7dd;margin-top:6px;padding-top:6px"><div class="muted" style="font-weight:700">之後 30 天已核准</div>${up.map(u => `<div class="row" style="padding:5px 0"><span>${esc(u.date)}・<b>${esc(u.name)}</b></span><span class="pill ${u.type === '補課' ? 'warn' : ''}">${esc(u.type)}</span></div>`).join('')}</div>` : '';
-  return `<div class="item" style="background:#fffaf0">
-    <div style="font-weight:800">📝 ${esc(S.date)} 請假／補課</div>
-    ${lv.length || pend.length || mk.length ? line('請假', lv) + line('待審核請假', pend) + line('補課學員', mk) : '<p class="muted" style="margin:4px 0">今天沒有人請假或補課</p>'}
-    ${upHtml}</div>`;
-}
-function rosterSummary() {
-  if (!S.list.length) return '';
-  const done = S.list.filter(x => x.saved), by = [...new Set(done.map(x => x.by).filter(Boolean))];
-  return `<p class="muted" style="font-weight:700;color:${done.length ? 'var(--ok)' : 'var(--mut)'}">已點名 ${done.length}／${S.list.length} 人${by.length ? '・點名教練：' + esc(by.join('、')) : ''}</p>`;
-}
+async function changeClass(v) { S.cls = v; await reloadRoster(); }
+async function changeDate(v) { S.date = v; await reloadRoster(); }
 function rosterHtml() {
   if (!S.list.length) return '<p class="muted">這個班目前沒有學員</p>';
   return S.list.map((x, i) => `<div class="item">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div><b>${esc(x.name)}</b> ${x.makeup ? '<span class="pill warn">⭐ 補課</span>' : ''} ${x.saved ? `<span class="pill">${x.saved === '出席' ? '✓ 已出席' : esc(x.saved)}</span>` : ''}</div>
       <span class="muted" style="margin:0;font-weight:700">${bal(x.balance)}</span></div>
-    ${x.saved && x.by ? `<div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(x.by)}・${esc(x.at)} 已點名</div>` : ''}
-    ${x.note || x.phone ? `<div class="safe">${x.note ? `<span class="pill bad">⚠️ ${esc(x.note)}</span>` : ''}${x.phone ? `<a href="tel:${esc(x.phone.replace(/[^\d+]/g, ''))}">📞 ${esc(x.phone)}</a>` : ''}</div>` : ''}
     <div class="seg">${['未到', '出席', '請假', '缺席'].map(s => `<button type="button" data-s="${s}" class="${x.v === s ? 'on' : ''}" onclick="pickStatus(${i},'${s}')">${{ '未到': '⏳ 未到', '出席': '✓ 出席', '請假': '📝 請假', '缺席': '✕ 缺席' }[s]}</button>`).join('')}</div></div>`).join('');
 }
 function pickStatus(i, s) { if (S.list[i]) { S.list[i].v = s; $('#roster').innerHTML = rosterHtml(); } }
 function setAll(s) { S.list.forEach(x => x.v = s); $('#roster').innerHTML = rosterHtml(); }
-async function doCheckin() { 
-  await api('coachCheckin', { classId: S.cls }); 
-  S.me = await api('me'); 
-  render(); 
-  setTimeout(() => toast('簽到成功！💪'), 100);
-}
+async function doCheckin() { await api('coachCheckin', { classId: S.cls }); toast('簽到成功！💪'); S.me = await api('me'); render(); }
 async function doSaveAttendance() {
-  if (S.needCheckin && !S.checkedIn) throw new Error('請先簽到此班，才能儲存點名');
   const c = { '出席': 0, '請假': 0, '缺席': 0, '未到': 0 };
   S.list.forEach(x => c[x.v]++);
   if (!(await ask(`【點名確認】\n\n✓ 出席：${c['出席']} 人\n📝 請假：${c['請假']} 人\n✕ 缺席：${c['缺席']} 人\n⏳ 未到：${c['未到']} 人\n\n確認送出點名紀錄嗎？`))) return;
-  try {
-    await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v, expect: x.saved || '' })) });
-  } catch (e) {
-    if (/剛被其他教練更新/.test(e.message)) { await info(e.message); await safe(viewCoach); return; }
-    throw e;
-  }
-  render();
-  setTimeout(() => toast('點名完成並儲存！'), 100);
+  await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v })) });
+  toast('點名完成並儲存！'); render();
 }
 
 // ===================== 總教練後台 =====================
 async function viewAdmin() {
   S.month = S.month || today().slice(0, 7);
-  const a = await api('admin', { month: S.month }, true);
-  S.adm = a;
-  const s = a.stats || {}, locked = a.locked;
+  const a = await api('admin', { month: S.month });
+  const s = a.stats || {};
   const totalSal = (a.coaches || []).reduce((t, c) => t + c.totalSalary, 0);
   const box = (n, t) => `<div class="stat"><b>${n}</b><span>${t}</span></div>`;
-  const money = n => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString();
 
   const coachHtml = (a.coaches || []).map(c => `<div class="item">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div><b>${esc(c.name)}</b> <span class="muted" style="font-size:13px">${esc(c.role)}</span></div>
-      <b style="color:var(--pri);font-size:18px">${money(c.totalSalary)}</b></div>
-    <div class="muted" style="margin:6px 0 0;font-size:13.5px">授課 <b>${c.totalHours}</b> 小時（${c.lessonCount} 堂）｜ 時薪 $${c.hourlyRate}/hr ｜ 基本 ${money(c.base)}
-      ${c.rateMissing ? ' <span class="pill warn">⚠️ 未設定時薪</span>' : ''}</div>
-    ${(c.adjustments || []).map(j => `<div class="row" style="padding:4px 0;border-top:0"><span class="muted" style="margin:0;font-size:13px">${esc(j.type)} ${j.amount > 0 ? '+' : ''}${j.amount}${j.note ? '・' + esc(j.note) : ''}</span>
-      ${locked ? '' : `<button class="ghost mini" data-act="delAdj" data-id="${esc(j.id)}">刪除</button>`}</div>`).join('')}</div>`).join('') || '<p class="muted">尚無教練資料</p>';
-
-  const salaryBtns = locked
-    ? `<button class="ghost" data-act="unlockMonth">🔓 解除鎖定</button><button class="ghost" data-act="copySalary">📋 複製薪資表</button>`
-    : `<button class="ghost" data-act="addAdj">➕ 代課／獎金／扣款</button><button class="ghost" data-act="adminCheckin">🕘 補簽到</button>
-       <button class="ghost" data-act="lockMonth">🔒 月結鎖定</button><button class="ghost" data-act="copySalary">📋 複製薪資表</button>`;
+      <b style="color:var(--pri);font-size:18px">$${c.totalSalary.toLocaleString()}</b></div>
+    <div class="muted" style="margin:6px 0 0;font-size:13.5px">授課 <b>${c.totalHours}</b> 小時（${c.lessonCount} 堂）｜ 時薪 $${c.hourlyRate}/hr
+      ${c.rateMissing ? ' <span class="pill warn">⚠️ 未設定時薪</span>' : ''}</div></div>`).join('') || '<p class="muted">尚無教練資料</p>';
 
   $('#app').innerHTML =
-    `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核假單')}${box(s.low ?? 0, '⚠️ 堂數 ≤ 1 堂')}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
-    card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">
-      ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
-      ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
+    `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核假單')}${box(s.low ?? 0, '⚠️ 堂數 ≤ 1 堂')}${box('$' + totalSal.toLocaleString(), esc(a.stats.month) + ' 預計薪資')}</div>` +
+    card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">${coachHtml}`) +
     card('💳 待審核匯款', (a.payments || []).map(p => `<div class="item" id="pay_item_${esc(p.id)}">
-      <b>${esc(p.parentName)}</b>${p.parentPhone ? ` <a href="tel:${esc(p.parentPhone)}" style="color:var(--pri);font-size:13px;font-weight:700;text-decoration:none">📞 ${esc(p.parentPhone)}</a>` : ''}｜期別：<b>${esc(p.period)}</b>
-      <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
+      <b>${esc(p.parentName)}</b>｜期別：<b>${esc(p.period)}</b>
+      <div class="muted" style="margin:4px 0 4px">實收 $${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
+      ${p.terms ? `<div class="muted" style="margin:0 0 8px">${esc(p.kind)}｜${p.terms} 期｜T恤 ${p.shirts} 件｜應付 $${(p.expected ?? 0).toLocaleString()} ${p.expected !== null && Number(p.amount) !== p.expected ? '<span class="pill bad">⚠️ 金額不符</span>' : '<span class="pill">✓ 金額相符</span>'}</div>` : ''}
       <div style="background:#f1eae2;padding:12px;border-radius:12px;margin-bottom:8px">
-        <div style="font-size:13.5px;font-weight:700;margin-bottom:4px;color:#475569">分別設定增加堂數：</div>
-        <div class="muted" style="font-size:12.5px">${p.suggest ? `依價目表建議每人 ${p.suggest} 堂（可自行修改）` : '價目表查無對應金額，請手動輸入'}</div>
+        <div style="font-size:13.5px;font-weight:700;margin-bottom:8px;color:#475569">分別設定增加堂數：</div>
         ${(p.students || []).map(st => `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div><b style="font-size:14.5px">${esc(st.name)}</b> <span class="muted" style="font-size:12px">(${esc(st.id)})・目前${balT(st.balance)}</span></div>
-          <input class="add-lesson-input" data-sid="${esc(st.id)}" type="number" inputmode="numeric" value="${p.suggest || ''}" style="width:105px!important;padding:6px 10px;margin:0;font-size:14px" placeholder="加幾堂"></div>`).join('')}
+          <div><b style="font-size:14.5px">${esc(st.name)}</b> <span class="muted" style="font-size:12px">(${esc(st.id)})</span></div>
+          <input class="add-lesson-input" data-sid="${esc(st.id)}" type="number" inputmode="numeric" value="${p.terms ? p.terms * (a.termLessons || 7) : ''}" style="width:105px!important;padding:6px 10px;margin:0;font-size:14px" placeholder="加幾堂"></div>`).join('')}
       </div>
       <input id="nt_${esc(p.id)}" placeholder="退回說明（退回必填）">
-      <div class="two"><button class="pri" data-act="reviewPay" data-id="${esc(p.id)}" data-d="pass">核准並加堂 ➜</button>
-        <button class="ghost" data-act="reviewPay" data-id="${esc(p.id)}" data-d="reject">退回匯款</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>') +
+      <div class="two"><button class="pri" onclick="run(this,()=>reviewPaySafe('${esc(p.id)}','pass'))">核准並加堂 ➜</button>
+        <button class="ghost" onclick="run(this,()=>reviewPaySafe('${esc(p.id)}','reject'))">退回匯款</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>') +
     card('📅 待審核請假與補課', (a.leaves || []).map(l => `<div class="item">
       <b>${esc(l.studentName)}</b> 申請 <b>【${esc(l.type)}】</b> ${esc(l.date)}
       ${l.type === '補課' ? `<div class="muted" style="margin:4px 0 0">補課班級：${esc(l.className)}${l.originDate ? '｜原請假日：' + esc(l.originDate) : ''}</div>` : ''}
       <div class="muted" style="margin:4px 0">${esc(l.reason)}</div>
-      <div class="two" style="margin-top:10px"><button class="pri" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="pass">核准申請 ➜</button>
-        <button class="ghost" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="reject">婉拒申請</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>') +
-    card('✅ 已核准請假／補課', leaveListHtml()) +
-    card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
-      ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className).toLowerCase())}"><div>
-        <b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}</span>
-        <div class="muted" style="margin:0;font-size:12.5px">${x.bound ? `已綁 ${x.bound} 個帳號` : '未綁定'}${x.status === '結業' ? '・已結業' : ''}${x.note ? '・⚠️ ' + esc(x.note) : ''}</div></div>
-        <div style="display:flex;align-items:center;gap:8px">${balPill(x.balance)}<button class="ghost mini" data-act="manageStu" data-id="${esc(x.id)}">管理</button></div></div>`).join('') || '<p class="muted">尚無學員資料</p>'),
-      `<button class="ghost mini" onclick="run(this,addStudentUi)">＋ 新增學員</button>`) +
-    card('🧾 最近堂數調整', (a.adjustLogs || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.reason)}・${esc(r.by)}</span></span>
-      <span class="pill ${r.delta < 0 ? 'bad' : ''}">${r.delta > 0 ? '+' : ''}${r.delta} → ${r.after}</span></div>`).join('') || '<p class="muted">尚無調整紀錄</p>') +
+      <div class="two" style="margin-top:10px"><button class="pri" onclick="run(this,()=>reviewLeave('${esc(l.id)}','pass'))">核准申請 ➜</button>
+        <button class="ghost" onclick="run(this,()=>reviewLeave('${esc(l.id)}','reject'))">婉拒申請</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>') +
+    card('⛹️ 全部學員名冊', (a.students || []).map(x => `<div class="row"><span><b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}${x.bound ? '' : '・未綁定'}</span></span>
+      <span class="pill ${x.balance <= 1 ? 'warn' : ''}">${x.balance} 堂</span></div>`).join('') || '<p class="muted">尚無學員資料</p>') +
     card('🗂️ 最近點名紀錄', (a.recent || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>${pill(r.status)}</div>`).join('') || '<p class="muted">尚無點名紀錄</p>');
-}
-function filterStu(q) {
-  q = q.trim().toLowerCase();
-  document.querySelectorAll('.stu-row').forEach(r => r.hidden = !!q && r.dataset.q.indexOf(q) === -1);
 }
 
 async function reviewPaySafe(id, decision) {
   const addMap = {};
-  const box = document.getElementById('pay_item_' + id), nt = document.getElementById('nt_' + id);
+  const box = document.getElementById('pay_item_' + id);
   if (decision === 'pass') {
     box.querySelectorAll('.add-lesson-input').forEach(inp => { const v = Number(inp.value); if (v > 0) addMap[inp.getAttribute('data-sid')] = v; });
     if (!Object.keys(addMap).length) throw new Error('請至少為一位學員填寫要加的堂數');
-  } else if (!nt.value.trim()) throw new Error('退回請填寫原因');
-  await api('reviewPay', { id, decision, studentAddLessons: addMap, note: nt.value });
-  render();
-  setTimeout(() => toast('匯款審核完成！'), 100);
+  } else if (!$('#nt_' + id).value.trim()) throw new Error('退回請填寫原因');
+  await api('reviewPay', { id, decision, studentAddLessons: addMap, note: $('#nt_' + id).value });
+  toast('匯款審核完成！'); render();
 }
-async function reviewLeaveUi(id, decision) {
-  let note = '';
-  if (decision === 'reject') {
-    const v = await dialog('婉拒申請', [{ key: 'note', label: '婉拒原因（家長會看到）', ph: '例如：該日已額滿' }], '確認婉拒');
-    if (!v) return;
-    if (!v.note) throw new Error('請填寫婉拒原因');
-    note = v.note;
-  }
-  await api('reviewLeave', { id, decision, note });
-  render();
-  setTimeout(() => toast('假單處理完成！'), 100);
-}
-
-async function addStudentUi() {
-  const cs = S.me.classes || [];
-  const v = await dialog('新增學員', [
-    { key: 'name', label: '學員姓名（必填）' },
-    { key: 'classId', label: '班級', type: 'select', options: cs.map(c => [c.classId, c.name]) },
-    { key: 'balance', label: '初始堂數', type: 'number', ph: '預設 0' },
-    { key: 'phone', label: '緊急聯絡電話', type: 'tel', ph: '教練點名時可看到' },
-    { key: 'note', label: '備註（過敏／傷病）', ph: '選填' },
-    { key: 'studentId', label: '學員編號', ph: '留空自動產生' },
-    { key: 'bindCode', label: '綁定碼', ph: '留空自動產生（兄弟姊妹請填相同綁定碼）' }
-  ], '新增');
-  if (!v) return;
-  const r = await api('addStudent', v);
-  await info(`已新增學員\n編號：${r.studentId}\n綁定碼：${r.bindCode}\n\n請把綁定碼提供給家長。`);
-  render();
-}
-
-async function manageStudent(id) {
-  const x = (S.adm.students || []).find(s => s.id === id); if (!x) return;
-  const k = await menu(`${x.name}（${x.className}）・${balT(x.balance)}`, [
-    ['adj', '✏️ 手動調整堂數'],
-    ['unbind', `🔗 解除家長綁定（目前 ${x.bound} 個帳號）`],
-    ['status', x.status === '結業' ? '🔄 恢復為在學' : '🎓 設為結業']
-  ]);
-  if (!k) return;
-  if (k === 'adj') {
-    const v = await dialog(`調整 ${x.name} 的堂數`, [
-      { key: 'delta', label: '增減堂數', type: 'number', ph: '加 2 堂填 2；扣 1 堂填 -1' },
-      { key: 'reason', label: '原因（必填，會留下紀錄）', ph: '例如：補償、退費、轉班' }], '確認調整');
-    if (!v) return;
-    const deltaNum = Number(v.delta);
-    await api('adjustBalance', { studentId: id, delta: deltaNum, reason: v.reason });
-    x.balance = Number(x.balance || 0) + deltaNum; // 樂觀更新
-    render();
-    setTimeout(() => toast('堂數已調整'), 100);
-  } else if (k === 'unbind') {
-    if (!(await ask(`確定解除 ${x.name} 的所有家長綁定嗎？\n家長需要重新輸入綁定碼才能再看。`))) return;
-    await api('unbind', { studentId: id });
-    x.bound = 0;
-    render();
-    setTimeout(() => toast('已解除綁定'), 100);
-  } else {
-    const next = x.status === '結業' ? '在學' : '結業';
-    if (!(await ask(`確定把 ${x.name} 設為「${next}」嗎？\n${next === '結業' ? '結業後不會出現在點名名單。' : ''}`))) return;
-    await api('setStudentStatus', { studentId: id, status: next });
-    x.status = next;
-    render();
-    setTimeout(() => toast('已更新狀態'), 100);
-  }
-}
-
-async function addAdjUi() {
-  const cs = S.adm.coaches || [];
-  if (!cs.length) throw new Error('尚無教練資料');
-  const v = await dialog(`薪資調整（${S.adm.stats.month}）`, [
-    { key: 'coachId', label: '教練', type: 'select', options: cs.map(c => [c.id, c.name]) },
-    { key: 'type', label: '類型', type: 'select', options: [['代課', '代課費（加）'], ['獎金', '獎金（加）'], ['扣款', '扣款（減）']] },
-    { key: 'amount', label: '金額（填正數）', type: 'number', ph: '例如 600' },
-    { key: 'note', label: '說明', ph: '例如 11/9 代課' }], '新增');
-  if (!v) return;
-  await api('addSalaryAdj', { month: S.adm.stats.month, ...v });
-  render();
-  setTimeout(() => toast('已新增調整項目！'), 100);
-}
-async function delAdj(id) {
-  if (!(await ask('確定刪除這筆薪資調整嗎？'))) return;
-  await api('delSalaryAdj', { id });
-  render();
-  setTimeout(() => toast('已刪除'), 100);
-}
-async function adminCheckinUi() {
-  const cs = S.adm.coaches || [], cl = S.me.classes || [];
-  if (!cs.length) throw new Error('尚無教練資料');
-  const v = await dialog('補登教練簽到（忘記簽到時使用）', [
-    { key: 'coachId', label: '教練', type: 'select', options: cs.map(c => [c.id, c.name]) },
-    { key: 'classId', label: '班級', type: 'select', options: cl.map(c => [c.classId, c.name]) },
-    { key: 'date', label: '上課日期', type: 'date', value: today() }], '補登');
-  if (!v) return;
-  await api('adminCheckin', v);
-  render();
-  setTimeout(() => toast('已補登簽到'), 100);
-}
-
-async function lockMonthUi() {
-  const m = S.month || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
-  const ok = await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後該月份不能再簽到、調整，金額也會固定。`);
-  if (!ok) return;
-  await api('lockMonth', { month: m });
-  render();
-  setTimeout(() => toast('已成功鎖定！'), 100);
-}
-
-async function unlockMonthUi() {
-  const m = S.month || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
-  const ok = await ask(`確定解除 ${m} 的鎖定嗎？`);
-  if (!ok) return;
-  await api('unlockMonth', { month: m });
-  render();
-  setTimeout(() => toast('已成功解除鎖定！'), 100);
-}
-
-function copySalary() {
-  const a = S.adm;
-  const rows = [['月份', '姓名', '身分', '授課堂數', '授課時數', '時薪', '基本薪資', '調整合計', '應付薪資']]
-    .concat((a.coaches || []).map(c => [a.stats.month, c.name, c.role, c.lessonCount, c.totalHours, c.hourlyRate, c.base, c.adjTotal, c.totalSalary]));
-  copyText(rows.map(r => r.join('\t')).join('\n'));
-}
-function copyText(t) {
-  const fallback = () => {
-    const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0';
-    document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); toast('已複製，可貼到 Excel／Google 追蹤表'); } catch (e) { toast('複製失敗，請改用手動複製'); }
-    ta.remove();
-  };
-  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(() => toast('已複製，可貼到 Excel／Google 追蹤表')).catch(fallback);
-  else fallback();
-}
+async function reviewLeave(id, decision) { await api('reviewLeave', { id, decision }); toast('假單處理完成！'); render(); }
 
 init();
 </script>

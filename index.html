@@ -108,7 +108,6 @@ code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;f
 <nav id="nav"></nav>
 <div id="toast"></div>
 
-<!-- 全螢幕旋轉遮罩 -->
 <div id="loading-overlay">
   <div class="spinner"></div>
   <div class="loading-text" id="loading-msg">資料處理中，請稍候…</div>
@@ -205,7 +204,6 @@ function menu(title, items) {
 
 function forceReLogin() { try { liff.logout(); } catch (e) {} liff.login(); }
 
-// 支援 silent 參數：首頁初始化靜默加載，操作送出才啟動轉圈
 async function api(action, data = {}, silent = false) {
   let token = '';
   try { if (liff.isLoggedIn()) token = liff.getIDToken() || ''; } catch (e) {}
@@ -237,7 +235,6 @@ async function init() {
   try {
     await liff.init({ liffId: CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login(); return; }
-    // 傳入 true，進站時不黑屏轉圈
     S.me = await api('me', {}, true);
     try { sessionStorage.removeItem('relogin'); } catch (e) {}
     render();
@@ -620,6 +617,8 @@ async function addStudentUi() {
   await info(`已新增學員\n編號：${r.studentId}\n綁定碼：${r.bindCode}\n\n請把綁定碼提供給家長。`);
   render();
 }
+
+// 核心修正：樂觀更新（即時計算記憶體堂數，克服 Google 試算表同步延遲）
 async function manageStudent(id) {
   const x = (S.adm.students || []).find(s => s.id === id); if (!x) return;
   const k = await menu(`${x.name}（${x.className}）・${balT(x.balance)}`, [
@@ -633,18 +632,24 @@ async function manageStudent(id) {
       { key: 'delta', label: '增減堂數', type: 'number', ph: '加 2 堂填 2；扣 1 堂填 -1' },
       { key: 'reason', label: '原因（必填，會留下紀錄）', ph: '例如：補償、退費、轉班' }], '確認調整');
     if (!v) return;
-    await api('adjustBalance', { studentId: id, delta: v.delta, reason: v.reason });
+    const deltaNum = Number(v.delta);
+    await api('adjustBalance', { studentId: id, delta: deltaNum, reason: v.reason });
+    
+    // 👈 樂觀更新：立刻同步記憶體中的學員堂數，不等試算表舊快取
+    x.balance = Number(x.balance || 0) + deltaNum;
     render();
     setTimeout(() => toast('堂數已調整'), 100);
   } else if (k === 'unbind') {
     if (!(await ask(`確定解除 ${x.name} 的所有家長綁定嗎？\n家長需要重新輸入綁定碼才能再看。`))) return;
     await api('unbind', { studentId: id });
+    x.bound = 0; // 樂觀更新
     render();
     setTimeout(() => toast('已解除綁定'), 100);
   } else {
     const next = x.status === '結業' ? '在學' : '結業';
     if (!(await ask(`確定把 ${x.name} 設為「${next}」嗎？\n${next === '結業' ? '結業後不會出現在點名名單。' : ''}`))) return;
     await api('setStudentStatus', { studentId: id, status: next });
+    x.status = next; // 樂觀更新
     render();
     setTimeout(() => toast('已更新狀態'), 100);
   }

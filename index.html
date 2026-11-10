@@ -416,18 +416,25 @@ async function viewCoach() {
         <span class="muted" style="margin:0">${esc(cur.name)}・${esc(S.date)}</span>
         <button class="ghost mini" onclick="safe(viewCoach)">🔄 重新整理</button></div>
       ${S.needCheckin && !S.checkedIn ? '<p class="muted" style="color:var(--bad);font-weight:700">⚠️ 請先「簽到此班」才能儲存點名</p>' : ''}
+      ${rosterSummary()}
       <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">⚡ 一鍵全班設為出席</button>
       <div id="roster">${rosterHtml()}</div>
       <button class="pri" style="margin-top:8px" onclick="run(this,doSaveAttendance)">🌟 儲存點名結果（未到不留紀錄、不扣堂）</button>`);
 }
 async function changeClass(v) { S.cls = v; await safe(viewCoach); }
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
+function rosterSummary() { // 伺服器上已點名的進度與點名教練
+  if (!S.list.length) return '';
+  const done = S.list.filter(x => x.saved), by = [...new Set(done.map(x => x.by).filter(Boolean))];
+  return `<p class="muted" style="font-weight:700;color:${done.length ? 'var(--ok)' : 'var(--mut)'}">已點名 ${done.length}／${S.list.length} 人${by.length ? '・點名教練：' + esc(by.join('、')) : ''}</p>`;
+}
 function rosterHtml() {
   if (!S.list.length) return '<p class="muted">這個班目前沒有學員</p>';
   return S.list.map((x, i) => `<div class="item">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div><b>${esc(x.name)}</b> ${x.makeup ? '<span class="pill warn">⭐ 補課</span>' : ''} ${x.saved ? `<span class="pill">${x.saved === '出席' ? '✓ 已出席' : esc(x.saved)}</span>` : ''}</div>
       <span class="muted" style="margin:0;font-weight:700">${bal(x.balance)}</span></div>
+    ${x.saved && x.by ? `<div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(x.by)}・${esc(x.at)} 已點名</div>` : ''}
     ${x.note || x.phone ? `<div class="safe">${x.note ? `<span class="pill bad">⚠️ ${esc(x.note)}</span>` : ''}${x.phone ? `<a href="tel:${esc(x.phone.replace(/[^\d+]/g, ''))}">📞 ${esc(x.phone)}</a>` : ''}</div>` : ''}
     <div class="seg">${['未到', '出席', '請假', '缺席'].map(s => `<button type="button" data-s="${s}" class="${x.v === s ? 'on' : ''}" onclick="pickStatus(${i},'${s}')">${{ '未到': '⏳ 未到', '出席': '✓ 出席', '請假': '📝 請假', '缺席': '✕ 缺席' }[s]}</button>`).join('')}</div></div>`).join('');
 }
@@ -439,7 +446,12 @@ async function doSaveAttendance() {
   const c = { '出席': 0, '請假': 0, '缺席': 0, '未到': 0 };
   S.list.forEach(x => c[x.v]++);
   if (!(await ask(`【點名確認】\n\n✓ 出席：${c['出席']} 人\n📝 請假：${c['請假']} 人\n✕ 缺席：${c['缺席']} 人\n⏳ 未到：${c['未到']} 人\n\n確認送出點名紀錄嗎？`))) return;
-  await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v })) });
+  try {
+    await api('saveAttendance', { classId: S.cls, date: S.date, records: S.list.map(x => ({ studentId: x.studentId, status: x.v, expect: x.saved || '' })) });
+  } catch (e) {
+    if (/剛被其他教練更新/.test(e.message)) { await info(e.message); await safe(viewCoach); return; } // 顯示誰改了什麼，並自動重新載入最新名單
+    throw e;
+  }
   toast('點名完成並儲存！'); render();
 }
 

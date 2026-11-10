@@ -493,16 +493,36 @@ async function switchKid(id) {
 async function doSubmitPay() {
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
   if (!ids.length) throw new Error('請勾選繳費的學員');
-  await api('pay', { period: $('#pay_period').value, plan: { identity: $('#pay_identity').value, terms: $('#pay_terms').value, shirts: $('#pay_shirts').value }, studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value });
+
+  const amt = Number($('#amt').value || 0);
+  if (amt <= 0) throw new Error('請輸入正確的匯款或付款金額');
+
+  const l5 = ($('#l5').value || '').trim();
+  if (!l5) throw new Error('請填寫帳號末五碼（若付現金請填「現金」）');
+
+  // 防呆驗證：若不是「現金」，就必須是「剛好 5 碼純數字」
+  const isCash = l5.includes('現金');
+  const isFiveDigits = /^\d{5}$/.test(l5);
+
+  if (!isCash && !isFiveDigits) {
+    throw new Error('帳號末五碼格式不正確！\n請填寫「剛好 5 碼純數字」，若為現場付現請直接填寫「現金」。');
+  }
+
+  await api('pay', {
+    period: $('#pay_period').value,
+    plan: {
+      identity: $('#pay_identity').value,
+      terms: $('#pay_terms').value,
+      shirts: $('#pay_shirts').value
+    },
+    studentIds: ids,
+    amount: amt,
+    last5: l5,
+    date: $('#pdate').value
+  });
+
   render();
   setTimeout(() => toast('繳費資料已送出，等待總教練確認！'), 100);
-}
-async function doSubmitLeave() {
-  const dt = $('#leave_date');
-  if (!dt || dt.disabled || !dt.value) throw new Error('請選擇請假的上課日');
-  await api('leave', { studentId: $('#leave_sid').value, reasonType: $('#leave_reason_type').value, date: dt.value, reason: $('#leave_rsn').value });
-  render();
-  setTimeout(() => toast('請假申請已送出，等待總教練核准'), 100);
 }
 
 async function doSubmitMakeup() {

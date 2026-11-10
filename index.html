@@ -72,7 +72,7 @@ nav button{flex:1;background:none;padding:14px 4px;color:#9ba7b6;font-size:14.5p
 nav button.on{color:var(--pri);font-weight:800;box-shadow:inset 0 3.5px 0 var(--pri)}
 #toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
   background:rgba(35,45,63,.94);color:#fff;padding:11px 22px;border-radius:99px;opacity:0;pointer-events:none;
-  transition:opacity .2s ease;font-size:14px;z-index:300;max-width:90%;text-align:center}
+  transition:opacity .2s ease;font-size:14px;z-index:1000;max-width:90%;text-align:center}
 #toast.show{opacity:1}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:200;padding:20px}
 .modal .box{background:#fff;border-radius:20px;padding:20px;width:100%;max-width:340px;max-height:86vh;overflow:auto}
@@ -147,7 +147,6 @@ function hideLoading() {
   if (o) o.classList.remove('active');
 }
 
-// run 函式：僅負責按鈕防呆，彈窗未按確認前絕不提早轉圈
 async function run(btn, fn) {
   if (btn) btn.disabled = true;
   try {
@@ -206,7 +205,6 @@ function menu(title, items) {
 
 function forceReLogin() { try { liff.logout(); } catch (e) {} liff.login(); }
 
-// 核心：在真正的網路請求中呼叫全螢幕旋轉遮罩
 async function api(action, data = {}) {
   let token = '';
   try { if (liff.isLoggedIn()) token = liff.getIDToken() || ''; } catch (e) {}
@@ -249,7 +247,6 @@ async function init() {
   }
 }
 
-// 統一事件代理
 const ACT = {
   switchKid: d => switchKid(d.id),
   cancel: d => cancelReq(d.id),
@@ -295,8 +292,8 @@ async function doBind() {
   const nm = $('#pname'), ph = $('#pphone');
   await api('bind', { code, name: nm ? nm.value.trim() : '', phone: ph ? ph.value.trim() : '' });
   S.me = await api('me');
-  toast('綁定成功！');
   render();
+  setTimeout(() => toast('綁定成功！'), 100);
 }
 function viewBind() {
   $('#app').innerHTML = bindBox() + card('📋 教練／總教練開通', `<p class="muted">請把下面這串 ID 傳給總教練，開通後重新開啟即可：</p><code>${esc(S.me.id)}</code>`);
@@ -421,25 +418,29 @@ async function doSubmitPay() {
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
   if (!ids.length) throw new Error('請勾選繳費的學員');
   await api('pay', { period: $('#pay_period').value, studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value });
-  toast('匯款已送出，等待總教練確認！'); render();
+  render();
+  setTimeout(() => toast('匯款已送出，等待總教練確認！'), 100);
 }
 async function doSubmitLeave() {
   const dt = $('#leave_date');
   if (!dt || dt.disabled || !dt.value) throw new Error('請選擇請假的上課日');
   await api('leave', { studentId: $('#leave_sid').value, reasonType: $('#leave_reason_type').value, date: dt.value, reason: $('#leave_rsn').value });
-  toast('請假申請已送出，等待總教練核准'); render();
+  render();
+  setTimeout(() => toast('請假申請已送出，等待總教練核准'), 100);
 }
 async function doSubmitMakeup() {
   const d = $('#mk_date').value;
   if (!d) throw new Error('請選擇補課日期');
   if (dow(d) !== 7) throw new Error('補課日期限定為週日');
   await api('makeup', { leaveId: $('#mk_leave').value, targetClassId: $('#mk_cls').value, targetDate: d });
-  toast('補課預約已送出'); render();
+  render();
+  setTimeout(() => toast('補課預約已送出'), 100);
 }
 async function cancelReq(id) {
   if (!(await ask('確定要取消這筆申請嗎？'))) return;
   await api('cancel', { id });
-  toast('已取消'); render();
+  render();
+  setTimeout(() => toast('已取消'), 100);
 }
 
 // ===================== 教練點名 =====================
@@ -493,7 +494,12 @@ function rosterHtml() {
 }
 function pickStatus(i, s) { if (S.list[i]) { S.list[i].v = s; $('#roster').innerHTML = rosterHtml(); } }
 function setAll(s) { S.list.forEach(x => x.v = s); $('#roster').innerHTML = rosterHtml(); }
-async function doCheckin() { await api('coachCheckin', { classId: S.cls }); toast('簽到成功！💪'); S.me = await api('me'); render(); }
+async function doCheckin() { 
+  await api('coachCheckin', { classId: S.cls }); 
+  S.me = await api('me'); 
+  render(); 
+  setTimeout(() => toast('簽到成功！💪'), 100);
+}
 async function doSaveAttendance() {
   if (S.needCheckin && !S.checkedIn) throw new Error('請先簽到此班，才能儲存點名');
   const c = { '出席': 0, '請假': 0, '缺席': 0, '未到': 0 };
@@ -505,7 +511,8 @@ async function doSaveAttendance() {
     if (/剛被其他教練更新/.test(e.message)) { await info(e.message); await safe(viewCoach); return; }
     throw e;
   }
-  toast('點名完成並儲存！'); render();
+  render();
+  setTimeout(() => toast('點名完成並儲存！'), 100);
 }
 
 // ===================== 總教練後台 =====================
@@ -527,7 +534,6 @@ async function viewAdmin() {
     ${(c.adjustments || []).map(j => `<div class="row" style="padding:4px 0;border-top:0"><span class="muted" style="margin:0;font-size:13px">${esc(j.type)} ${j.amount > 0 ? '+' : ''}${j.amount}${j.note ? '・' + esc(j.note) : ''}</span>
       ${locked ? '' : `<button class="ghost mini" data-act="delAdj" data-id="${esc(j.id)}">刪除</button>`}</div>`).join('')}</div>`).join('') || '<p class="muted">尚無教練資料</p>';
 
-  // 精準根據 locked 存在與否渲染按鈕
   const salaryBtns = locked
     ? `<button class="ghost" data-act="unlockMonth">🔓 解除鎖定</button><button class="ghost" data-act="copySalary">📋 複製薪資表</button>`
     : `<button class="ghost" data-act="addAdj">➕ 代課／獎金／扣款</button><button class="ghost" data-act="adminCheckin">🕘 補簽到</button>
@@ -580,7 +586,8 @@ async function reviewPaySafe(id, decision) {
     if (!Object.keys(addMap).length) throw new Error('請至少為一位學員填寫要加的堂數');
   } else if (!nt.value.trim()) throw new Error('退回請填寫原因');
   await api('reviewPay', { id, decision, studentAddLessons: addMap, note: nt.value });
-  toast('匯款審核完成！'); render();
+  render();
+  setTimeout(() => toast('匯款審核完成！'), 100);
 }
 async function reviewLeaveUi(id, decision) {
   let note = '';
@@ -591,7 +598,8 @@ async function reviewLeaveUi(id, decision) {
     note = v.note;
   }
   await api('reviewLeave', { id, decision, note });
-  toast('假單處理完成！'); render();
+  render();
+  setTimeout(() => toast('假單處理完成！'), 100);
 }
 
 async function addStudentUi() {
@@ -624,18 +632,20 @@ async function manageStudent(id) {
       { key: 'reason', label: '原因（必填，會留下紀錄）', ph: '例如：補償、退費、轉班' }], '確認調整');
     if (!v) return;
     await api('adjustBalance', { studentId: id, delta: v.delta, reason: v.reason });
-    toast('堂數已調整');
+    render();
+    setTimeout(() => toast('堂數已調整'), 100);
   } else if (k === 'unbind') {
     if (!(await ask(`確定解除 ${x.name} 的所有家長綁定嗎？\n家長需要重新輸入綁定碼才能再看。`))) return;
     await api('unbind', { studentId: id });
-    toast('已解除綁定');
+    render();
+    setTimeout(() => toast('已解除綁定'), 100);
   } else {
     const next = x.status === '結業' ? '在學' : '結業';
     if (!(await ask(`確定把 ${x.name} 設為「${next}」嗎？\n${next === '結業' ? '結業後不會出現在點名名單。' : ''}`))) return;
     await api('setStudentStatus', { studentId: id, status: next });
-    toast('已更新狀態');
+    render();
+    setTimeout(() => toast('已更新狀態'), 100);
   }
-  render();
 }
 
 async function addAdjUi() {
@@ -648,12 +658,14 @@ async function addAdjUi() {
     { key: 'note', label: '說明', ph: '例如 11/9 代課' }], '新增');
   if (!v) return;
   await api('addSalaryAdj', { month: S.adm.stats.month, ...v });
-  toast('已新增'); render();
+  render();
+  setTimeout(() => toast('已新增'), 100);
 }
 async function delAdj(id) {
   if (!(await ask('確定刪除這筆薪資調整嗎？'))) return;
   await api('delSalaryAdj', { id });
-  toast('已刪除'); render();
+  render();
+  setTimeout(() => toast('已刪除'), 100);
 }
 async function adminCheckinUi() {
   const cs = S.adm.coaches || [], cl = S.me.classes || [];
@@ -664,17 +676,18 @@ async function adminCheckinUi() {
     { key: 'date', label: '上課日期', type: 'date', value: today() }], '補登');
   if (!v) return;
   await api('adminCheckin', v);
-  toast('已補登簽到'); render();
+  render();
+  setTimeout(() => toast('已補登簽到'), 100);
 }
 
-// 核心修正：鎖定操作先彈窗確認，點確定後才呼叫 API 顯示轉圈並精準重整
+// 修正：轉圈結束且重新渲染完畢後，才跳出提示
 async function lockMonthUi() {
   const m = S.month || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
   const ok = await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後該月份不能再簽到、調整，金額也會固定。`);
   if (!ok) return;
   await api('lockMonth', { month: m });
-  toast('已成功鎖定！');
   render();
+  setTimeout(() => toast('已成功鎖定！'), 100);
 }
 
 async function unlockMonthUi() {
@@ -682,8 +695,8 @@ async function unlockMonthUi() {
   const ok = await ask(`確定解除 ${m} 的鎖定嗎？`);
   if (!ok) return;
   await api('unlockMonth', { month: m });
-  toast('已成功解除鎖定！');
   render();
+  setTimeout(() => toast('已成功解除鎖定！'), 100);
 }
 
 function copySalary() {
@@ -696,7 +709,7 @@ function copyText(t) {
   const fallback = () => {
     const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0';
     document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); toast('已複製，可貼到 Excel／Google 試算表'); } catch (e) { toast('複製失敗，請改用手動複製'); }
+    try { document.execCommand('copy'); toast('已複製，可貼到 Excel／Google 追蹤表'); } catch (e) { toast('複製失敗，請改用手動複製'); }
     ta.remove();
   };
   if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(() => toast('已複製，可貼到 Excel／Google 追蹤表')).catch(fallback);

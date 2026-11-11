@@ -280,7 +280,7 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
-const FE_VER = '2026-11-11-r11';
+const FE_VER = '2026-11-11-r12';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -897,22 +897,25 @@ async function cashPayUi() {
   const stus = S.adm.students || [];
   if (!stus.length) throw new Error('目前尚無學員資料');
 
-  const v = await dialog('💵 現場收取現金登記', [
+  const v = await dialog('💵 補登收款（匯款／現金）', [
+    { key: 'method', label: '付款方式', type: 'select', value: '匯款', options: [['匯款', '匯款（已轉帳）'], ['現金', '現金（現場收取）']] },
     { key: 'studentId', label: '學員', type: 'select', options: stus.map(s => [s.id, `${s.name} (${s.className}・目前剩${s.balance}堂)`]) },
     { key: 'period', label: '繳費期別', type: 'select', options: [
       ['第二期', '第二期（常態 7 堂）'],
       ['一次報名兩期', '一次報名兩期（14 堂）'],
       ['中途插班', '中途插班繳費（自訂堂數）']
     ]},
-    { key: 'amount', label: '收取現金金額', type: 'number', ph: '例如: 4200 (插班依比例填寫)' },
+    { key: 'amount', label: '實收金額', type: 'number', ph: '例如: 4200 (插班依比例填寫)' },
+    { key: 'last5', label: '匯款帳號後五碼（匯款才填）', ph: '5 碼數字，現金免填' },
+    { key: 'date', label: '轉帳／收款日期', type: 'date', value: today() },
     { key: 'lessons', label: '增加堂數', type: 'number', ph: '常態7堂、兩期14堂，插班請自訂', value: '7' },
-    { key: 'note', label: '備註說明', ph: '例如: 現場交付千元大鈔 / 經手人總教練', value: '現場收取現金' }
+    { key: 'note', label: '備註說明', ph: '例如: 表單報名後匯款 / 現場交付現金', value: '' }
   ], '確認入帳並加堂');
 
   if (!v) return;
   await api('cashPay', v);
   render();
-  setTimeout(() => toast('現金已入帳，學員堂數已自動累加！'), 100);
+  setTimeout(() => toast('已入帳，學員堂數已自動累加！'), 100);
 }
 
 async function viewAdmin() {
@@ -957,7 +960,7 @@ async function viewAdmin() {
       <input id="nt_${esc(p.id)}" placeholder="退回說明（退回必填）">
       <div class="two"><button class="pri" data-act="reviewPay" data-id="${esc(p.id)}" data-d="pass">核准並加堂 ➜</button>
         <button class="ghost" data-act="reviewPay" data-id="${esc(p.id)}" data-d="reject">退回匯款</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>',
-      `<button class="ghost mini" onclick="run(this,cashPayUi)">💵 現場收取現金</button>`) +
+      `<button class="ghost mini" onclick="run(this,cashPayUi)">💵 補登收款</button>`) +
     pendingCard('📝 待審核請假', 'leave', '請假') +
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +

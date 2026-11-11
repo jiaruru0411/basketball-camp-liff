@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-11-r23';
+const FE_VER = '2026-11-11-r24';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -1039,6 +1039,8 @@ async function addStudentUi() {
     { key: 'name', label: '學員姓名（必填）' },
     { key: 'classId', label: '班級', type: 'select', options: cs.map(c => [c.classId, c.name]) },
     { key: 'kind', label: '學員類型', type: 'select', value: '', options: [['', '正式學員'], ['試上', '試上（體驗 1 堂）'], ['補課', '補課（上一期學生來補課）']] },
+    { key: 'visitDate', label: '上課日期（選試上／補課才填；隔幾週再來，之後可再加日期）', type: 'date' },
+    { key: 'visitClassId', label: '上課的班級（試上／補課來上哪一班；不選＝上面的班級）', type: 'select', value: '', options: [['', '同上面的班級']].concat(cs.map(c => [c.classId, c.name])) },
     { key: 'balance', label: '初始堂數', type: 'number', ph: '留空：正式 7 堂；試上、補課 1 堂', value: '' },
     { key: 'group', label: '班別（基礎／競技合開的班才選）', type: 'select', value: '', options: [['', '不分班別'], ['基礎班', '基礎班'], ['競技班', '競技班']] },
     { key: 'grade', label: '年級（教練點名時可看到）', type: 'select', value: '', options: gradeOpts },
@@ -1058,11 +1060,23 @@ async function manageStudent(id) {
   const x = (S.adm.students || []).find(s => s.id === id); if (!x) return;
   const k = await menu(`${x.name}（${x.className}${x.grp ? '・' + x.grp : ''}）・${balT(x.balance)}`, [
     ['edit', '📝 修改學員資料（姓名／班級／電話／備註／可同時調堂數）'],
+    ...(x.kind ? [['visit', `📅 新增${x.kind}上課日期（不是每週來，要來的那天再加）`]] : []),
     ['adj', '✏️ 手動調整堂數'],
     ['unbind', `🔗 解除家長綁定（目前 ${x.bound} 個帳號）`],
     ['status', x.status === '結業' ? '🔄 恢復為在學' : '🎓 設為結業']
   ]);
   if (!k) return;
+  if (k === 'visit') {
+    const cs0 = S.me.classes || [];
+    const v = await dialog(`${x.name}・新增${x.kind}日期`, [
+      { key: 'date', label: '上課日期', type: 'date' },
+      { key: 'classId', label: '上課的班級', type: 'select', value: x.classId, options: cs0.map(c => [c.classId, c.name]) }], '新增');
+    if (!v) return;
+    if (!v.date) throw new Error('請選擇日期');
+    await api('addVisit', { studentId: id, date: v.date, classId: v.classId });
+    render(); setTimeout(() => toast('已新增 ' + v.date + ' 的上課安排'), 100);
+    return;
+  }
   if (k === 'edit') {
     const v = await dialog(`修改 ${x.name} 的資料`, [
       { key: 'name', label: '姓名', value: x.name },

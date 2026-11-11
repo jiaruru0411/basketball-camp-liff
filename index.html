@@ -280,7 +280,9 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
-const FE_VER = '2026-11-11-r21';
+const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
+const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
+const FE_VER = '2026-11-11-r22';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -447,7 +449,7 @@ async function viewParent() {
 
   $('#app').innerHTML = noticeBanner() + kidTabs +
     card('⛹️ 孩子的課務狀態', vis.map(s => `<div class="row"><div><b>${esc(s.name)}</b>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}
-      <div class="muted" style="margin:0">${esc(s.grp || s.className)}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}</div></div>
+      <div class="muted" style="margin:0">${esc(s.grp || s.className)}${s.grade ? '・' + esc(s.grade) : ''}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}</div></div>
       ${balPill(s.balance)}</div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
     card('📝 我要請假', `
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
@@ -670,7 +672,7 @@ function rosterHtml() {
   return S.list.map((x, i) => `<div class="item ${x.makeup ? 'makeup-item' : ''} ${x.leave ? 'leave-item' : ''}">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <b>${esc(x.name)}</b> ${x.grp ? `<span class="pill gray">${esc(x.grp)}</span>` : ''}
+        <b>${esc(x.name)}</b> ${x.grade ? `<span class="pill gray">${esc(x.grade)}</span>` : ''}${x.grp ? `<span class="pill gray">${esc(x.grp)}</span>` : ''}
         ${x.makeup ? '<span class="pill" style="background:#fef3c7;color:#b45309">⭐ 跨班補課</span>' : ''}${x.swap ? `<span class="pill" style="background:#eff6ff;color:#2563eb">🔄 ${esc(x.swap)}</span>` : ''} 
         ${x.leave ? `<span class="pill warn">📝 事前請假（${esc(x.leaveReason || '已核准')}）</span>` : ''}
         ${x.saved ? `<span class="pill">${x.saved === '出席' ? '✓ 已出席' : esc(x.saved)}</span>` : ''}
@@ -983,8 +985,8 @@ async function viewAdmin() {
       ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
     card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
-      ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className + (x.grp || '')).toLowerCase())}"><div>
-        <b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}${x.grp ? '・' + esc(x.grp) : ''}</span>
+      ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className + (x.grp || '') + (x.grade || '')).toLowerCase())}"><div>
+        <b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}${x.grp ? '・' + esc(x.grp) : ''}${x.grade ? '・' + esc(x.grade) : ''}</span>
         <div class="muted" style="margin:0;font-size:12.5px">${x.bound ? `已綁 ${x.bound} 個帳號` : '未綁定'}${x.status === '結業' ? '・已結業' : ''}${x.note ? '・⚠️ ' + esc(x.note) : ''}</div></div>
         <div style="display:flex;align-items:center;gap:8px">${balPill(x.balance)}<button class="ghost mini" data-act="manageStu" data-id="${esc(x.id)}">管理</button></div></div>`).join('') || '<p class="muted">尚無學員資料</p>'),
       `<button class="ghost mini" onclick="run(this,addStudentUi)">＋ 新增學員</button>`) +
@@ -1038,12 +1040,14 @@ async function addStudentUi() {
     { key: 'classId', label: '班級', type: 'select', options: cs.map(c => [c.classId, c.name]) },
     { key: 'balance', label: '初始堂數', type: 'number', ph: '常態班預設 7 堂，中途插班可自訂', value: '7' },
     { key: 'group', label: '班別（基礎／競技合開的班才選）', type: 'select', value: '', options: [['', '不分班別'], ['基礎班', '基礎班'], ['競技班', '競技班']] },
-    { key: 'phone', label: '緊急聯絡電話', type: 'tel', ph: '教練點名時可看到' },
+    { key: 'grade', label: '年級（教練點名時可看到）', type: 'select', value: '', options: gradeOpts },
+    { key: 'phone', label: '緊急聯絡電話（必填）', type: 'tel', ph: '教練點名時可看到' },
     { key: 'note', label: '備註（過敏／傷病）', ph: '選填' },
     { key: 'studentId', label: '學員編號', ph: '留空自動產生' },
     { key: 'bindCode', label: '綁定碼', ph: '留空自動產生（兄弟姊妹請填相同綁定碼）' }
   ], '新增');
   if (!v) return;
+  if (String(v.phone || '').replace(/\D/g, '').length < 8) throw new Error('緊急聯絡電話為必填（至少 8 碼）');
   const r = await api('addStudent', v);
   await info(`已新增學員\n編號：${r.studentId}\n綁定碼：${r.bindCode}\n\n請把 6 碼綁定碼提供給家長。`);
   render();
@@ -1063,17 +1067,19 @@ async function manageStudent(id) {
       { key: 'name', label: '姓名', value: x.name },
       { key: 'classId', label: '班級', type: 'select', value: x.classId, options: (S.me.classes || []).map(c => [c.classId, c.name]) },
       { key: 'group', label: '班別（基礎／競技）', type: 'select', value: x.grp || '', options: [['', '不分班別'], ['基礎班', '基礎班'], ['競技班', '競技班']] },
-      { key: 'phone', label: '緊急聯絡電話', type: 'tel', value: x.phone || '' },
+      { key: 'grade', label: '年級（長大了在這裡改）', type: 'select', value: x.grade || '', options: gradeOpts },
+      { key: 'phone', label: '緊急聯絡電話（必填）', type: 'tel', value: x.phone || '' },
       { key: 'note', label: '備註（過敏／傷病）', value: x.note || '' },
       { key: 'delta', label: '同時調整堂數（選填）', type: 'number', ph: '不調整就留空；加 7 堂填 7，扣 1 堂填 -1' },
       { key: 'reason', label: '調整堂數的原因（有填堂數才必填）', ph: '例如：試上轉正式報名' }], '儲存');
     if (!v) return;
+    if (String(v.phone || '').replace(/\D/g, '').length < 8) throw new Error('緊急聯絡電話為必填（至少 8 碼）');
     const delta = v.delta === '' ? 0 : Number(v.delta);
     if (!isFinite(delta) || Math.floor(delta) !== delta) throw new Error('堂數請填整數');
     if (delta !== 0 && !v.reason) throw new Error('有調整堂數，請填寫原因');
-    const changed = v.name !== x.name || v.classId !== x.classId || (v.group || '') !== (x.grp || '') || (v.phone || '') !== (x.phone || '') || (v.note || '') !== (x.note || '');
+    const changed = v.name !== x.name || v.classId !== x.classId || (v.group || '') !== (x.grp || '') || (v.grade || '') !== (x.grade || '') || (v.phone || '') !== (x.phone || '') || (v.note || '') !== (x.note || '');
     if (!changed && delta === 0) throw new Error('沒有任何變更');
-    if (changed) await api('updateStudent', { studentId: id, name: v.name, classId: v.classId, group: v.group, phone: v.phone, note: v.note });
+    if (changed) await api('updateStudent', { studentId: id, name: v.name, classId: v.classId, group: v.group, grade: v.grade, phone: v.phone, note: v.note });
     if (delta !== 0) { await api('adjustBalance', { studentId: id, delta: delta, reason: v.reason }); x.balance = Number(x.balance || 0) + delta; }
     render();
     setTimeout(() => toast(changed && delta !== 0 ? '資料與堂數已更新' : delta !== 0 ? '堂數已調整' : '學員資料已更新'), 100);

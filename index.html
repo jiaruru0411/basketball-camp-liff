@@ -261,7 +261,7 @@ const ACT = {
   switchKid: d => switchKid(d.id),
   cancel: d => cancelReq(d.id),
   reviewPay: d => reviewPaySafe(d.id, d.d),
-  reviewLeave: d => reviewLeaveUi(d.id, d.d),
+  reviewLeave: d => reviewLeaveUi(d.id, d.d, d.k),
   manageStu: d => manageStudent(d.id),
   delAdj: d => delAdj(d.id),
   lockMonth: () => lockMonthUi(),
@@ -348,6 +348,25 @@ function leaveDateHtml(st) {
 }
 function onLeaveKid(id) { const b = $('#leave_date_box'); if (b) b.innerHTML = leaveDateHtml(stuById(id)); }
 
+function swapRefresh(keepDate) {
+  const sidEl = $('#sw_sid'), de = $('#sw_date'), ce = $('#sw_cls'); if (!sidEl || !de || !ce) return;
+  const st = stuById(sidEl.value); if (!st) return;
+  if (!keepDate) {
+    const ds = classDates(st);
+    de.innerHTML = ds.length ? ds.map(d => `<option value="${d}">${d}（週${DN[dow(d) - 1]}）</option>`).join('') : '<option value="">近期沒有上課日</option>';
+  }
+  const own = ((S.parentData && S.parentData.cl) || []).find(c => c.classId === st.classId), d = de.value;
+  const list = ((S.parentData && S.parentData.cl) || []).filter(c => c.classId !== st.classId && own && c.hours === own.hours && (!c.days || !c.days.length || (d && c.days.includes(dow(d)))));
+  ce.innerHTML = list.length ? list.map(c => `<option value="${esc(c.classId)}">${esc(c.name)} (${c.hours}h)</option>`).join('') : '<option value="">沒有可換的班級（需不同時段、相同時數）</option>';
+}
+async function doSubmitSwap() {
+  const d = $('#sw_date').value, c = $('#sw_cls').value;
+  if (!d) throw new Error('請選擇調課日期');
+  if (!c) throw new Error('沒有可換的班級');
+  await api('swap', { studentId: $('#sw_sid').value, date: d, targetClassId: c, reason: $('#sw_rsn').value });
+  render();
+  setTimeout(() => toast('調課申請已送出，等待總教練核准'), 100);
+}
 function fillMkClasses() { // 只列出「不是原班」且「時數相同」的班級
   const sel = $('#mk_leave'), cs = $('#mk_cls'); if (!sel || !cs || !sel.selectedOptions[0]) return;
   const op = sel.selectedOptions[0], cid = op.dataset.cid, h = Number(op.dataset.h) || 0, keep = cs.value;
@@ -379,7 +398,8 @@ function snapForm() {
 function restoreForm(o) {
   const set = id => { const el = document.getElementById(id); if (!el || o[id] === undefined) return;
     if (el.tagName === 'SELECT' && ![...el.options].some(x => x.value === o[id])) return; el.value = o[id]; };
-  Object.keys(o).forEach(id => { if (id !== 'leave_date' && id !== 'mk_date') set(id); });
+  Object.keys(o).forEach(id => { if (id !== 'leave_date' && id !== 'mk_date' && id !== 'sw_date' && id !== 'sw_cls') set(id); });
+  if ($('#sw_sid')) { swapRefresh(); set('sw_date'); swapRefresh(true); set('sw_cls'); }
   if (o.leave_sid !== undefined && $('#leave_sid')) onLeaveKid($('#leave_sid').value);
   updateMk(); set('leave_date'); set('mk_date');
 }
@@ -437,6 +457,13 @@ async function viewParent() {
       <div id="leave_date_box">${leaveDateHtml(vis[0])}</div>
       <input id="leave_rsn" placeholder="原因說明（例如：發燒就醫／外出旅遊）">
       <button class="pri" onclick="run(this,doSubmitLeave)">送出請假申請 ➜</button>`) +
+    card('🔄 當天換時段（調課）', `
+      <p class="muted">例如上午的課改到下午上、或下午的課提早來上午。需經總教練核准，不算請假、不扣事假次數。</p>
+      <select id="sw_sid" onchange="swapRefresh()">${opt}</select>
+      <select id="sw_date" onchange="swapRefresh(true)"></select>
+      <select id="sw_cls"></select>
+      <input id="sw_rsn" placeholder="原因說明（選填，例如：早上有事）">
+      <button class="pri" onclick="run(this,doSubmitSwap)">送出調課申請 ➜</button>`) +
     card('🏀 預約補課', makeupForm + `
       <div class="rules-box"><b>📌 115年常態班請假補課規範：</b><ol>
         <li><b>病假單堂</b>：請提供看診收據（接受上課日前後二日）。</li>
@@ -466,6 +493,7 @@ async function viewParent() {
         ${l.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">說明：${esc(l.note)}</div>` : ''}${cancelBtn(l)}</div>${pill(l.status)}</div>`).join('')) || '<p class="muted">尚無歷史紀錄</p>') +
     bindBox();
   updateMk();
+  swapRefresh();
   calcPay();
 }
 async function setAttf(v) {
@@ -542,7 +570,7 @@ async function viewCoach() {
   const isAdmin = S.me.role === 'admin';
   if (!isAdmin || !S.date) S.date = today();
   const r = await api('roster', { classId: S.cls, date: S.date }, true);
-  S.upcoming = r.upcoming || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
+  S.upcoming = r.upcoming || []; S.swapOut = r.swapOut || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
   
   S.list.forEach(x => { 
     x.v = x.saved || (x.leave ? '請假' : '未到'); 
@@ -583,11 +611,11 @@ async function viewCoach() {
 async function changeClass(v) { S.cls = v; await safe(viewCoach); }
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
 function leaveBox() { // 教練一眼看到：這天誰請假、誰補課、之後誰要請假
-  const lv = S.list.filter(x => x.leave), pend = S.list.filter(x => x.pendingLeave && !x.leave), mk = S.list.filter(x => x.makeup), up = S.upcoming || [];
+  const sw = S.list.filter(x => x.swap), swo = S.swapOut || [], lv = S.list.filter(x => x.leave), pend = S.list.filter(x => x.pendingLeave && !x.leave), mk = S.list.filter(x => x.makeup), up = S.upcoming || [];
   const line = (t, arr) => arr.length ? `<div style="margin:4px 0">${t}：${arr.map(x => `<b>${esc(x.name)}</b>${x.leaveReason ? `<span class="muted">（${esc(x.leaveReason)}）</span>` : ''}`).join('、')}</div>` : '';
   const upHtml = up.length ? `<div style="border-top:1px dashed #f0e7dd;margin-top:6px;padding-top:6px"><div class="muted" style="font-weight:700">之後 30 天已核准</div>${up.map(u => `<div class="row" style="padding:5px 0"><span>${esc(u.date)}・<b>${esc(u.name)}</b></span><span class="pill ${u.type === '補課' ? 'warn' : ''}">${esc(u.type)}</span></div>`).join('')}</div>` : '';
   return `<div class="item" style="background:#fffaf0"><div style="font-weight:800">📝 ${esc(S.date)} 請假／補課</div>
-    ${lv.length || pend.length || mk.length ? line('請假', lv) + line('待審核請假', pend) + line('補課學員', mk) : '<p class="muted" style="margin:4px 0">今天沒有人請假或補課</p>'}${upHtml}</div>`;
+    ${lv.length || pend.length || mk.length || sw.length || swo.length ? line('請假', lv) + line('待審核請假', pend) + line('補課學員', mk) + (sw.length ? `<div style="margin:4px 0">調課來上：${sw.map(x => `<b>${esc(x.name)}</b><span class="muted">（${esc(x.swap)}）</span>`).join('、')}</div>` : '') + (swo.length ? `<div style="margin:4px 0">調去別班：${swo.map(x => `<b>${esc(x.name)}</b><span class="muted">（→${esc(x.to)}）</span>`).join('、')}</div>` : '') : '<p class="muted" style="margin:4px 0">今天沒有人請假或補課</p>'}${upHtml}</div>`;
 }
 function rosterSummary() {
   if (!S.list.length) return '';
@@ -600,7 +628,7 @@ function rosterHtml() {
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
         <b>${esc(x.name)}</b> 
-        ${x.makeup ? '<span class="pill" style="background:#fef3c7;color:#b45309">⭐ 跨班補課</span>' : ''} 
+        ${x.makeup ? '<span class="pill" style="background:#fef3c7;color:#b45309">⭐ 跨班補課</span>' : ''}${x.swap ? `<span class="pill" style="background:#eff6ff;color:#2563eb">🔄 ${esc(x.swap)}</span>` : ''} 
         ${x.leave ? `<span class="pill warn">📝 事前請假（${esc(x.leaveReason || '已核准')}）</span>` : ''}
         ${x.saved ? `<span class="pill">${x.saved === '出席' ? '✓ 已出席' : esc(x.saved)}</span>` : ''}
       </div>
@@ -641,6 +669,27 @@ function switchMemoTab(t) {
   renderMemoBox();
 }
 
+function pendingCard(title, key, type) {
+  const list = ((S.adm && S.adm.leaves) || []).filter(l => l.type === type);
+  const btns = l => type === '請假'
+    ? `<div class="two" style="margin-top:10px"><button class="pri" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="pass">✅ 核准</button>
+        <button class="ghost" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="reject">婉拒</button></div>
+      <button class="ghost" style="width:100%;margin-top:8px;font-size:13.5px" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="pass" data-k="天災">🌧️ 核准（天災／停課，不計事假）</button>`
+    : `<div class="two" style="margin-top:10px"><button class="pri" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="pass">✅ 核准</button>
+        <button class="ghost" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="reject">婉拒</button></div>`;
+  const body = l => {
+    if (type === '請假') return `<b>${esc(l.studentName)}</b>・${esc(l.className)}<div style="margin:4px 0"><b>${esc(l.date)}</b> ${l.kind ? `<span class="pill ${l.kind === '病假' ? '' : 'warn'}">${esc(l.kind)}</span>` : ''}</div>
+      ${l.kind === '事假' ? `<div class="muted" style="margin:0 0 4px;font-weight:700;color:${l.usedPersonal ? 'var(--bad)' : 'var(--mut)'}">本期已核准事假：${l.usedPersonal} 次${l.usedPersonal ? '（再核准會超過每期 1 次，請婉拒或改標天災）' : ''}</div>` : ''}
+      <div class="muted" style="margin:0">原因：${esc(l.reasonText || l.reason)}</div>`;
+    if (type === '補課') return `<b>${esc(l.studentName)}</b> 補課日：<b>${esc(l.date)}</b>
+      <div class="muted" style="margin:4px 0 0;color:var(--pri);font-weight:700">補去：${esc(l.className)}${l.originDate ? '｜原請假日：' + esc(l.originDate) : ''}</div>
+      <div class="muted" style="margin:2px 0 0">${esc(l.reason)}</div>`;
+    return `<b>${esc(l.studentName)}</b> 調課日：<b>${esc(l.date)}</b>
+      <div class="muted" style="margin:4px 0 0;color:var(--pri);font-weight:700">${esc(l.reasonText || l.reason)}</div>`;
+  };
+  return card(title + (list.length ? ` <span class="pill warn">${list.length}</span>` : ''),
+    list.map(l => `<div class="item">${body(l)}${btns(l)}</div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>');
+}
 function setRv(v) { S.rvMine = v; const e = document.getElementById('rv_list'); if (e) e.parentElement.outerHTML = card('🗒️ 審核紀錄', reviewedHtml()); }
 function reviewedHtml() {
   const all = (S.adm && S.adm.reviewed) || [], mine = !!S.rvMine, me = S.me.name;
@@ -655,9 +704,9 @@ function renderMemoBox() {
   const box = $('#memo_container');
   if (!box || !S.adm) return;
   const a = S.adm, f = S.mf || { cls: '', when: 'future', ended: false }, t = today();
-  const isLeave = S.memoTab === 'leave';
-  const src = (isLeave ? a.approvedLeaves : a.approvedMakeups) || [];
-  const classes = [...new Map(((a.approvedLeaves || []).concat(a.approvedMakeups || [])).map(l => [l.classId, l.className])).entries()];
+  const isLeave = S.memoTab === 'leave', isSwap = S.memoTab === 'swap';
+  const src = (isLeave ? a.approvedLeaves : isSwap ? a.approvedSwaps : a.approvedMakeups) || [];
+  const classes = [...new Map(((a.approvedLeaves || []).concat(a.approvedMakeups || [], a.approvedSwaps || [])).map(l => [l.classId, l.className])).entries()];
   const keep = l => (!f.cls || l.classId === f.cls) && (f.ended || !l.ended) && (f.when === 'all' || (f.when === 'future' ? l.date >= t : l.date < t));
   const rows = src.filter(keep); if (f.when === 'past') rows.reverse();
   const sel = (v, o) => o.map(x => `<option value="${esc(x[0])}" ${x[0] === v ? 'selected' : ''}>${esc(x[1])}</option>`).join('');
@@ -670,15 +719,20 @@ function renderMemoBox() {
       <b>${esc(m.studentName)}</b> 補課日：<b>${esc(m.date)}</b>${endTag(m)}
       <div class="muted" style="margin:2px 0 0;font-size:12.5px">目標班級：<b>${esc(m.className)}</b></div></div>
       <span class="pill" style="background:#fffbeb;color:#d97706">⭐ 補課已排定</span></div>`).join('') || '<p class="muted">沒有符合的補課紀錄</p>';
+  const swapHtml = rows.map(m => `<div class="row"><div>
+      <b>${esc(m.studentName)}</b> 調課日：<b>${esc(m.date)}</b>${endTag(m)}
+      <div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(m.fromClass)} → <b>${esc(m.className)}</b></div></div>
+      <span class="pill" style="background:#eff6ff;color:#2563eb">🔄 調課已排定</span></div>`).join('') || '<p class="muted">沒有符合的調課紀錄</p>';
   box.innerHTML = `
-    <div class="memo-tabs">
-      <button class="memo-btn ${isLeave ? 'active' : ''}" onclick="switchMemoTab('leave')">📝 請假名單備忘 (${(a.approvedLeaves || []).length})</button>
-      <button class="memo-btn ${!isLeave ? 'active' : ''}" onclick="switchMemoTab('makeup')">⭐ 補課名單備忘 (${(a.approvedMakeups || []).length})</button>
+    <div class="memo-tabs" style="grid-template-columns:repeat(3,1fr)">
+      <button class="memo-btn ${isLeave ? 'active' : ''}" onclick="switchMemoTab('leave')">📝 請假 (${(a.approvedLeaves || []).length})</button>
+      <button class="memo-btn ${!isLeave && !isSwap ? 'active' : ''}" onclick="switchMemoTab('makeup')">⭐ 補課 (${(a.approvedMakeups || []).length})</button>
+      <button class="memo-btn ${isSwap ? 'active' : ''}" onclick="switchMemoTab('swap')">🔄 調課 (${(a.approvedSwaps || []).length})</button>
     </div>
     <div class="two"><select onchange="setMf('cls',this.value)">${sel(f.cls, [['', '全部班級']].concat(classes))}</select>
       <select onchange="setMf('when',this.value)">${sel(f.when, [['future', '今天起'], ['past', '已過'], ['all', '全部']])}</select></div>
     <label class="muted" style="display:block;margin:6px 0"><input type="checkbox" ${f.ended ? 'checked' : ''} onchange="setMf('ended',this.checked)">顯示已過保留期（堂數用完超過14天）／已結業</label>
-    ${isLeave ? leaveHtml : makeupHtml}`;
+    ${isLeave ? leaveHtml : isSwap ? swapHtml : makeupHtml}`;
 }
 
 // 總教練點擊「💵 現場收取現金」彈出對話框
@@ -748,12 +802,9 @@ async function viewAdmin() {
       <div class="two"><button class="pri" data-act="reviewPay" data-id="${esc(p.id)}" data-d="pass">核准並加堂 ➜</button>
         <button class="ghost" data-act="reviewPay" data-id="${esc(p.id)}" data-d="reject">退回匯款</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>',
       `<button class="ghost mini" onclick="run(this,cashPayUi)">💵 現場收取現金</button>`) +
-    card('📅 待審核請假與補課', (a.leaves || []).map(l => `<div class="item">
-      <b>${esc(l.studentName)}</b> 申請 <b>【${esc(l.type)}】</b> ${esc(l.date)}${l.kind ? ` <span class="pill ${l.kind === '病假' ? '' : 'warn'}">${esc(l.kind)}</span>` : ''}${l.kind === '事假' ? `<div class="muted" style="margin:4px 0 0;font-weight:700;color:${l.usedPersonal ? 'var(--bad)' : 'var(--mut)'}">本期已核准事假：${l.usedPersonal} 次${l.usedPersonal ? '（再核准會超過每期 1 次的限制）' : ''}</div>` : ''}
-      ${l.type === '補課' ? `<div class="muted" style="margin:4px 0 0;color:var(--pri);font-weight:700">目標班級：${esc(l.className)}</div>` : ''}
-      <div class="muted" style="margin:4px 0">${esc(l.reasonText || l.reason)}</div>
-      <div class="two" style="margin-top:10px"><button class="pri" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="pass">核准申請 ➜</button>
-        <button class="ghost" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="reject">婉拒申請</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>') +
+    pendingCard('📝 待審核請假', 'leave', '請假') +
+    pendingCard('⭐ 待審核補課', 'makeup', '補課') +
+    pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +
     card('🗒️ 審核紀錄', reviewedHtml()) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
     card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
@@ -788,7 +839,7 @@ async function reviewPaySafe(id, decision) {
   render();
   setTimeout(() => toast('匯款審核完成！'), 100);
 }
-async function reviewLeaveUi(id, decision) {
+async function reviewLeaveUi(id, decision, kind) {
   let note = '';
   if (decision === 'reject') {
     const v = await dialog('婉拒申請', [{ key: 'note', label: '婉拒原因（家長會看到）', ph: '例如：該日補課人數已滿' }], '確認婉拒');
@@ -796,13 +847,7 @@ async function reviewLeaveUi(id, decision) {
     if (!v.note) throw new Error('請填寫婉拒原因');
     note = v.note;
   }
-  let kind = '';
-  if (decision === 'pass') {
-    const k = await menu('核准這筆申請', [['ok', '✅ 一般核准'], ['dis', '🌧️ 核准並標記為天災／停課（補課不計事假）']]);
-    if (!k) return;
-    if (k === 'dis') kind = '天災';
-  }
-  await api('reviewLeave', { id, decision, note, kind });
+  await api('reviewLeave', { id, decision, note, kind: kind || '' });
   render();
   setTimeout(() => toast('申請處理完成！'), 100);
 }

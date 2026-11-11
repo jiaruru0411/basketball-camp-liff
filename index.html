@@ -280,7 +280,7 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
-const FE_VER = '2026-11-11-r13';
+const FE_VER = '2026-11-11-r14';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -1039,7 +1039,7 @@ async function addStudentUi() {
 async function manageStudent(id) {
   const x = (S.adm.students || []).find(s => s.id === id); if (!x) return;
   const k = await menu(`${x.name}（${x.className}）・${balT(x.balance)}`, [
-    ['edit', '📝 修改學員資料（姓名／班級／電話／備註）'],
+    ['edit', '📝 修改學員資料（姓名／班級／電話／備註／可同時調堂數）'],
     ['adj', '✏️ 手動調整堂數'],
     ['unbind', `🔗 解除家長綁定（目前 ${x.bound} 個帳號）`],
     ['status', x.status === '結業' ? '🔄 恢復為在學' : '🎓 設為結業']
@@ -1050,11 +1050,19 @@ async function manageStudent(id) {
       { key: 'name', label: '姓名', value: x.name },
       { key: 'classId', label: '班級', type: 'select', value: x.classId, options: (S.me.classes || []).map(c => [c.classId, c.name]) },
       { key: 'phone', label: '緊急聯絡電話', type: 'tel', value: x.phone || '' },
-      { key: 'note', label: '備註（過敏／傷病）', value: x.note || '' }], '儲存');
+      { key: 'note', label: '備註（過敏／傷病）', value: x.note || '' },
+      { key: 'delta', label: '同時調整堂數（選填）', type: 'number', ph: '不調整就留空；加 7 堂填 7，扣 1 堂填 -1' },
+      { key: 'reason', label: '調整堂數的原因（有填堂數才必填）', ph: '例如：試上轉正式報名' }], '儲存');
     if (!v) return;
-    await api('updateStudent', { studentId: id, ...v });
+    const delta = v.delta === '' ? 0 : Number(v.delta);
+    if (!isFinite(delta) || Math.floor(delta) !== delta) throw new Error('堂數請填整數');
+    if (delta !== 0 && !v.reason) throw new Error('有調整堂數，請填寫原因');
+    const changed = v.name !== x.name || v.classId !== x.classId || (v.phone || '') !== (x.phone || '') || (v.note || '') !== (x.note || '');
+    if (!changed && delta === 0) throw new Error('沒有任何變更');
+    if (changed) await api('updateStudent', { studentId: id, name: v.name, classId: v.classId, phone: v.phone, note: v.note });
+    if (delta !== 0) { await api('adjustBalance', { studentId: id, delta: delta, reason: v.reason }); x.balance = Number(x.balance || 0) + delta; }
     render();
-    setTimeout(() => toast('學員資料已更新'), 100);
+    setTimeout(() => toast(changed && delta !== 0 ? '資料與堂數已更新' : delta !== 0 ? '堂數已調整' : '學員資料已更新'), 100);
     return;
   }
   if (k === 'adj') {

@@ -701,14 +701,21 @@ function switchMemoTab(t) {
   renderMemoBox();
 }
 
-function scheduleCardAdmin(a) { // 排班：某天某班由誰上班（沒特別排就用班級列表預設的教練）
-  const sc = a.schedule || { dates: [], staff: [] };
+function schedPick(v) { S.schedDate = v; const e = document.getElementById('sched_box'); if (e) e.innerHTML = schedBody(S.adm.schedule); }
+function schedBody(sc) {
+  const d = (sc.dates || []).find(x => x.date === S.schedDate) || (sc.dates || [])[0];
+  if (!d) return '<p class="muted">近期沒有上課日</p>';
   const nameOf = id => ((sc.staff || []).find(x => x.id === id) || {}).name || '未登錄';
-  return card('👥 排班', `<p class="muted">沒有特別排的班，會用「班級列表」裡設定的教練。只有排到班的教練可以簽到。</p>` +
-    (sc.dates || []).map(d => `<div class="item"><b>${esc(d.date)}（週${DN[dow(d.date) - 1]}）</b>
-      ${d.classes.map(c => `<div class="row" style="padding:7px 0"><div>${esc(c.name)}${c.tm ? `<span class="muted"> ${esc(c.tm)}</span>` : ''}
-        <div class="muted" style="margin:0;font-size:12.5px">${c.ids.map(nameOf).map(esc).join('、') || '尚未指派教練'}${c.custom ? ' <span class="pill warn">已調整</span>' : ' <span class="pill gray">預設</span>'}</div></div>
-        <button class="ghost mini" onclick="editSchedule('${esc(d.date)}','${esc(c.id)}')">調整</button></div>`).join('')}</div>`).join('') || '<p class="muted">近期沒有上課日</p>');
+  return d.classes.map(c => `<div class="row" style="padding:8px 0"><div>${esc(c.name)}${c.tm && c.name.indexOf(c.tm) === -1 ? `<span class="muted"> ${esc(c.tm)}</span>` : ''}
+    <div class="muted" style="margin:0;font-size:12.5px">${c.ids.map(nameOf).map(esc).join('、') || '尚未指派教練'}${c.custom ? ' <span class="pill warn">已調整</span>' : ''}</div></div>
+    <button class="ghost mini" onclick="editSchedule('${esc(d.date)}','${esc(c.id)}')">調整</button></div>`).join('');
+}
+function scheduleCardAdmin(a) { // 排班：選日期看那天各班的教練，一次只顯示一天，畫面不會太長
+  const sc = a.schedule || { dates: [], staff: [] };
+  if (!sc.dates.some(x => x.date === S.schedDate)) S.schedDate = (sc.dates[0] || {}).date;
+  return card('👥 排班', `<p class="muted">平常用「班級列表」設定的教練；臨時要換人，選日期後按該班的「調整」。只有排到班的教練可以簽到。</p>
+    <select onchange="schedPick(this.value)">${(sc.dates || []).map(d => `<option value="${esc(d.date)}" ${d.date === S.schedDate ? 'selected' : ''}>${esc(d.date)}（週${DN[dow(d.date) - 1]}）${d.classes.some(c => c.custom) ? '・有調整' : ''}</option>`).join('')}</select>
+    <div id="sched_box">${schedBody(sc)}</div>`);
 }
 function editSchedule(date, cid) {
   const sc = S.adm.schedule, d = sc.dates.find(x => x.date === date), c = d && d.classes.find(x => x.id === cid); if (!c) return;
@@ -720,7 +727,7 @@ function editSchedule(date, cid) {
     if (x === 'no') { w.remove(); return; }
     const ids = [...w.querySelectorAll('input:checked')].map(i => i.value);
     w.remove();
-    try { await api('setSchedule', { date, classId: cid, coachIds: ids }); render(); setTimeout(() => toast('排班已更新'), 100); } catch (err) { toast(err.message); }
+    try { await api('setSchedule', { date, classId: cid, coachIds: ids }); S.schedDate = date; render(); setTimeout(() => toast('排班已更新'), 100); } catch (err) { toast(err.message); }
   };
 }
 function overviewCard(a) { // #3 今日各班概況

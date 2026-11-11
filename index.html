@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-11-r24';
+const FE_VER = '2026-11-12-r26';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -607,7 +607,7 @@ async function viewCoach() {
     x.v = x.saved || (x.leave ? '請假' : '未到'); 
   });
 
-  let ms = null; try { ms = await api('mySalary', { month: S.cmonth || today().slice(0, 7) }, true); } catch (e) {}
+  let ms = null; try { ms = await api('mySalary', { month: S.cmonth || '' }, true); } catch (e) {}
   const cur = cs.find(c => c.classId === S.cls), isToday = S.date === today();
   const logs = (S.me.recentCheckins || []).map(k => `<div class="row" style="padding:6px 0"><span>${esc(k.date)}・${esc(k.className)}</span><span class="pill">已簽到 ${esc(k.time)}</span></div>`).join('') || '<p class="muted" style="margin:4px 0 0">近期尚無簽到紀錄</p>';
 
@@ -649,7 +649,7 @@ function mySalaryCard(m) { // 教練的班表與授課明細（不顯示時薪�
   return card('🗓️ 我的班表與授課明細', `
     <div style="font-weight:800;margin:0 0 6px">接下來的上班日</div>
     ${(m.upcoming || []).map(u => `<div class="row" style="padding:7px 0"><span><b>${esc(u.date)}</b>（週${DN[dow(u.date) - 1]}）</span><span style="text-align:right">${esc(u.className)}<div class="muted" style="margin:0;font-size:12.5px">${u.tm ? esc(u.tm) + ' 開始・' : ''}${u.hours} 小時</div></span></div>`).join('') || '<p class="muted">目前沒有排到班，請洽總教練</p>'}
-    <div style="border-top:1px dashed #f0e7dd;margin-top:10px;padding-top:10px"><input type="month" value="${esc(m.month)}" onchange="S.cmonth=this.value;safe(viewCoach)">
+    <div style="border-top:1px dashed #f0e7dd;margin-top:10px;padding-top:10px">${(m.keys || []).length ? `<select onchange="S.cmonth=this.value;safe(viewCoach)">${m.keys.map(k => `<option value="${esc(k)}" ${k === m.month ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>` : `<input type="month" value="${esc(m.month)}" onchange="S.cmonth=this.value;safe(viewCoach)">`}
     <div class="stats"><div class="stat"><b>${m.lessonCount}</b><span>${esc(m.month)} 授課堂數</span></div><div class="stat"><b>${m.totalHours}</b><span>授課小時</span></div></div>
     <details><summary class="muted" style="cursor:pointer">授課明細（${(m.days || []).length} 筆）</summary>${(m.days || []).map(d => `<div class="row" style="padding:6px 0"><span>${esc(d.date)}・${esc(d.className)}${d.note ? `<span class="muted">（${esc(d.note)}）</span>` : ''}</span><span class="muted" style="margin:0">${d.hours} 小時</span></div>`).join('') || '<p class="muted">本月尚無簽到</p>'}</details></div>`);
 }
@@ -838,11 +838,12 @@ function financeCard(a) { // 財務報表：依期別看（兩期合報的款項
   return card('📊 財務報表（依期別）', `
     <select onchange="S.finPeriod=this.value;render()">${(fp.periods || []).map(p => `<option value="${esc(p.period)}" ${p.period === S.finPeriod ? 'selected' : ''}>${esc(p.period)}（${m(p.amount)}）</option>`).join('') || '<option>尚無收款紀錄</option>'}</select>
     <div class="stats" style="margin-top:8px"><div class="stat"><b>${m(g.amount)}</b><span>${esc(S.finPeriod || '')}收入（${g.count || 0} 筆）</span></div><div class="stat"><b>${m(fp.total)}</b><span>全部期別合計</span></div></div>
+    ${(a.periodSalary || {})[S.finPeriod] !== undefined ? `<div class="row"><span>教練費（${esc(S.finPeriod)}）</span><span>${m(a.periodSalary[S.finPeriod])}</span></div><div class="row"><span><b>預估盈餘</b>（收入 − 教練費）</span><b style="color:${g.amount - a.periodSalary[S.finPeriod] < 0 ? 'var(--bad)' : 'var(--ok)'}">${m(g.amount - a.periodSalary[S.finPeriod])}</b></div>` : ''}
     <div class="row"><span>匯款 / 現金</span><span>${m((g.byMethod || {})['匯款'])} ／ ${m((g.byMethod || {})['現金'])}</span></div>
     <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">${esc(S.finPeriod || '')}收款明細</summary>${(g.list || []).map(r => `<div class="row" style="padding:7px 0"><div>${esc(r.date)}・<b>${esc(r.students)}</b>
       <div class="muted" style="margin:0;font-size:12.5px">${esc(r.who)}・${esc(r.method)}${r.by ? '・' + esc(r.by) : ''}${r.split ? '・兩期合報共 ' + m(r.total) : ''}</div></div><b>${m(r.amount)}</b></div>`).join('') || '<p class="muted">這一期還沒有收款</p>'}</details>
     <button class="ghost" style="width:100%;margin-top:10px" data-act="copyFinance">📋 複製這一期收款明細</button>
-    <p class="muted" style="font-size:12.5px;margin:6px 0 0">一次報多期的款項會平均分到各期，短 T 算在第一期。教練薪資仍依月份計算，請看上方薪資區。</p>`);
+    <p class="muted" style="font-size:12.5px;margin:6px 0 0">一次報多期的款項會平均分到各期，短 T 算在第一期。教練費依期別計算（看上方薪資區），預估盈餘只是收入減教練費，不含場地等其他支出。</p>`);
 }
 function pendingCard(title, key, type) {
   const list = ((S.adm && S.adm.leaves) || []).filter(l => l.type === type);
@@ -934,9 +935,8 @@ async function cashPayUi() {
 }
 
 async function viewAdmin() {
-  S.month = S.month || today().slice(0, 7);
-  const a = await api('admin', { month: S.month }, true);
-  S.adm = a;
+  const a = await api('admin', { month: S.salKey || '' }, true);
+  S.adm = a; S.salKey = (a.stats && a.stats.month) || S.salKey || '';
   const s = a.stats || {}, locked = a.locked;
   const totalSal = (a.coaches || []).reduce((t, c) => t + c.totalSalary, 0);
   const box = (n, t) => `<div class="stat"><b>${n}</b><span>${t}</span></div>`;
@@ -980,7 +980,7 @@ async function viewAdmin() {
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +
     card('🗒️ 審核紀錄', reviewedHtml()) +
-    card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">
+    card('💵 教練授課時數與薪資', ((a.salaryKeys || []).length ? `<select onchange="S.salKey=this.value;render()">${a.salaryKeys.map(k => `<option value="${esc(k)}" ${k === S.salKey ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>` : `<input type="month" value="${esc(S.salKey)}" onchange="S.salKey=this.value;render()">`) + `
       ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
       ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
@@ -1160,8 +1160,8 @@ async function adminCheckinUi() {
 }
 
 async function lockMonthUi() {
-  const m = S.month || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
-  const ok = await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後該月份不能再簽到、調整，金額也會固定。`);
+  const m = S.salKey || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
+  const ok = await ask(`確定鎖定 ${m} 的薪資嗎？\n鎖定後這一期（月）不能再簽到、調整，金額也會固定。`);
   if (!ok) return;
   await api('lockMonth', { month: m });
   render();
@@ -1169,7 +1169,7 @@ async function lockMonthUi() {
 }
 
 async function unlockMonthUi() {
-  const m = S.month || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
+  const m = S.salKey || (S.adm && S.adm.stats && S.adm.stats.month) || today().slice(0, 7);
   const ok = await ask(`確定解除 ${m} 的鎖定嗎？`);
   if (!ok) return;
   await api('unlockMonth', { month: m });
@@ -1184,7 +1184,7 @@ function copyFinance() {
 }
 function copySalary() {
   const a = S.adm;
-  const rows = [['月份', '姓名', '身分', '授課堂數', '授課時數', '時薪', '基本薪資', '調整合計', '應付薪資']]
+  const rows = [['期別', '姓名', '身分', '授課堂數', '授課時數', '時薪', '基本薪資', '調整合計', '應付薪資']]
     .concat((a.coaches || []).map(c => [a.stats.month, c.name, c.role, c.lessonCount, c.totalHours, c.hourlyRate, c.base, c.adjTotal, c.totalSalary]));
   copyText(rows.map(r => r.join('\t')).join('\n'));
 }

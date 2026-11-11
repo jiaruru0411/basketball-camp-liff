@@ -122,7 +122,8 @@ code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;f
 const CONFIG = {
   LIFF_ID: '2012507478-35PGiqXO',
   API_URL: 'https://script.google.com/macros/s/AKfycbwXzUnQ1zvcQhCHZs3ezX5tGsJzTCkbQVJij4ID7dWD7kgPFsWFYbySGoqBA8nSasGUzQ/exec',
-  BANK: '匯款帳號：822 中國信託 1234-5678-9012（戶名：永不平凡籃球營）'
+  BANK: '匯款帳號：822 中國信託 1234-5678-9012（戶名：永不平凡籃球營）',
+  VENUE: '永平高中綜合大樓 3 樓室內體育館'
 };
 
 const $ = s => document.querySelector(s);
@@ -194,7 +195,7 @@ function dialog(title, fields, okText) {
   return new Promise(res => {
     const body = fields.map(f => {
       const lab = `<div class="lab">${esc(f.label)}</div>`;
-      if (f.type === 'select') return lab + `<select data-k="${esc(f.key)}">${f.options.map(o => `<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select>`;
+      if (f.type === 'select') return lab + `<select data-k="${esc(f.key)}">${f.options.map(o => `<option value="${esc(o[0])}" ${String(o[0]) === String(f.value ?? '') ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select>`;
       return lab + `<input data-k="${esc(f.key)}" type="${esc(f.type || 'text')}" placeholder="${esc(f.ph || '')}" value="${esc(f.value ?? '')}">`;
     }).join('');
     const w = modal(`<p style="font-weight:800;margin-bottom:12px">${esc(title)}</p>${body}<div class="two" style="margin-top:6px"><button class="ghost" data-x="no">取消</button><button class="pri" data-x="ok">${esc(okText || '確認')}</button></div>`);
@@ -268,7 +269,8 @@ const ACT = {
   unlockMonth: () => unlockMonthUi(),
   addAdj: () => addAdjUi(),
   adminCheckin: () => adminCheckinUi(),
-  copySalary: () => copySalary()
+  copySalary: () => copySalary(),
+  copyFinance: () => copyFinance()
 };
 
 document.addEventListener('click', e => {
@@ -447,6 +449,7 @@ async function viewParent() {
     card('⛹️ 孩子的課務狀態', vis.map(s => `<div class="row"><div><b>${esc(s.name)}</b>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}
       <div class="muted" style="margin:0">${esc(s.className)}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}</div></div>
       ${balPill(s.balance)}</div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
+    scheduleCard(vis, h) +
     card('📋 出勤／請假／缺席紀錄', attHtml) +
     card('📝 我要請假', `
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
@@ -495,6 +498,23 @@ async function viewParent() {
   updateMk();
   swapRefresh();
   calcPay();
+}
+function scheduleCard(vis, h) { // #1 下一堂課與本期剩餘上課日
+  const leaves = (h.leaves || []).filter(l => l.type === '請假' && (l.status === '已核准' || l.status === '待審核'));
+  const swaps = (h.leaves || []).filter(l => l.type === '調課' && (l.status === '已核准' || l.status === '待審核'));
+  const rows = vis.filter(s => s.status !== '結業').map(s => {
+    const ds = classDates(s, 8);
+    if (!ds.length) return `<div class="row"><div><b>${esc(s.name)}</b><div class="muted" style="margin:0">近期沒有排定的上課日</div></div></div>`;
+    const tag = d => {
+      const lv = leaves.find(l => l.studentId === s.studentId && l.date === d), sw = swaps.find(l => l.studentId === s.studentId && l.date === d);
+      return lv ? `<span class="pill warn">${lv.status === '待審核' ? '請假待審' : '已請假'}</span>` : sw ? `<span class="pill" style="background:#eff6ff;color:#2563eb">${sw.status === '待審核' ? '調課待審' : '已調課'}</span>` : '';
+    };
+    return `<div class="item"><b>${esc(s.name)}</b>・${esc(s.className)}
+      <div style="font-size:18px;font-weight:800;color:var(--pri);margin:6px 0 2px">下一堂：${esc(ds[0])}（週${DN[dow(ds[0]) - 1]}）${tag(ds[0])}</div>
+      <div class="muted" style="margin:0 0 6px">📍 ${esc(CONFIG.VENUE)}</div>
+      <div class="muted" style="margin:0;font-size:13px">之後：${ds.slice(1).map(d => esc(d.slice(5)) + tag(d)).join('、') || '（本期已無）'}</div></div>`;
+  });
+  return card('📅 上課日程', rows.join('') || '<p class="muted">沒有進行中的學員</p>');
 }
 async function setAttf(v) {
   const snap = snapForm();
@@ -570,12 +590,13 @@ async function viewCoach() {
   const isAdmin = S.me.role === 'admin';
   if (!isAdmin || !S.date) S.date = today();
   const r = await api('roster', { classId: S.cls, date: S.date }, true);
-  S.upcoming = r.upcoming || []; S.swapOut = r.swapOut || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
+  S.upcoming = r.upcoming || []; S.swapOut = r.swapOut || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin; S.duty = r.duty || {};
   
   S.list.forEach(x => { 
     x.v = x.saved || (x.leave ? '請假' : '未到'); 
   });
 
+  let ms = null; try { ms = await api('mySalary', { month: S.cmonth || today().slice(0, 7) }, true); } catch (e) {}
   const cur = cs.find(c => c.classId === S.cls), isToday = S.date === today();
   const logs = (S.me.recentCheckins || []).map(k => `<div class="row" style="padding:6px 0"><span>${esc(k.date)}・${esc(k.className)}</span><span class="pill">已簽到 ${esc(k.time)}</span></div>`).join('') || '<p class="muted" style="margin:4px 0 0">近期尚無簽到紀錄</p>';
 
@@ -589,7 +610,9 @@ async function viewCoach() {
     card('📍 簽到：' + esc(cur.name), `
       <div class="row" style="border-top:0">
         <span>${isToday ? (S.checkedIn ? '<span class="pill">✓ 今日已簽到</span>' : '<span class="pill warn">尚未簽到</span>') : '<span class="muted" style="margin:0">簽到僅限當天</span>'}</span>
-        ${isToday && !S.checkedIn ? '<button class="pri mini" style="width:auto;font-size:14px;padding:10px 16px" onclick="run(this,doCheckin)">📍 簽到此班</button>' : ''}</div>
+        ${isToday && !S.checkedIn && (S.duty.onDuty || !S.needCheckin) ? '<button class="pri mini" style="width:auto;font-size:14px;padding:10px 16px" onclick="run(this,doCheckin)">📍 簽到此班</button>' : ''}</div>
+      ${S.needCheckin && isToday && !S.checkedIn && !S.duty.onDuty && !S.duty.testMode ? `<p class="muted" style="color:var(--bad);font-weight:700;margin:6px 0 0">今天這個班沒有排到您（今日排班：${esc((S.duty.names || []).join('、') || '無')}），如需代課請洽總教練。</p>` : ''}
+      ${S.needCheckin && S.duty.window ? `<p class="muted" style="margin:6px 0 0;font-size:13px">⏰ 簽到時間：${esc(S.duty.window)}（上課前後 30 分鐘）${S.duty.testMode ? '｜測試模式不受限制' : ''}</p>` : ''}
       <div style="border-top:1px dashed #f0e7dd;padding-top:8px;margin-top:6px"><div class="muted" style="font-weight:700">近期出勤紀錄</div>${logs}</div>`) +
     card('🏀 課堂學員點名', `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -606,7 +629,16 @@ async function viewCoach() {
       ${rosterSummary()}
       <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">⚡ 一鍵全班設為出席（請假學員自動保留）</button>
       <div id="roster">${rosterHtml()}</div>
-      <button class="pri" style="margin-top:8px" onclick="run(this,doSaveAttendance)">🌟 儲存點名結果（未到不留紀錄、不扣堂）</button>`);
+      <button class="pri" style="margin-top:8px" onclick="run(this,doSaveAttendance)">🌟 儲存點名結果（未到不留紀錄、不扣堂）</button>`) + mySalaryCard(ms);
+}
+function mySalaryCard(m) { // 教練的班表與授課明細（不顯示時薪與金額）
+  if (!m) return '';
+  return card('🗓️ 我的班表與授課明細', `
+    <div style="font-weight:800;margin:0 0 6px">接下來的上班日</div>
+    ${(m.upcoming || []).map(u => `<div class="row" style="padding:7px 0"><span><b>${esc(u.date)}</b>（週${DN[dow(u.date) - 1]}）</span><span style="text-align:right">${esc(u.className)}<div class="muted" style="margin:0;font-size:12.5px">${u.tm ? esc(u.tm) + ' 開始・' : ''}${u.hours} 小時</div></span></div>`).join('') || '<p class="muted">目前沒有排到班，請洽總教練</p>'}
+    <div style="border-top:1px dashed #f0e7dd;margin-top:10px;padding-top:10px"><input type="month" value="${esc(m.month)}" onchange="S.cmonth=this.value;safe(viewCoach)">
+    <div class="stats"><div class="stat"><b>${m.lessonCount}</b><span>${esc(m.month)} 授課堂數</span></div><div class="stat"><b>${m.totalHours}</b><span>授課小時</span></div></div>
+    <details><summary class="muted" style="cursor:pointer">授課明細（${(m.days || []).length} 筆）</summary>${(m.days || []).map(d => `<div class="row" style="padding:6px 0"><span>${esc(d.date)}・${esc(d.className)}${d.note ? `<span class="muted">（${esc(d.note)}）</span>` : ''}</span><span class="muted" style="margin:0">${d.hours} 小時</span></div>`).join('') || '<p class="muted">本月尚無簽到</p>'}</details></div>`);
 }
 async function changeClass(v) { S.cls = v; await safe(viewCoach); }
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
@@ -669,6 +701,50 @@ function switchMemoTab(t) {
   renderMemoBox();
 }
 
+function scheduleCardAdmin(a) { // 排班：某天某班由誰上班（沒特別排就用班級列表預設的教練）
+  const sc = a.schedule || { dates: [], staff: [] };
+  const nameOf = id => ((sc.staff || []).find(x => x.id === id) || {}).name || '未登錄';
+  return card('👥 排班', `<p class="muted">沒有特別排的班，會用「班級列表」裡設定的教練。只有排到班的教練可以簽到。</p>` +
+    (sc.dates || []).map(d => `<div class="item"><b>${esc(d.date)}（週${DN[dow(d.date) - 1]}）</b>
+      ${d.classes.map(c => `<div class="row" style="padding:7px 0"><div>${esc(c.name)}${c.tm ? `<span class="muted"> ${esc(c.tm)}</span>` : ''}
+        <div class="muted" style="margin:0;font-size:12.5px">${c.ids.map(nameOf).map(esc).join('、') || '尚未指派教練'}${c.custom ? ' <span class="pill warn">已調整</span>' : ' <span class="pill gray">預設</span>'}</div></div>
+        <button class="ghost mini" onclick="editSchedule('${esc(d.date)}','${esc(c.id)}')">調整</button></div>`).join('')}</div>`).join('') || '<p class="muted">近期沒有上課日</p>');
+}
+function editSchedule(date, cid) {
+  const sc = S.adm.schedule, d = sc.dates.find(x => x.date === date), c = d && d.classes.find(x => x.id === cid); if (!c) return;
+  const w = modal(`<p style="font-weight:800;margin-bottom:6px">${esc(date)}・${esc(c.name)}</p><p class="muted">勾選這天要上班的教練；全部取消＝回復預設。</p>
+    <div class="chk">${(sc.staff || []).map(x => `<label><input type="checkbox" value="${esc(x.id)}" ${c.ids.includes(x.id) ? 'checked' : ''}>${esc(x.name)}</label>`).join('')}</div>
+    <div class="two" style="margin-top:8px"><button class="ghost" data-x="no">取消</button><button class="pri" data-x="ok">儲存</button></div>`);
+  w.onclick = async e => {
+    const x = e.target.dataset && e.target.dataset.x; if (!x) return;
+    if (x === 'no') { w.remove(); return; }
+    const ids = [...w.querySelectorAll('input:checked')].map(i => i.value);
+    w.remove();
+    try { await api('setSchedule', { date, classId: cid, coachIds: ids }); render(); setTimeout(() => toast('排班已更新'), 100); } catch (err) { toast(err.message); }
+  };
+}
+function overviewCard(a) { // #3 今日各班概況
+  const o = a.overview || {};
+  if (!o.classDay) return card('📍 今日概況', `<p class="muted">${esc(o.date || '')} 今天沒有課。${o.nextDate ? '下一個上課日：<b>' + esc(o.nextDate) + '</b>' : ''}</p>`);
+  return card('📍 今日概況・' + esc(o.date), (o.classes || []).map(c => {
+    const noCoach = !c.coaches.some(k => k.checked), done = c.total > 0 && c.saved >= c.total;
+    return `<div class="item"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(c.name)}</b>
+      <span class="pill ${done ? '' : c.saved ? 'warn' : 'gray'}">點名 ${c.saved}／${c.total}</span></div>
+      <div style="margin:6px 0 0;font-size:13.5px">${c.coaches.map(k => `<span class="pill ${k.checked ? '' : 'bad'}" style="margin-right:4px">${k.checked ? '✓' : '✗'} ${esc(k.name)}${k.checked ? ' 已簽到' : ' 未簽到'}</span>`).join('') || '<span class="pill bad">未指派教練</span>'}</div>
+      <div class="muted" style="margin:6px 0 0;font-size:12.5px">${noCoach && c.coaches.length ? '⚠️ 目前還沒有教練簽到　' : ''}請假 ${c.leave}・補課 ${c.makeup}・調課 ${c.swap}</div></div>`;
+  }).join('') || '<p class="muted">今天沒有班級開課</p>');
+}
+function financeCard(a) { // #6 財務月報
+  const f = a.finance || {}, m = n => (n < 0 ? '-$' : '$') + Math.abs(n || 0).toLocaleString();
+  return card('📊 財務月報・' + esc(f.month || ''), `
+    <div class="stats"><div class="stat"><b>${m(f.income)}</b><span>本月收入（${f.count || 0} 筆）</span></div><div class="stat"><b>${m(f.salary)}</b><span>教練薪資支出</span></div></div>
+    <div class="row"><span>淨額（收入 − 薪資）</span><b style="color:${(f.net || 0) < 0 ? 'var(--bad)' : 'var(--ok)'}">${m(f.net)}</b></div>
+    <div class="row"><span>匯款 / 現金</span><span>${m((f.byMethod || {})['匯款'])} ／ ${m((f.byMethod || {})['現金'])}</span></div>
+    ${(f.byPeriod || []).map(p => `<div class="row"><span>${esc(p.period)}</span><span>${m(p.amount)}</span></div>`).join('')}
+    <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">收款明細</summary>${(f.list || []).map(r => `<div class="row" style="padding:7px 0"><div>${esc(r.date)}・<b>${esc(r.students)}</b><div class="muted" style="margin:0;font-size:12.5px">${esc(r.who)}・${esc(r.period)}・${esc(r.method)}</div></div><b>${m(r.amount)}</b></div>`).join('') || '<p class="muted">本月尚無收款</p>'}</details>
+    <button class="ghost" style="width:100%;margin-top:10px" data-act="copyFinance">📋 複製本月收款明細</button>
+    <p class="muted" style="font-size:12.5px;margin:6px 0 0">月份跟上面薪資區相同，切換月份請用薪資區的月份選擇。</p>`);
+}
 function pendingCard(title, key, type) {
   const list = ((S.adm && S.adm.leaves) || []).filter(l => l.type === type);
   const btns = l => type === '請假'
@@ -783,6 +859,8 @@ async function viewAdmin() {
 
   $('#app').innerHTML =
     `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${box(s.approvedMakeupCount ?? 0, '⭐ 待補課學員')}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
+    overviewCard(a) +
+    scheduleCardAdmin(a) +
     card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">
       ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
       ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
@@ -805,6 +883,7 @@ async function viewAdmin() {
     pendingCard('📝 待審核請假', 'leave', '請假') +
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +
+    financeCard(a) +
     card('🗒️ 審核紀錄', reviewedHtml()) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
     card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
@@ -815,6 +894,8 @@ async function viewAdmin() {
       `<button class="ghost mini" onclick="run(this,addStudentUi)">＋ 新增學員</button>`) +
     card('🧾 最近堂數調整', (a.adjustLogs || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.reason)}・${esc(r.by)}</span></span>
       <span class="pill ${r.delta < 0 ? 'bad' : ''}">${r.delta > 0 ? '+' : ''}${r.delta} → ${r.after}</span></div>`).join('') || '<p class="muted">尚無調整紀錄</p>') +
+    card('🧾 操作紀錄（最近 80 筆）', (a.opLogs || []).map(r => `<div class="row" style="padding:8px 0"><div><b>${esc(r.action)}</b>・${esc(r.target)}
+      <div class="muted" style="margin:0;font-size:12.5px">${esc(r.by)} ${esc(r.at)}${r.detail ? '｜' + esc(r.detail) : ''}</div></div></div>`).join('') || '<p class="muted">尚無操作紀錄</p>') +
     card('🗂️ 最近點名紀錄', (a.recent || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>${pill(r.status)}</div>`).join('') || '<p class="muted">尚無點名紀錄</p>');
 
   renderMemoBox();
@@ -872,11 +953,24 @@ async function addStudentUi() {
 async function manageStudent(id) {
   const x = (S.adm.students || []).find(s => s.id === id); if (!x) return;
   const k = await menu(`${x.name}（${x.className}）・${balT(x.balance)}`, [
+    ['edit', '📝 修改學員資料（姓名／班級／電話／備註）'],
     ['adj', '✏️ 手動調整堂數'],
     ['unbind', `🔗 解除家長綁定（目前 ${x.bound} 個帳號）`],
     ['status', x.status === '結業' ? '🔄 恢復為在學' : '🎓 設為結業']
   ]);
   if (!k) return;
+  if (k === 'edit') {
+    const v = await dialog(`修改 ${x.name} 的資料`, [
+      { key: 'name', label: '姓名', value: x.name },
+      { key: 'classId', label: '班級', type: 'select', value: x.classId, options: (S.me.classes || []).map(c => [c.classId, c.name]) },
+      { key: 'phone', label: '緊急聯絡電話', type: 'tel', value: x.phone || '' },
+      { key: 'note', label: '備註（過敏／傷病）', value: x.note || '' }], '儲存');
+    if (!v) return;
+    await api('updateStudent', { studentId: id, ...v });
+    render();
+    setTimeout(() => toast('學員資料已更新'), 100);
+    return;
+  }
   if (k === 'adj') {
     const v = await dialog(`調整 ${x.name} 的堂數`, [
       { key: 'delta', label: '增減堂數', type: 'number', ph: '加 2 堂填 2；扣 1 堂填 -1' },
@@ -953,6 +1047,11 @@ async function unlockMonthUi() {
   setTimeout(() => toast('已成功解除鎖定！'), 100);
 }
 
+function copyFinance() {
+  const f = (S.adm && S.adm.finance) || {};
+  const rows = [['月份', '日期', '學員', '家長', '期別', '方式', '金額', '經手人']].concat((f.list || []).map(r => [f.month, r.date, r.students, r.who, r.period, r.method, r.amount, r.by]));
+  copyText(rows.map(r => r.join('\t')).join('\n'));
+}
 function copySalary() {
   const a = S.adm;
   const rows = [['月份', '姓名', '身分', '授課堂數', '授課時數', '時薪', '基本薪資', '調整合計', '應付薪資']]

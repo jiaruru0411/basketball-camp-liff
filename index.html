@@ -280,7 +280,7 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
-const FE_VER = '2026-11-11-r20';
+const FE_VER = '2026-11-11-r21';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -763,76 +763,57 @@ function warnBox(list) { // 排班後若有教練時間重疊，跳出提醒（�
   const w = modal(`<p style="font-weight:800;margin-bottom:6px">⚠️ 已儲存，但有時間重疊</p><p class="muted" style="margin-bottom:8px">${list.map(esc).join('<br>')}</p><p class="muted">若是刻意安排可忽略；否則請回排班調整。</p><button class="pri" data-x="ok">我知道了</button>`);
   w.onclick = e => { if (e.target.dataset && e.target.dataset.x) w.remove(); };
 }
-function batchSchedule() { // 依「時段」批次排班；可選「加入／移除／取代」，加入不會刪掉原本排好的教練
+function batchSchedule() { // 批次排班：選一個班 → 選教練與方式 → 選日期；預設「加入」，不會洗掉原本排好的人
   const sc = S.adm.schedule || { dates: [], staff: [] }, seen = {}, cls = [];
   (sc.dates || []).forEach(d => d.classes.forEach(c => { if (!seen[c.id]) { seen[c.id] = 1; cls.push(c); } }));
   if (!cls.length) { toast('目前沒有可排班的班級'); return; }
-  const slots = [...new Set(cls.map(c => c.tm || ''))].sort();
-  const slotName = t => t ? t + ' 開始的班' : '未設定上課時間的班';
   const nameOf = id => ((sc.staff || []).find(x => x.id === id) || {}).name || '未登錄';
   const w = modal(`<p style="font-weight:800;margin-bottom:6px">批次排班</p>
-    <p class="muted">1. 選時段</p>
-    <select id="bs_slot">${slots.map(t => `<option value="${esc(t)}">${esc(slotName(t))}（${cls.filter(c => (c.tm || '') === t).length} 個班）</option>`).join('')}</select>
-    <p class="muted" style="margin-top:8px">2. 勾選要一起排班的班級</p>
-    <div class="chk" id="bs_cls"></div>
-    <p class="muted" style="margin-top:8px">3. 要怎麼排</p>
+    <p class="muted">1. 選班級</p>
+    <select id="bs_cls">${cls.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
+    <p class="muted" style="margin-top:8px">2. 要怎麼排</p>
     <select id="bs_mode"><option value="add">加入：把勾選的教練加進去（保留原本排好的人）</option><option value="remove">移除：把勾選的教練拿掉（例如某幾週不能來）</option><option value="replace">取代：只留勾選的教練（全不勾＝回復預設）</option></select>
-    <p class="muted" style="margin-top:8px">4. 勾選教練</p>
+    <p class="muted" style="margin-top:8px">3. 勾選教練</p>
     <div class="chk" id="bs_staff">${(sc.staff || []).map(x => `<label><input type="checkbox" value="${esc(x.id)}">${esc(x.name)}</label>`).join('')}</div>
     <p class="muted" id="bs_cnt" style="margin-top:8px"></p>
     <div class="chk" id="bs_dates"></div>
     <div class="two" style="margin-top:8px"><button class="ghost" data-x="all">日期全選／全不選</button><span></span></div>
     <div class="two" style="margin-top:8px"><button class="ghost" data-x="no">取消</button><button class="pri" data-x="ok">套用</button></div>`);
-  const sel = w.querySelector('#bs_slot');
+  const sel = w.querySelector('#bs_cls');
   const ds = () => [...w.querySelectorAll('#bs_dates input')];
-  const pickedCls = () => [...w.querySelectorAll('#bs_cls input:checked')].map(i => i.value);
-  const count = () => { w.querySelector('#bs_cnt').textContent = '5. 勾選要套用的日期（共 ' + ds().length + ' 天，已選 ' + ds().filter(i => i.checked).length + ' 天；日期後面是目前排的教練）'; };
-  const nowText = (d, ids) => { // 這天、已勾選的班級，目前排的教練（各班不同就顯示「各班不同」）
-    const lists = d.classes.filter(c => ids.includes(c.id)).map(c => (c.ids || []).slice().sort().join(','));
-    if (!lists.length) return ''; if (new Set(lists).size > 1) return '各班不同';
-    const c = d.classes.find(k => ids.includes(k.id)); return (c.ids || []).map(nameOf).join('、') || '未指派';
-  };
+  const count = () => { w.querySelector('#bs_cnt').textContent = '4. 勾選要套用的日期（已選 ' + ds().filter(i => i.checked).length + '／' + ds().length + ' 天；日期後面是目前排的教練）'; };
   const fillDates = () => {
-    const ids = pickedCls(), days = (sc.dates || []).filter(d => d.classes.some(c => ids.includes(c.id)));
-    w.querySelector('#bs_dates').innerHTML = days.map(d => `<label><input type="checkbox" value="${esc(d.date)}" checked>${esc(d.date)}（週${DN[dow(d.date) - 1]}）・${esc(nowText(d, ids))}</label>`).join('') || '<span class="muted">沒有上課日</span>';
+    const days = (sc.dates || []).filter(d => d.classes.some(c => c.id === sel.value));
+    w.querySelector('#bs_dates').innerHTML = days.map(d => { const c = d.classes.find(k => k.id === sel.value); return `<label><input type="checkbox" value="${esc(d.date)}" checked>${esc(d.date)}（週${DN[dow(d.date) - 1]}）・${esc((c.ids || []).map(nameOf).join('、') || '未指派')}</label>`; }).join('') || '<span class="muted">沒有上課日</span>';
     count();
   };
-  const fillCls = () => {
-    const list = cls.filter(c => (c.tm || '') === sel.value);
-    w.querySelector('#bs_cls').innerHTML = list.map(c => `<label><input type="checkbox" value="${esc(c.id)}" checked>${esc(c.name)}</label>`).join('');
-    fillDates();
-  };
-  sel.onchange = fillCls;
-  w.onchange = e => { const t = e.target; if (!t.closest) return; if (t.closest('#bs_cls')) fillDates(); else if (t.closest('#bs_dates')) count(); };
-  fillCls();
+  sel.onchange = fillDates;
+  w.onchange = e => { const t = e.target; if (t.closest && t.closest('#bs_dates')) count(); };
+  fillDates();
   w.onclick = async e => {
     const x = e.target.dataset && e.target.dataset.x; if (!x) return;
     if (x === 'no') { w.remove(); return; }
     if (x === 'all') { const on = ds().some(i => !i.checked); ds().forEach(i => { i.checked = on; }); count(); return; }
-    const classIds = pickedCls(), dates = ds().filter(i => i.checked).map(i => i.value), coachIds = [...w.querySelectorAll('#bs_staff input:checked')].map(i => i.value), mode = w.querySelector('#bs_mode').value;
-    if (!classIds.length) { toast('請至少勾選一個班級'); return; }
+    const dates = ds().filter(i => i.checked).map(i => i.value), coachIds = [...w.querySelectorAll('#bs_staff input:checked')].map(i => i.value), mode = w.querySelector('#bs_mode').value;
     if (!dates.length) { toast('請至少勾選一個日期'); return; }
     if (mode !== 'replace' && !coachIds.length) { toast(mode === 'add' ? '請勾選要加入的教練' : '請勾選要移除的教練'); return; }
     w.remove();
-    try { const r = await api('setScheduleBatch', { classIds, dates, coachIds, mode }); render(); setTimeout(() => warnBox(r && r.warn), 400); setTimeout(() => toast('已更新 ' + classIds.length + ' 個班、' + dates.length + ' 天'), 100); } catch (err) { toast(err.message); }
+    try { const r = await api('setScheduleBatch', { classIds: [sel.value], dates, coachIds, mode }); render(); setTimeout(() => { toast('已更新 ' + dates.length + ' 天'); warnBox(r && r.warn); }, 100); } catch (err) { toast(err.message); }
   };
 }
 function editSchedule(date, cid) {
   const sc = S.adm.schedule, d = sc.dates.find(x => x.date === date), c = d && d.classes.find(x => x.id === cid); if (!c) return;
-  const same = c.tm ? d.classes.filter(x => x.id !== cid && x.tm === c.tm) : [];
   const w = modal(`<p style="font-weight:800;margin-bottom:6px">${esc(date)}・${esc(c.name)}</p><p class="muted">勾選這天要上班的教練；全部取消＝回復預設。</p>
     <div class="chk">${(sc.staff || []).map(x => `<label><input type="checkbox" name="es_coach" value="${esc(x.id)}" ${c.ids.includes(x.id) ? 'checked' : ''}>${esc(x.name)}</label>`).join('')}</div>
-    ${same.length ? `<div class="chk" style="margin-top:8px"><label><input type="checkbox" id="es_same" checked>同時套用到同時段（${esc(c.tm)}）的其他班：${same.map(x => esc(x.name)).join('、')}</label></div>` : ''}
     <div class="two" style="margin-top:8px"><button class="ghost" data-x="no">取消</button><button class="pri" data-x="ok">儲存</button></div>`);
   w.onclick = async e => {
     const x = e.target.dataset && e.target.dataset.x; if (!x) return;
     if (x === 'no') { w.remove(); return; }
-    const ids = [...w.querySelectorAll('input[name=es_coach]:checked')].map(i => i.value), both = same.length && w.querySelector('#es_same').checked;
+    const ids = [...w.querySelectorAll('input[name=es_coach]:checked')].map(i => i.value);
     w.remove();
     try {
-      const r = both ? await api('setScheduleBatch', { classIds: [cid].concat(same.map(s => s.id)), dates: [date], coachIds: ids, mode: 'replace' })
-        : await api('setSchedule', { date, classId: cid, coachIds: ids });
-      S.schedDate = date; render(); setTimeout(() => warnBox(r && r.warn), 400); setTimeout(() => toast(both ? '已更新同時段的 ' + (same.length + 1) + ' 個班' : '排班已更新'), 100);
+      const r = await api('setSchedule', { date, classId: cid, coachIds: ids });
+      S.schedDate = date; render(); setTimeout(() => warnBox(r && r.warn), 400); setTimeout(() => toast('排班已更新'), 100);
     } catch (err) { toast(err.message); }
   };
 }

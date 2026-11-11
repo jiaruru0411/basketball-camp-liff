@@ -337,7 +337,7 @@ function classDates(st, n = 10) {
   for (let i = 0; i < 180 && out.length < n; i++, d = addDays(d, 1)) {
     if (st.classEnd && d > st.classEnd) break;
     const cal = (S.parentData && S.parentData.cal) || [];
-    if ((st.classDays || []).includes(dow(d)) && (!cal.length || cal.includes(d))) out.push(d); // 有建「課程日曆」就只列簡章上的上課日
+    if ((st.classDays || []).includes(dow(d)) && (!cal.length || cal.includes(d)) && !noticeOf(st, d)) out.push(d); // 停課的日子不用請假 // 有建「課程日曆」就只列簡章上的上課日
   }
   return out;
 }
@@ -409,7 +409,7 @@ function restoreForm(o) {
 async function viewParent() {
   if (!S.parentData) {
     const d = await api('parentHome', {}, true);
-    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods, cal: d.calendar || [], plan: d.plan || { shirt: 450, discount: { '舊生': { 1: 200, 2: 600 }, '新生': { 1: 200, 2: 0 } }, gift: {}, lessons: 7 } };
+    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods, notices: d.notices || [], cal: d.calendar || [], plan: d.plan || { shirt: 450, discount: { '舊生': { 1: 200, 2: 600 }, '新生': { 1: 200, 2: 0 } }, gift: {}, lessons: 7 } };
     updateGreeting();
   }
   const { h, cl, mo, periods } = S.parentData;
@@ -445,7 +445,7 @@ async function viewParent() {
 
   const cancelBtn = x => x.canCancel ? `<div><button class="ghost mini" style="margin-top:6px" data-act="cancel" data-id="${esc(x.id)}">取消這筆</button></div>` : '';
 
-  $('#app').innerHTML = kidTabs +
+  $('#app').innerHTML = noticeBanner() + kidTabs +
     card('⛹️ 孩子的課務狀態', vis.map(s => `<div class="row"><div><b>${esc(s.name)}</b>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}
       <div class="muted" style="margin:0">${esc(s.className)}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}</div></div>
       ${balPill(s.balance)}</div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
@@ -499,6 +499,14 @@ async function viewParent() {
   swapRefresh();
   calcPay();
 }
+const noticeOf = (st, d) => ((S.parentData && S.parentData.notices) || []).find(n => n.date === d && (!n.cid || n.cid === st.classId));
+function noticeBanner() { // 停課公告（家長）
+  const ns = (S.parentData && S.parentData.notices) || [];
+  if (!ns.length) return '';
+  return `<div class="card" style="background:#fff1f2;border-color:#fecdd3"><h2 style="color:#be123c">🚫 停課公告</h2>
+    ${ns.map(n => `<div class="row" style="padding:8px 0"><div><b>${esc(n.date)}（週${DN[dow(n.date) - 1]}）${esc(n.className)}停課</b><div class="muted" style="margin:0">原因：${esc(n.reason)}</div></div></div>`).join('')}
+    <p class="muted" style="margin:6px 0 0;font-size:13px">已自動幫孩子請假，不計事假次數，可到下方「預約補課」安排補課。</p></div>`;
+}
 function scheduleCard(vis, h) { // #1 下一堂課與本期剩餘上課日
   const leaves = (h.leaves || []).filter(l => l.type === '請假' && (l.status === '已核准' || l.status === '待審核'));
   const swaps = (h.leaves || []).filter(l => l.type === '調課' && (l.status === '已核准' || l.status === '待審核'));
@@ -507,6 +515,7 @@ function scheduleCard(vis, h) { // #1 下一堂課與本期剩餘上課日
     if (!ds.length) return `<div class="row"><div><b>${esc(s.name)}</b><div class="muted" style="margin:0">近期沒有排定的上課日</div></div></div>`;
     const tag = d => {
       const lv = leaves.find(l => l.studentId === s.studentId && l.date === d), sw = swaps.find(l => l.studentId === s.studentId && l.date === d);
+      if (noticeOf(s, d)) return '<span class="pill bad">停課</span>';
       return lv ? `<span class="pill warn">${lv.status === '待審核' ? '請假待審' : '已請假'}</span>` : sw ? `<span class="pill" style="background:#eff6ff;color:#2563eb">${sw.status === '待審核' ? '調課待審' : '已調課'}</span>` : '';
     };
     return `<div class="item"><b>${esc(s.name)}</b>・${esc(s.className)}
@@ -590,7 +599,7 @@ async function viewCoach() {
   const isAdmin = S.me.role === 'admin';
   if (!isAdmin || !S.date) S.date = today();
   const r = await api('roster', { classId: S.cls, date: S.date }, true);
-  S.upcoming = r.upcoming || []; S.swapOut = r.swapOut || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin; S.duty = r.duty || {};
+  S.upcoming = r.upcoming || []; S.swapOut = r.swapOut || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin; S.duty = r.duty || {}; S.cancelled = r.cancelled || '';
   
   S.list.forEach(x => { 
     x.v = x.saved || (x.leave ? '請假' : '未到'); 
@@ -625,6 +634,7 @@ async function viewCoach() {
         ${makeupCount ? `<span class="pill" style="background:#fffbeb;color:#d97706">⭐ 補課 ${makeupCount} 人</span>` : ''}
       </div>
       ${S.needCheckin && !S.checkedIn ? '<p class="muted" style="color:var(--bad);font-weight:700">⚠️ 請先「簽到此班」才能儲存點名</p>' : ''}
+      ${S.cancelled ? `<div class="item" style="background:#fff1f2;border-color:#fecdd3"><b style="color:#be123c">🚫 這個班 ${esc(S.date)} 已公告停課</b><div class="muted" style="margin:4px 0 0">原因：${esc(S.cancelled)}。不需要簽到與點名。</div></div>` : ''}
       ${leaveBox()}
       ${rosterSummary()}
       <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">⚡ 一鍵全班設為出席（請假學員自動保留）</button>
@@ -701,6 +711,35 @@ function switchMemoTab(t) {
   renderMemoBox();
 }
 
+function noticeCardAdmin(a) {
+  const ns = a.notices || [], t = today();
+  return card('🚫 停課公告', `<p class="muted">颱風、場地不能用時發布：該日受影響班級的學員會<b>自動請假（不計事假）</b>，家長開網頁就看到公告並可預約補課。</p>
+    <button class="pri" style="margin-bottom:10px" onclick="run(this,postNoticeUi)">發布停課公告 ➜</button>` +
+    (ns.map(n => `<div class="row"><div><b>${esc(n.date)}（週${DN[dow(n.date) - 1]}）${esc(n.className)}</b>${n.date < t ? ' <span class="pill gray">已過</span>' : ''}
+      <div class="muted" style="margin:0;font-size:12.5px">${esc(n.reason)}｜${esc(n.by)} 發布・自動請假 ${n.count} 人</div></div>
+      ${n.date >= t ? `<button class="ghost mini" onclick="run(this,()=>cancelNoticeUi('${esc(n.id)}'))">撤銷</button>` : ''}</div>`).join('') || '<p class="muted">目前沒有停課公告</p>'));
+}
+async function postNoticeUi() {
+  const cs = S.me.classes || [];
+  const v = await dialog('發布停課公告', [
+    { key: 'date', label: '停課日期', type: 'date', value: today() },
+    { key: 'classId', label: '哪個班停課', type: 'select', options: [['', '全部班級']].concat(cs.map(c => [c.classId, c.name])) },
+    { key: 'reason', label: '原因（家長會看到）', ph: '例如：颱風停班停課／場地臨時不能使用' }], '發布');
+  if (!v) return;
+  if (!v.date) throw new Error('請選擇日期');
+  if (!v.reason) throw new Error('請填寫原因');
+  const lab = v.classId ? ((cs.find(c => c.classId === v.classId) || {}).name || v.classId) : '全部班級';
+  if (!(await ask(`確定發布停課公告？\n\n日期：${v.date}\n範圍：${lab}\n原因：${v.reason}\n\n該日受影響的學員會自動請假（不計事假），並通知家長。`))) return;
+  const r = await api('postNotice', v);
+  render();
+  setTimeout(() => toast(`已發布，${r.students} 位學員自動請假`), 100);
+}
+async function cancelNoticeUi(id) {
+  if (!(await ask('確定撤銷這則停課公告？\n自動建立的請假會一併取消，課程恢復正常。'))) return;
+  await api('cancelNotice', { id });
+  render();
+  setTimeout(() => toast('已撤銷停課公告'), 100);
+}
 function schedPick(v) { S.schedDate = v; const e = document.getElementById('sched_box'); if (e) e.innerHTML = schedBody(S.adm.schedule); }
 function schedBody(sc) {
   const d = (sc.dates || []).find(x => x.date === S.schedDate) || (sc.dates || [])[0];
@@ -736,7 +775,7 @@ function overviewCard(a) { // #3 今日各班概況
   return card('📍 今日概況・' + esc(o.date), (o.classes || []).map(c => {
     const noCoach = !c.coaches.some(k => k.checked), done = c.total > 0 && c.saved >= c.total;
     return `<div class="item"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(c.name)}</b>
-      <span class="pill ${done ? '' : c.saved ? 'warn' : 'gray'}">點名 ${c.saved}／${c.total}</span></div>
+      ${c.cancelled ? '<span class="pill bad">🚫 停課</span>' : `<span class="pill ${done ? '' : c.saved ? 'warn' : 'gray'}">點名 ${c.saved}／${c.total}</span>`}</div>
       <div style="margin:6px 0 0;font-size:13.5px">${c.coaches.map(k => `<span class="pill ${k.checked ? '' : 'bad'}" style="margin-right:4px">${k.checked ? '✓' : '✗'} ${esc(k.name)}${k.checked ? ' 已簽到' : ' 未簽到'}</span>`).join('') || '<span class="pill bad">未指派教練</span>'}</div>
       <div class="muted" style="margin:6px 0 0;font-size:12.5px">${noCoach && c.coaches.length ? '⚠️ 目前還沒有教練簽到　' : ''}請假 ${c.leave}・補課 ${c.makeup}・調課 ${c.swap}</div></div>`;
   }).join('') || '<p class="muted">今天沒有班級開課</p>');
@@ -867,6 +906,7 @@ async function viewAdmin() {
   $('#app').innerHTML =
     `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${box(s.approvedMakeupCount ?? 0, '⭐ 待補課學員')}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
     overviewCard(a) +
+    noticeCardAdmin(a) +
     scheduleCardAdmin(a) +
     card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">
       ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}

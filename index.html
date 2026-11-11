@@ -280,7 +280,7 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
-const FE_VER = '2026-11-11-r10';
+const FE_VER = '2026-11-11-r11';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -942,7 +942,7 @@ async function viewAdmin() {
     `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${box(s.approvedMakeupCount ?? 0, '⭐ 待補課學員')}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
     overviewCard(a) +
     scheduleCardAdmin(a) +
-    // 待審核匯款卡片：標題右側新增「💵 現場收取現金」快捷鍵
+    // 待審核匯款卡片：標題右側新增「💵 現場收取現金」快捷鍵 +
     card('💳 待審核匯款', (a.payments || []).map(p => `<div class="item" id="pay_item_${esc(p.id)}">
       <b>${esc(p.parentName)}</b>${p.parentPhone ? ` <a href="tel:${esc(p.parentPhone)}" style="color:var(--pri);font-size:13px;font-weight:700;text-decoration:none">📞 ${esc(p.parentPhone)}</a>` : ''}｜期別：<b>${esc(p.period)}</b>
       <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
@@ -962,6 +962,9 @@ async function viewAdmin() {
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +
     card('🗒️ 審核紀錄', reviewedHtml()) +
+    card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">
+      ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
+      ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
     card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
       ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className).toLowerCase())}"><div>
@@ -972,13 +975,10 @@ async function viewAdmin() {
     card('🧾 最近堂數調整', (a.adjustLogs || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.reason)}・${esc(r.by)}</span></span>
       <span class="pill ${r.delta < 0 ? 'bad' : ''}">${r.delta > 0 ? '+' : ''}${r.delta} → ${r.after}</span></div>`).join('') || '<p class="muted">尚無調整紀錄</p>') +
     card('🗂️ 最近點名紀錄', (a.recent || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>${pill(r.status)}</div>`).join('') || '<p class="muted">尚無點名紀錄</p>') +
-    card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">
-      ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
-      ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
-    card('🧾 操作紀錄（最近 80 筆）', (a.opLogs || []).map(r => `<div class="row" style="padding:8px 0"><div><b>${esc(r.action)}</b>・${esc(r.target)}
-      <div class="muted" style="margin:0;font-size:12.5px">${esc(r.by)} ${esc(r.at)}${r.detail ? '｜' + esc(r.detail) : ''}</div></div></div>`).join('') || '<p class="muted">尚無操作紀錄</p>') +
     financeCard(a) +
-    noticeCardAdmin(a);
+    noticeCardAdmin(a) +
+    card('🧾 操作紀錄（最近 10 筆）', (a.opLogs || []).slice(0,10).map(r => `<div class="row" style="padding:8px 0"><div><b>${esc(r.action)}</b>・${esc(r.target)}
+      <div class="muted" style="margin:0;font-size:12.5px">${esc(r.by)} ${esc(r.at)}${r.detail ? '｜' + esc(r.detail) : ''}</div></div></div>`).join('') || '<p class="muted">尚無操作紀錄</p>');
 
   renderMemoBox();
 }

@@ -221,7 +221,7 @@ async function api(action, data = {}, silent = false) {
   
   if (!silent) showLoading();
   try {
-    const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
+    const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, asRole: S.asRole || '', ...data }) });
     const j = await r.json();
     if (!j.ok) {
       if (/登入驗證失敗/.test(j.error || '')) { // 只自動重新登入一次，避免無限循環
@@ -278,6 +278,19 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
+function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
+  let b = document.getElementById('testbar');
+  if (!S.me || !S.me.testMode) { if (b) b.remove(); return; }
+  if (!b) { b = document.createElement('div'); b.id = 'testbar'; b.style.cssText = 'background:#fef3c7;border-bottom:1.5px solid #fde68a;padding:8px 14px;font-size:13px;font-weight:700;color:#92400e;display:flex;gap:8px;align-items:center'; document.querySelector('header').after(b); }
+  const cur = S.asRole || 'admin';
+  b.innerHTML = '🧪 測試身分：' + [['admin', '總教練'], ['coach', '教練'], ['parent', '家長']].map(o =>
+    `<button class="${cur === o[0] ? 'pri' : 'ghost'} mini" style="width:auto" onclick="switchRole('${o[0]}')">${o[1]}</button>`).join('');
+}
+async function switchRole(r) {
+  S.asRole = r === 'admin' ? '' : r; S.tab = null; S.date = null; S.parentData = null;
+  S.me = await api('me');
+  render();
+}
 function go(t) { S.tab = t; S.date = null; render(); }
 function render() {
   const tabs = {
@@ -288,6 +301,7 @@ function render() {
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === S.tab ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
   updateGreeting();
   S.parentData = null;
+  testBar();
   safe({ bind: viewBind, parent: viewParent, coach: viewCoach, admin: viewAdmin }[S.tab]);
 }
 

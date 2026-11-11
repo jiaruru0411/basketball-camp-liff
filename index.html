@@ -280,7 +280,7 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
-const FE_VER = '2026-11-11-r9';
+const FE_VER = '2026-11-11-r10';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -449,8 +449,6 @@ async function viewParent() {
     card('⛹️ 孩子的課務狀態', vis.map(s => `<div class="row"><div><b>${esc(s.name)}</b>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}
       <div class="muted" style="margin:0">${esc(s.className)}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}</div></div>
       ${balPill(s.balance)}</div>`).join('') || '<p class="muted">尚未綁定學員</p>') +
-    scheduleCard(vis, h) +
-    card('📋 出勤／請假／缺席紀錄', attHtml) +
     card('📝 我要請假', `
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
       <select id="leave_reason_type">
@@ -460,6 +458,18 @@ async function viewParent() {
       <div id="leave_date_box">${leaveDateHtml(vis[0])}</div>
       <input id="leave_rsn" placeholder="原因說明（例如：發燒就醫／外出旅遊）">
       <button class="pri" onclick="run(this,doSubmitLeave)">送出請假申請 ➜</button>`) +
+    card('🕒 最近申請進度',
+      ((h.payments || []).map(p => `<div class="row"><div><b>繳費 $${esc(p.amount)}・${esc(p.studentNames)}</b>
+        ${p.logs ? `<div class="muted" style="color:var(--ok);font-size:13px;margin:0">${esc(p.logs)}</div>` : ''}
+        ${p.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">說明：${esc(p.note)}</div>` : ''}${cancelBtn(p)}</div>${pill(p.status)}</div>`).join('') +
+      (h.leaves || []).filter(l => S.curKid === 'ALL' || l.studentId === S.curKid).map(l => `<div class="row"><div>
+        <b>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</b>${l.type === '請假' && l.kind ? ` <span class="pill ${l.kind === '病假' ? '' : 'warn'}">${esc(l.kind)}</span>` : ''}
+        ${l.reasonText ? `<div class="muted" style="font-size:12.5px;margin:2px 0 0">原因：${esc(l.reasonText)}${l.at ? '（' + esc(l.at) + ' 申請）' : ''}</div>` : ''}
+        ${l.deadline ? `<div class="muted" style="font-size:12.5px;color:#b45309;margin:2px 0 0">補課截止日：${esc(l.deadline)}</div>` : ''}
+        ${l.linkedMakeupId ? `<div class="muted" style="color:var(--pri);font-weight:700;font-size:13px;margin:2px 0 0">已預約補課：單號 ${esc(l.linkedMakeupId)}</div>` : ''}
+        ${l.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">說明：${esc(l.note)}</div>` : ''}${cancelBtn(l)}</div>${pill(l.status)}</div>`).join('')) || '<p class="muted">尚無歷史紀錄</p>') +
+    scheduleCard(vis, h) +
+    card('📋 出勤／請假／缺席紀錄', attHtml) +
     card('🔄 當天換時段（調課）', `
       <p class="muted">例如上午的課改到下午上、或下午的課提早來上午。需經總教練核准，不算請假、不扣事假次數。</p>
       <select id="sw_sid" onchange="swapRefresh()">${opt}</select>
@@ -484,16 +494,6 @@ async function viewParent() {
       <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額 (如: 4200)"><input id="l5" maxlength="5" inputmode="numeric" placeholder="匯款帳號末五碼（5 碼數字）"></div>
       <p class="muted" style="font-weight:600">轉帳日期</p><input id="pdate" type="date" value="${today()}">
       <button class="pri" onclick="run(this,doSubmitPay)">送出對帳資料 ➜</button>`) +
-    card('🕒 最近申請進度',
-      ((h.payments || []).map(p => `<div class="row"><div><b>繳費 $${esc(p.amount)}・${esc(p.studentNames)}</b>
-        ${p.logs ? `<div class="muted" style="color:var(--ok);font-size:13px;margin:0">${esc(p.logs)}</div>` : ''}
-        ${p.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">說明：${esc(p.note)}</div>` : ''}${cancelBtn(p)}</div>${pill(p.status)}</div>`).join('') +
-      (h.leaves || []).filter(l => S.curKid === 'ALL' || l.studentId === S.curKid).map(l => `<div class="row"><div>
-        <b>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</b>${l.type === '請假' && l.kind ? ` <span class="pill ${l.kind === '病假' ? '' : 'warn'}">${esc(l.kind)}</span>` : ''}
-        ${l.reasonText ? `<div class="muted" style="font-size:12.5px;margin:2px 0 0">原因：${esc(l.reasonText)}${l.at ? '（' + esc(l.at) + ' 申請）' : ''}</div>` : ''}
-        ${l.deadline ? `<div class="muted" style="font-size:12.5px;color:#b45309;margin:2px 0 0">補課截止日：${esc(l.deadline)}</div>` : ''}
-        ${l.linkedMakeupId ? `<div class="muted" style="color:var(--pri);font-weight:700;font-size:13px;margin:2px 0 0">已預約補課：單號 ${esc(l.linkedMakeupId)}</div>` : ''}
-        ${l.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">說明：${esc(l.note)}</div>` : ''}${cancelBtn(l)}</div>${pill(l.status)}</div>`).join('')) || '<p class="muted">尚無歷史紀錄</p>') +
     bindBox();
   updateMk();
   swapRefresh();
@@ -941,11 +941,7 @@ async function viewAdmin() {
   $('#app').innerHTML =
     `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${box(s.approvedMakeupCount ?? 0, '⭐ 待補課學員')}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
     overviewCard(a) +
-    noticeCardAdmin(a) +
     scheduleCardAdmin(a) +
-    card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">
-      ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
-      ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
     // 待審核匯款卡片：標題右側新增「💵 現場收取現金」快捷鍵
     card('💳 待審核匯款', (a.payments || []).map(p => `<div class="item" id="pay_item_${esc(p.id)}">
       <b>${esc(p.parentName)}</b>${p.parentPhone ? ` <a href="tel:${esc(p.parentPhone)}" style="color:var(--pri);font-size:13px;font-weight:700;text-decoration:none">📞 ${esc(p.parentPhone)}</a>` : ''}｜期別：<b>${esc(p.period)}</b>
@@ -965,7 +961,6 @@ async function viewAdmin() {
     pendingCard('📝 待審核請假', 'leave', '請假') +
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +
-    financeCard(a) +
     card('🗒️ 審核紀錄', reviewedHtml()) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
     card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
@@ -976,9 +971,14 @@ async function viewAdmin() {
       `<button class="ghost mini" onclick="run(this,addStudentUi)">＋ 新增學員</button>`) +
     card('🧾 最近堂數調整', (a.adjustLogs || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.reason)}・${esc(r.by)}</span></span>
       <span class="pill ${r.delta < 0 ? 'bad' : ''}">${r.delta > 0 ? '+' : ''}${r.delta} → ${r.after}</span></div>`).join('') || '<p class="muted">尚無調整紀錄</p>') +
+    card('🗂️ 最近點名紀錄', (a.recent || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>${pill(r.status)}</div>`).join('') || '<p class="muted">尚無點名紀錄</p>') +
+    card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">
+      ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
+      ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
     card('🧾 操作紀錄（最近 80 筆）', (a.opLogs || []).map(r => `<div class="row" style="padding:8px 0"><div><b>${esc(r.action)}</b>・${esc(r.target)}
       <div class="muted" style="margin:0;font-size:12.5px">${esc(r.by)} ${esc(r.at)}${r.detail ? '｜' + esc(r.detail) : ''}</div></div></div>`).join('') || '<p class="muted">尚無操作紀錄</p>') +
-    card('🗂️ 最近點名紀錄', (a.recent || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>${pill(r.status)}</div>`).join('') || '<p class="muted">尚無點名紀錄</p>');
+    financeCard(a) +
+    noticeCardAdmin(a);
 
   renderMemoBox();
 }

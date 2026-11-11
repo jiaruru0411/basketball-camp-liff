@@ -280,7 +280,7 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
-const FE_VER = '2026-11-11-r8';
+const FE_VER = '2026-11-11-r9';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -619,8 +619,9 @@ async function viewCoach() {
     card('📍 簽到：' + esc(cur.name), `
       <div class="row" style="border-top:0">
         <span>${isToday ? (S.checkedIn ? '<span class="pill">✓ 今日已簽到</span>' : '<span class="pill warn">尚未簽到</span>') : '<span class="muted" style="margin:0">簽到僅限當天</span>'}</span>
-        ${isToday && !S.checkedIn && (S.duty.onDuty || !S.needCheckin) ? '<button class="pri mini" style="width:auto;font-size:14px;padding:10px 16px" onclick="run(this,doCheckin)">📍 簽到此班</button>' : ''}</div>
+        ${isToday && !S.checkedIn && (S.duty.testMode || !S.needCheckin || (S.duty.onDuty && S.duty.inWindow !== false)) ? '<button class="pri mini" style="width:auto;font-size:14px;padding:10px 16px" onclick="run(this,doCheckin)">📍 簽到此班</button>' : ''}</div>
       ${S.needCheckin && isToday && !S.checkedIn && !S.duty.onDuty && !S.duty.testMode ? `<p class="muted" style="color:var(--bad);font-weight:700;margin:6px 0 0">今天這個班沒有排到您（今日排班：${esc((S.duty.names || []).join('、') || '無')}），如需代課請洽總教練。</p>` : ''}
+      ${S.needCheckin && isToday && !S.checkedIn && S.duty.onDuty && S.duty.inWindow === false && !S.duty.testMode ? `<p class="muted" style="color:var(--bad);font-weight:700;margin:6px 0 0">目前不在簽到時間內，請在 ${esc(S.duty.window)} 之間簽到；時間到後按「重新整理」。</p>` : ''}
       ${S.needCheckin && S.duty.window ? `<p class="muted" style="margin:6px 0 0;font-size:13px">⏰ 簽到時間：${esc(S.duty.window)}（上課前後 30 分鐘）${S.duty.testMode ? '｜測試模式不受限制' : ''}</p>` : ''}
       <div style="border-top:1px dashed #f0e7dd;padding-top:8px;margin-top:6px"><div class="muted" style="font-weight:700">近期出勤紀錄</div>${logs}</div>`) +
     card('🏀 課堂學員點名', `

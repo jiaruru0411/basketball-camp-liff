@@ -278,7 +278,11 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
+const FE_VER = '2026-11-11-r7';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
+  let vb = document.getElementById('verbar');
+  if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
+  vb.textContent = '前端 ' + FE_VER + '｜後端 ' + ((S.me && S.me.ver) || '舊版（尚未更新）') + (S.me && S.me.testMode ? '｜測試模式開啟' : '');
   let b = document.getElementById('testbar');
   if (!S.me || !S.me.testMode) { if (b) b.remove(); return; }
   if (!b) { b = document.createElement('div'); b.id = 'testbar'; b.style.cssText = 'background:#fef3c7;border-bottom:1.5px solid #fde68a;padding:8px 14px;font-size:13px;font-weight:700;color:#92400e;display:flex;gap:8px;align-items:center'; document.querySelector('header').after(b); }
@@ -344,8 +348,16 @@ function leaveDateHtml(st) {
 }
 function onLeaveKid(id) { const b = $('#leave_date_box'); if (b) b.innerHTML = leaveDateHtml(stuById(id)); }
 
+function fillMkClasses() { // 只列出「不是原班」且「時數相同」的班級
+  const sel = $('#mk_leave'), cs = $('#mk_cls'); if (!sel || !cs || !sel.selectedOptions[0]) return;
+  const op = sel.selectedOptions[0], cid = op.dataset.cid, h = Number(op.dataset.h) || 0, keep = cs.value;
+  const list = ((S.parentData && S.parentData.cl) || []).filter(c => c.classId !== cid && (!h || c.hours === h) && (!c.days || !c.days.length || c.days.includes(7)));
+  cs.innerHTML = list.length ? list.map(c => `<option value="${esc(c.classId)}">${esc(c.name)} (${c.hours}h${c.days && c.days.length ? '・' + dayTxt(c.days) : ''})</option>`).join('') : '<option value="">沒有可補課的班級（需不同班、同時數）</option>';
+  if (keep && list.some(c => c.classId === keep)) cs.value = keep;
+}
 function updateMk() {
   const sel = $('#mk_leave'); if (!sel || !sel.selectedOptions[0]) return;
+  fillMkClasses();
   const op = sel.selectedOptions[0], dt = $('#mk_date'); if (!dt) return;
   const mn = today();
   const dl = op.dataset.dl || '';
@@ -402,8 +414,8 @@ async function viewParent() {
   const mks = (mo || []).filter(x => S.curKid === 'ALL' || x.studentId === S.curKid);
 
   const makeupForm = mks.length ? `
-    <select id="mk_leave" onchange="updateMk()">${mks.map(x => `<option value="${esc(x.leaveId)}" data-ld="${esc(x.leaveDate)}" data-dl="${esc(x.deadline)}">${esc(x.studentName)}・${esc(x.leaveDate)} ${esc(x.kind)}（最後截止日：${esc(x.deadline)}）</option>`).join('')}</select>
-    <select id="mk_cls">${cl.map(c => `<option value="${esc(c.classId)}">${esc(c.name)} (${c.hours}h${c.days && c.days.length ? '・' + dayTxt(c.days) : ''})</option>`).join('')}</select>
+    <select id="mk_leave" onchange="updateMk()">${mks.map(x => `<option value="${esc(x.leaveId)}" data-ld="${esc(x.leaveDate)}" data-dl="${esc(x.deadline)}" data-cid="${esc(x.classId)}" data-h="${esc(x.hours)}">${esc(x.studentName)}・${esc(x.leaveDate)} ${esc(x.kind)}（最後截止日：${esc(x.deadline)}）</option>`).join('')}</select>
+    <select id="mk_cls"></select>
     <p class="muted" style="font-size:13px;margin:4px 0 2px">選擇補課日期（限週日）<span id="mk_hint" style="display:block;color:var(--pri);font-weight:700"></span></p>
     <input id="mk_date" type="date" min="${today()}">
     <button class="pri" onclick="run(this,doSubmitMakeup)">送出補課預約 ➜</button>`
@@ -420,7 +432,7 @@ async function viewParent() {
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
       <select id="leave_reason_type">
         <option value="病假">🤒 病假（請於官方LINE上傳看診收據）</option>
-        <option value="事假">🚗 私人事假（每期僅限補課 1 次）</option>
+        <option value="事假">🚗 私人事假（每期僅限 1 次）</option>
       </select>
       <div id="leave_date_box">${leaveDateHtml(vis[0])}</div>
       <input id="leave_rsn" placeholder="原因說明（例如：發燒就醫／外出旅遊）">
@@ -429,7 +441,7 @@ async function viewParent() {
       <div class="rules-box"><b>📌 115年常態班請假補課規範：</b><ol>
         <li><b>病假單堂</b>：請提供看診收據（接受上課日前後二日）。</li>
         <li><b>病假兩堂以上</b>：請提供醫生診斷證明書。</li>
-        <li><b>事假限制</b>：學員私人因素每期<b>僅限補課 1 次</b>，其餘恕不補課退費。</li>
+        <li><b>事假限制</b>：學員私人因素每期<b>僅限請假 1 次</b>（並補課 1 次），其餘恕不補課退費。</li><li><b>補課班級</b>：不可補回原班，且須是<b>相同時數</b>的班級（1 小時對 1 小時、2 小時對 2 小時）。</li>
         <li><b>補課期限</b>：請於<b>該期課程整期結束後『四週內』完成</b>，未上完之課程視同放棄，無法退費。</li>
         <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li></ol></div>`) +
     card('💳 匯款對帳回傳', `
@@ -447,7 +459,8 @@ async function viewParent() {
         ${p.logs ? `<div class="muted" style="color:var(--ok);font-size:13px;margin:0">${esc(p.logs)}</div>` : ''}
         ${p.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">說明：${esc(p.note)}</div>` : ''}${cancelBtn(p)}</div>${pill(p.status)}</div>`).join('') +
       (h.leaves || []).filter(l => S.curKid === 'ALL' || l.studentId === S.curKid).map(l => `<div class="row"><div>
-        <b>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</b>
+        <b>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</b>${l.type === '請假' && l.kind ? ` <span class="pill ${l.kind === '病假' ? '' : 'warn'}">${esc(l.kind)}</span>` : ''}
+        ${l.reasonText ? `<div class="muted" style="font-size:12.5px;margin:2px 0 0">原因：${esc(l.reasonText)}${l.at ? '（' + esc(l.at) + ' 申請）' : ''}</div>` : ''}
         ${l.deadline ? `<div class="muted" style="font-size:12.5px;color:#b45309;margin:2px 0 0">補課截止日：${esc(l.deadline)}</div>` : ''}
         ${l.linkedMakeupId ? `<div class="muted" style="color:var(--pri);font-weight:700;font-size:13px;margin:2px 0 0">已預約補課：單號 ${esc(l.linkedMakeupId)}</div>` : ''}
         ${l.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">說明：${esc(l.note)}</div>` : ''}${cancelBtn(l)}</div>${pill(l.status)}</div>`).join('')) || '<p class="muted">尚無歷史紀錄</p>') +
@@ -508,6 +521,7 @@ async function doSubmitMakeup() {
     throw new Error(`所選日期已超過該期結業後四週的最後期限（${dl} 前需補完），無法預約！`);
   }
 
+  if (!$('#mk_cls').value) throw new Error('沒有可補課的班級（補課須選不同班、相同時數的班級）');
   await api('makeup', { leaveId: sel.value, targetClassId: $('#mk_cls').value, targetDate: d });
   render();
   setTimeout(() => toast('補課預約已送出，等待總教練確認！'), 100);
@@ -627,6 +641,15 @@ function switchMemoTab(t) {
   renderMemoBox();
 }
 
+function setRv(v) { S.rvMine = v; const e = document.getElementById('rv_list'); if (e) e.parentElement.outerHTML = card('🗒️ 審核紀錄', reviewedHtml()); }
+function reviewedHtml() {
+  const all = (S.adm && S.adm.reviewed) || [], mine = !!S.rvMine, me = S.me.name;
+  const rows = all.filter(r => !mine || r.by === me);
+  return `<label class="muted" style="display:block;margin:0 0 8px"><input type="checkbox" ${mine ? 'checked' : ''} onchange="setRv(this.checked)">只看我審核的</label><div id="rv_list">` +
+    (rows.slice(0, 40).map(r => `<div class="row"><div><b>${esc(r.who)}</b>・${esc(r.summary)}
+      <div class="muted" style="margin:0;font-size:12.5px">${esc(r.by)} ${esc(r.at)}${r.note ? '｜' + esc(r.note) : ''}</div></div>
+      <span class="pill ${r.result === '核准' ? '' : 'bad'}">${esc(r.kind)}${esc(r.result)}</span></div>`).join('') || '<p class="muted">尚無審核紀錄</p>') + '</div>';
+}
 function setMf(k, v) { S.mf = Object.assign({ cls: '', when: 'future', ended: false }, S.mf || {}, { [k]: v }); renderMemoBox(); }
 function renderMemoBox() {
   const box = $('#memo_container');
@@ -726,11 +749,12 @@ async function viewAdmin() {
         <button class="ghost" data-act="reviewPay" data-id="${esc(p.id)}" data-d="reject">退回匯款</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>',
       `<button class="ghost mini" onclick="run(this,cashPayUi)">💵 現場收取現金</button>`) +
     card('📅 待審核請假與補課', (a.leaves || []).map(l => `<div class="item">
-      <b>${esc(l.studentName)}</b> 申請 <b>【${esc(l.type)}】</b> ${esc(l.date)}
+      <b>${esc(l.studentName)}</b> 申請 <b>【${esc(l.type)}】</b> ${esc(l.date)}${l.kind ? ` <span class="pill ${l.kind === '病假' ? '' : 'warn'}">${esc(l.kind)}</span>` : ''}${l.kind === '事假' ? `<div class="muted" style="margin:4px 0 0;font-weight:700;color:${l.usedPersonal ? 'var(--bad)' : 'var(--mut)'}">本期已核准事假：${l.usedPersonal} 次${l.usedPersonal ? '（再核准會超過每期 1 次的限制）' : ''}</div>` : ''}
       ${l.type === '補課' ? `<div class="muted" style="margin:4px 0 0;color:var(--pri);font-weight:700">目標班級：${esc(l.className)}</div>` : ''}
-      <div class="muted" style="margin:4px 0">${esc(l.reason)}</div>
+      <div class="muted" style="margin:4px 0">${esc(l.reasonText || l.reason)}</div>
       <div class="two" style="margin-top:10px"><button class="pri" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="pass">核准申請 ➜</button>
         <button class="ghost" data-act="reviewLeave" data-id="${esc(l.id)}" data-d="reject">婉拒申請</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>') +
+    card('🗒️ 審核紀錄', reviewedHtml()) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
     card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
       ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className).toLowerCase())}"><div>

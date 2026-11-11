@@ -280,7 +280,7 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
-const FE_VER = '2026-11-11-r7';
+const FE_VER = '2026-11-11-r8';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -754,7 +754,41 @@ function scheduleCardAdmin(a) { // 排班：選日期看那天各班的教練，
   if (!sc.dates.some(x => x.date === S.schedDate)) S.schedDate = (sc.dates[0] || {}).date;
   return card('👥 排班', `<p class="muted">平常用「班級列表」設定的教練；臨時要換人，選日期後按該班的「調整」。只有排到班的教練可以簽到。</p>
     <select onchange="schedPick(this.value)">${(sc.dates || []).map(d => `<option value="${esc(d.date)}" ${d.date === S.schedDate ? 'selected' : ''}>${esc(d.date)}（週${DN[dow(d.date) - 1]}）${d.classes.some(c => c.custom) ? '・有調整' : ''}</option>`).join('')}</select>
-    <div id="sched_box">${schedBody(sc)}</div>`);
+    <div id="sched_box">${schedBody(sc)}</div>
+    <button class="ghost" style="margin-top:10px;width:100%" onclick="batchSchedule()">📅 批次排班（一次排整期）</button>`);
+}
+function batchSchedule() { // 選班級＋教練，勾選要套用的上課日，一次寫入
+  const sc = S.adm.schedule || { dates: [], staff: [] }, seen = {}, cls = [];
+  (sc.dates || []).forEach(d => d.classes.forEach(c => { if (!seen[c.id]) { seen[c.id] = 1; cls.push(c); } }));
+  if (!cls.length) { toast('目前沒有可排班的班級'); return; }
+  const w = modal(`<p style="font-weight:800;margin-bottom:6px">批次排班</p>
+    <select id="bs_cls">${cls.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
+    <p class="muted" style="margin-top:8px">1. 勾選教練（全部不勾＝回復預設教練）</p>
+    <div class="chk" id="bs_staff">${(sc.staff || []).map(x => `<label><input type="checkbox" value="${esc(x.id)}">${esc(x.name)}</label>`).join('')}</div>
+    <p class="muted" id="bs_cnt" style="margin-top:8px"></p>
+    <div class="chk" id="bs_dates"></div>
+    <div class="two" style="margin-top:8px"><button class="ghost" data-x="all">全選／全不選</button><span></span></div>
+    <div class="two" style="margin-top:8px"><button class="ghost" data-x="no">取消</button><button class="pri" data-x="ok">套用</button></div>`);
+  const sel = w.querySelector('#bs_cls');
+  const ds = () => [...w.querySelectorAll('#bs_dates input')];
+  const count = () => { w.querySelector('#bs_cnt').textContent = '2. 勾選要套用的日期（本期還有 ' + ds().length + ' 堂，已選 ' + ds().filter(i => i.checked).length + ' 堂）'; };
+  const fill = () => {
+    const cid = sel.value, days = (sc.dates || []).filter(d => d.classes.some(c => c.id === cid));
+    w.querySelector('#bs_dates').innerHTML = days.map(d => `<label><input type="checkbox" value="${esc(d.date)}" checked>${esc(d.date)}（週${DN[dow(d.date) - 1]}）</label>`).join('') || '<span class="muted">沒有上課日</span>';
+    const first = days[0] && days[0].classes.find(c => c.id === cid), ids = first ? first.ids : [];
+    w.querySelectorAll('#bs_staff input').forEach(i => { i.checked = ids.includes(i.value); });
+    count();
+  };
+  sel.onchange = fill; w.onchange = e => { if (e.target.closest && e.target.closest('#bs_dates')) count(); }; fill();
+  w.onclick = async e => {
+    const x = e.target.dataset && e.target.dataset.x; if (!x) return;
+    if (x === 'no') { w.remove(); return; }
+    if (x === 'all') { const on = ds().some(i => !i.checked); ds().forEach(i => { i.checked = on; }); count(); return; }
+    const dates = ds().filter(i => i.checked).map(i => i.value), coachIds = [...w.querySelectorAll('#bs_staff input:checked')].map(i => i.value);
+    if (!dates.length) { toast('請至少勾選一個日期'); return; }
+    const cid = sel.value; w.remove();
+    try { await api('setScheduleBatch', { classId: cid, dates, coachIds }); render(); setTimeout(() => toast('已排好 ' + dates.length + ' 堂'), 100); } catch (err) { toast(err.message); }
+  };
 }
 function editSchedule(date, cid) {
   const sc = S.adm.schedule, d = sc.dates.find(x => x.date === date), c = d && d.classes.find(x => x.id === cid); if (!c) return;

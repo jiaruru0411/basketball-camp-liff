@@ -224,7 +224,7 @@ async function api(action, data = {}, silent = false) {
     const r = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify({ action, token, ...data }) });
     const j = await r.json();
     if (!j.ok) {
-      if (/登入驗證失敗/.test(j.error || '')) {
+      if (/登入驗證失敗/.test(j.error || '')) { // 只自動重新登入一次，避免無限循環
         let n = 0; try { n = Number(sessionStorage.getItem('relogin') || 0); } catch (e) {}
         if (n < 1) { try { sessionStorage.setItem('relogin', String(n + 1)); } catch (e) {} forceReLogin(); return new Promise(() => {}); }
         throw new Error('登入已過期，請關閉後從 LINE 重新開啟');
@@ -280,10 +280,9 @@ document.addEventListener('click', e => {
 
 function go(t) { S.tab = t; S.date = null; render(); }
 function render() {
-  // 管理員擁有後台、學員專區、點名打卡、綁定四個入口
   const tabs = {
     guest: [['bind', '🎒 學員綁定']], parent: [['parent', '🏀 學員專區']], coach: [['coach', '👟 點名打卡']],
-    admin: [['admin', '📊 後台總覽'], ['parent', '🏀 學員專區'], ['coach', '👟 點名打卡'], ['bind', '🎒 學員綁定']]
+    admin: [['admin', '📊 後台總覽'], ['coach', '👟 點名打卡'], ['bind', '🎒 學員綁定']]
   }[S.me.role] || [['bind', '🎒 學員綁定']];
   if (!tabs.some(t => t[0] === S.tab)) S.tab = tabs[0][0];
   $('#nav').innerHTML = tabs.map(t => `<button class="${t[0] === S.tab ? 'on' : ''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
@@ -317,7 +316,8 @@ function classDates(st, n = 10) {
   if (st.classStart && st.classStart > d) d = st.classStart;
   for (let i = 0; i < 180 && out.length < n; i++, d = addDays(d, 1)) {
     if (st.classEnd && d > st.classEnd) break;
-    if ((st.classDays || []).includes(dow(d))) out.push(d);
+    const cal = (S.parentData && S.parentData.cal) || [];
+    if ((st.classDays || []).includes(dow(d)) && (!cal.length || cal.includes(d))) out.push(d); // 有建「課程日曆」就只列簡章上的上課日
   }
   return out;
 }
@@ -361,7 +361,7 @@ function restoreForm(o) {
 async function viewParent() {
   if (!S.parentData) {
     const d = await api('parentHome', {}, true);
-    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods, plan: d.plan };
+    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods, cal: d.calendar || [], plan: d.plan || { shirt: 450, discount: { '舊生': { 1: 200, 2: 600 }, '新生': { 1: 200, 2: 0 } }, gift: {}, lessons: 7 } };
     updateGreeting();
   }
   const { h, cl, mo, periods } = S.parentData;
@@ -383,7 +383,7 @@ async function viewParent() {
     <div class="muted" style="margin:0;align-self:center">出席 ${cnt('出席')}・請假 ${cnt('請假')}・缺席 ${cnt('缺席')}</div></div>`;
   const attHtml = attBar + attAll.filter(a => !af || a.status === af).map(a => `
     <div class="row"><div><b>${esc(a.date)}</b><div class="muted" style="margin:0">${esc(a.studentName)}・${esc(a.className)}</div></div>
-    <span class="pill ${a.status === '出席' ? '' : a.status === '請假' ? 'warn' : 'bad'}">${esc(a.status === '出席' ? '✓ 正常出席' : a.status === '請假' ? '📝 事前請假' : a.status)}</span></div>`).join('') || '<p class="muted">尚無課堂出勤紀錄</p>';
+    <span class="pill ${a.status === '出席' ? '' : a.status === '請假' ? 'warn' : 'bad'}">${esc(a.status === '出席' ? '✓ 正常出席' : a.status === '請假' ? '📝 事前請假' : a.status)}</span></div>`).join('') || '<p class="muted">沒有符合的紀錄（堂數用完 14 天後，紀錄會自動隱藏）</p>';
   
   const mks = (mo || []).filter(x => S.curKid === 'ALL' || x.studentId === S.curKid);
 
@@ -407,7 +407,6 @@ async function viewParent() {
       <select id="leave_reason_type">
         <option value="病假">🤒 病假（請於官方LINE上傳看診收據）</option>
         <option value="事假">🚗 私人事假（每期僅限補課 1 次）</option>
-        <option value="公假/天災">📌 公假 / 停班停課天災</option>
       </select>
       <div id="leave_date_box">${leaveDateHtml(vis[0])}</div>
       <input id="leave_rsn" placeholder="原因說明（例如：發燒就醫／外出旅遊）">
@@ -421,37 +420,13 @@ async function viewParent() {
         <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li></ol></div>`) +
     card('💳 匯款對帳回傳', `
       <p class="muted">${esc(CONFIG.BANK)}</p>
-      <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">繳費期別</div>
       <select id="pay_period">${(periods || []).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
-      <div class="two">
-        <div>
-          <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">身分</div>
-          <select id="pay_identity" onchange="calcPay()"><option value="舊生">舊生續報</option><option value="新生">新生報名</option></select>
-        </div>
-        <div>
-          <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">報名期數</div>
-          <select id="pay_terms" onchange="calcPay()"><option value="1">第二期（7 堂）</option></select>
-        </div>
-      </div>
-      <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">加購營隊短T件數（每件 $450，無加購填 0）</div>
-      <input id="pay_shirts" type="number" inputmode="numeric" min="0" value="0" placeholder="加購件數" oninput="calcPay()">
+      <div class="two"><select id="pay_terms" onchange="calcPay()"><option value="1">報名 1 期（7 堂）</option><option value="2">一次報名 2 期（14 堂）</option></select>
+        <input id="pay_shirts" type="number" inputmode="numeric" min="0" value="0" placeholder="另購短T件數" oninput="calcPay()"></div>
       <div class="chk" onchange="calcPay()">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
       <p id="pay_hint" class="muted" style="font-weight:600"></p>
-      <div class="two">
-        <div>
-          <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">匯款金額</div>
-          <input id="amt" type="number" inputmode="numeric" placeholder="例如: 4000">
-        </div>
-        <div>
-          <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">帳號末五碼／現金</div>
-          <input id="l5" maxlength="5" placeholder="5 碼數字或填現金">
-        </div>
-      </div>
-      <p class="muted" style="font-size:13px;color:#d97706;margin:-4px 0 12px;font-weight:600">
-        💡 銀行轉帳請填末五碼；若現場繳交現金給教練請填「現金」。
-      </p>
-      <div class="muted" style="font-weight:700;font-size:13px;margin:0 0 4px">轉帳或付款日期</div>
-      <input id="pdate" type="date" value="${today()}">
+      <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額 (如: 4200)"><input id="l5" maxlength="5" inputmode="numeric" placeholder="匯款帳號末五碼（5 碼數字）"></div>
+      <p class="muted" style="font-weight:600">轉帳日期</p><input id="pdate" type="date" value="${today()}">
       <button class="pri" onclick="run(this,doSubmitPay)">送出對帳資料 ➜</button>`) +
     card('🕒 最近申請進度',
       ((h.payments || []).map(p => `<div class="row"><div><b>繳費 $${esc(p.amount)}・${esc(p.studentNames)}</b>
@@ -472,16 +447,14 @@ async function setAttf(v) {
   await viewParent();
   restoreForm(snap);
 }
-function calcPay() {
-  const pl = S.plan || {}, id = ($('#pay_identity') || {}).value || '舊生', terms = Number(($('#pay_terms') || {}).value || 1), shirts = Math.max(0, Math.floor(Number(($('#pay_shirts') || {}).value) || 0));
+function calcPay() { // 簡章金額試算（新舊生由總教練人工確認，這裡兩種都列出來供參考）
+  const pl = S.plan || {}, terms = Number(($('#pay_terms') || {}).value || 1), shirts = Math.max(0, Math.floor(Number(($('#pay_shirts') || {}).value) || 0));
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
-  const fees = ids.map(i => (stuById(i) || {}).fee || 4200);
+  const fees = ids.map(i => (stuById(i) || {}).fee || 0);
   const hint = $('#pay_hint'); if (!hint) return;
-  if (!ids.length) { hint.textContent = '請先勾選學員'; return; }
-  const d = ((pl.discount || {})[id] || {})[terms] || 0;
-  const total = fees.reduce((t, x) => t + x * terms - d, 0) + shirts * (pl.shirt || 450);
-  hint.innerHTML = `應繳 <b style="color:var(--pri)">$${total.toLocaleString()}</b>（${ids.length} 人・${terms} 期・${id}優惠 -$${d}／人${shirts ? '・T恤 ' + shirts + ' 件' : ''}）`;
-  const amt = $('#amt'); if (amt) amt.value = total;
+  if (!ids.length || fees.some(x => !x)) { hint.textContent = ids.length ? '此班尚未設定費用，請依報名表單通知的金額輸入' : '請先勾選學員'; return; }
+  const tot = id => fees.reduce((t, x) => t + x * terms - (((pl.discount || {})[id] || {})[terms] || 0), 0) + shirts * (pl.shirt || 450);
+  hint.innerHTML = `參考金額：舊生 <b style="color:var(--pri)">$${tot('舊生').toLocaleString()}</b>／新生 <b style="color:var(--pri)">$${tot('新生').toLocaleString()}</b>（${ids.length} 人・${terms} 期${shirts ? '・T恤 ' + shirts + ' 件' : ''}）<br>請依報名後通知您的金額匯款，新舊生身分由總教練確認。`;
 }
 async function switchKid(id) {
   const snap = snapForm();
@@ -493,36 +466,16 @@ async function switchKid(id) {
 async function doSubmitPay() {
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
   if (!ids.length) throw new Error('請勾選繳費的學員');
-
-  const amt = Number($('#amt').value || 0);
-  if (amt <= 0) throw new Error('請輸入正確的匯款或付款金額');
-
-  const l5 = ($('#l5').value || '').trim();
-  if (!l5) throw new Error('請填寫帳號末五碼（若付現金請填「現金」）');
-
-  // 防呆驗證：若不是「現金」，就必須是「剛好 5 碼純數字」
-  const isCash = l5.includes('現金');
-  const isFiveDigits = /^\d{5}$/.test(l5);
-
-  if (!isCash && !isFiveDigits) {
-    throw new Error('帳號末五碼格式不正確！\n請填寫「剛好 5 碼純數字」，若為現場付現請直接填寫「現金」。');
-  }
-
-  await api('pay', {
-    period: $('#pay_period').value,
-    plan: {
-      identity: $('#pay_identity').value,
-      terms: $('#pay_terms').value,
-      shirts: $('#pay_shirts').value
-    },
-    studentIds: ids,
-    amount: amt,
-    last5: l5,
-    date: $('#pdate').value
-  });
-
+  await api('pay', { period: $('#pay_period').value, plan: { terms: $('#pay_terms').value, shirts: $('#pay_shirts').value }, studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value });
   render();
   setTimeout(() => toast('繳費資料已送出，等待總教練確認！'), 100);
+}
+async function doSubmitLeave() {
+  const dt = $('#leave_date');
+  if (!dt || dt.disabled || !dt.value) throw new Error('請選擇請假的上課日');
+  await api('leave', { studentId: $('#leave_sid').value, reasonType: $('#leave_reason_type').value, date: dt.value, reason: $('#leave_rsn').value });
+  render();
+  setTimeout(() => toast('請假申請已送出，等待總教練核准'), 100);
 }
 
 async function doSubmitMakeup() {
@@ -561,7 +514,7 @@ async function viewCoach() {
   const isAdmin = S.me.role === 'admin';
   if (!isAdmin || !S.date) S.date = today();
   const r = await api('roster', { classId: S.cls, date: S.date }, true);
-  S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
+  S.upcoming = r.upcoming || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin;
   
   S.list.forEach(x => { 
     x.v = x.saved || (x.leave ? '請假' : '未到'); 
@@ -593,6 +546,7 @@ async function viewCoach() {
         ${makeupCount ? `<span class="pill" style="background:#fffbeb;color:#d97706">⭐ 補課 ${makeupCount} 人</span>` : ''}
       </div>
       ${S.needCheckin && !S.checkedIn ? '<p class="muted" style="color:var(--bad);font-weight:700">⚠️ 請先「簽到此班」才能儲存點名</p>' : ''}
+      ${leaveBox()}
       ${rosterSummary()}
       <button class="ghost" style="width:100%;margin-bottom:12px" onclick="setAll('出席')">⚡ 一鍵全班設為出席（請假學員自動保留）</button>
       <div id="roster">${rosterHtml()}</div>
@@ -600,6 +554,13 @@ async function viewCoach() {
 }
 async function changeClass(v) { S.cls = v; await safe(viewCoach); }
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
+function leaveBox() { // 教練一眼看到：這天誰請假、誰補課、之後誰要請假
+  const lv = S.list.filter(x => x.leave), pend = S.list.filter(x => x.pendingLeave && !x.leave), mk = S.list.filter(x => x.makeup), up = S.upcoming || [];
+  const line = (t, arr) => arr.length ? `<div style="margin:4px 0">${t}：${arr.map(x => `<b>${esc(x.name)}</b>${x.leaveReason ? `<span class="muted">（${esc(x.leaveReason)}）</span>` : ''}`).join('、')}</div>` : '';
+  const upHtml = up.length ? `<div style="border-top:1px dashed #f0e7dd;margin-top:6px;padding-top:6px"><div class="muted" style="font-weight:700">之後 30 天已核准</div>${up.map(u => `<div class="row" style="padding:5px 0"><span>${esc(u.date)}・<b>${esc(u.name)}</b></span><span class="pill ${u.type === '補課' ? 'warn' : ''}">${esc(u.type)}</span></div>`).join('')}</div>` : '';
+  return `<div class="item" style="background:#fffaf0"><div style="font-weight:800">📝 ${esc(S.date)} 請假／補課</div>
+    ${lv.length || pend.length || mk.length ? line('請假', lv) + line('待審核請假', pend) + line('補課學員', mk) : '<p class="muted" style="margin:4px 0">今天沒有人請假或補課</p>'}${upHtml}</div>`;
+}
 function rosterSummary() {
   if (!S.list.length) return '';
   const done = S.list.filter(x => x.saved), by = [...new Set(done.map(x => x.by).filter(Boolean))];
@@ -652,24 +613,24 @@ function switchMemoTab(t) {
   renderMemoBox();
 }
 
-function setMf(k, v) { S.mf = Object.assign({ cls: '', when: 'future' }, S.mf || {}, { [k]: v }); renderMemoBox(); }
+function setMf(k, v) { S.mf = Object.assign({ cls: '', when: 'future', ended: false }, S.mf || {}, { [k]: v }); renderMemoBox(); }
 function renderMemoBox() {
   const box = $('#memo_container');
   if (!box || !S.adm) return;
-  const a = S.adm, f = S.mf || { cls: '', when: 'future' }, t = today();
+  const a = S.adm, f = S.mf || { cls: '', when: 'future', ended: false }, t = today();
   const isLeave = S.memoTab === 'leave';
   const src = (isLeave ? a.approvedLeaves : a.approvedMakeups) || [];
   const classes = [...new Map(((a.approvedLeaves || []).concat(a.approvedMakeups || [])).map(l => [l.classId, l.className])).entries()];
-  const keep = l => (!f.cls || l.classId === f.cls) && (f.when === 'all' || (f.when === 'future' ? l.date >= t : l.date < t));
+  const keep = l => (!f.cls || l.classId === f.cls) && (f.ended || !l.ended) && (f.when === 'all' || (f.when === 'future' ? l.date >= t : l.date < t));
   const rows = src.filter(keep); if (f.when === 'past') rows.reverse();
   const sel = (v, o) => o.map(x => `<option value="${esc(x[0])}" ${x[0] === v ? 'selected' : ''}>${esc(x[1])}</option>`).join('');
-  
+  const endTag = l => l.ended ? ' <span class="pill gray">已過保留期</span>' : '';
   const leaveHtml = rows.map(l => `<div class="row"><div>
-      <b>${esc(l.studentName)}</b>【請假】<b>${esc(l.date)}</b>
+      <b>${esc(l.studentName)}</b>【請假】<b>${esc(l.date)}</b>${endTag(l)}
       <div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(l.className)}｜${esc(l.reason || '無備註原因')}｜補課期限：${esc(l.deadline || '無')}${l.by ? '｜' + esc(l.by) + ' 核准' : ''}</div></div>
       <span class="pill warn">已核准請假</span></div>`).join('') || '<p class="muted">沒有符合的請假紀錄</p>';
   const makeupHtml = rows.map(m => `<div class="row"><div>
-      <b>${esc(m.studentName)}</b> 補課日：<b>${esc(m.date)}</b>
+      <b>${esc(m.studentName)}</b> 補課日：<b>${esc(m.date)}</b>${endTag(m)}
       <div class="muted" style="margin:2px 0 0;font-size:12.5px">目標班級：<b>${esc(m.className)}</b></div></div>
       <span class="pill" style="background:#fffbeb;color:#d97706">⭐ 補課已排定</span></div>`).join('') || '<p class="muted">沒有符合的補課紀錄</p>';
   box.innerHTML = `
@@ -679,9 +640,11 @@ function renderMemoBox() {
     </div>
     <div class="two"><select onchange="setMf('cls',this.value)">${sel(f.cls, [['', '全部班級']].concat(classes))}</select>
       <select onchange="setMf('when',this.value)">${sel(f.when, [['future', '今天起'], ['past', '已過'], ['all', '全部']])}</select></div>
+    <label class="muted" style="display:block;margin:6px 0"><input type="checkbox" ${f.ended ? 'checked' : ''} onchange="setMf('ended',this.checked)">顯示已過保留期（堂數用完超過14天）／已結業</label>
     ${isLeave ? leaveHtml : makeupHtml}`;
 }
 
+// 總教練點擊「💵 現場收取現金」彈出對話框
 async function cashPayUi() {
   const stus = S.adm.students || [];
   if (!stus.length) throw new Error('目前尚無學員資料');
@@ -690,10 +653,11 @@ async function cashPayUi() {
     { key: 'studentId', label: '學員', type: 'select', options: stus.map(s => [s.id, `${s.name} (${s.className}・目前剩${s.balance}堂)`]) },
     { key: 'period', label: '繳費期別', type: 'select', options: [
       ['第二期', '第二期（常態 7 堂）'],
+      ['一次報名兩期', '一次報名兩期（14 堂）'],
       ['中途插班', '中途插班繳費（自訂堂數）']
     ]},
-    { key: 'amount', label: '收取現金金額', type: 'number', ph: '例如: 4000 (插班依比例填寫)' },
-    { key: 'lessons', label: '增加堂數', type: 'number', ph: '常態7堂，插班請自訂', value: '7' },
+    { key: 'amount', label: '收取現金金額', type: 'number', ph: '例如: 4200 (插班依比例填寫)' },
+    { key: 'lessons', label: '增加堂數', type: 'number', ph: '常態7堂、兩期14堂，插班請自訂', value: '7' },
     { key: 'note', label: '備註說明', ph: '例如: 現場交付千元大鈔 / 經手人總教練', value: '現場收取現金' }
   ], '確認入帳並加堂');
 
@@ -731,9 +695,11 @@ async function viewAdmin() {
     card('💵 教練授課時數與薪資', `<input type="month" value="${esc(S.month)}" onchange="S.month=this.value;render()">
       ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
       ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
+    // 待審核匯款卡片：標題右側新增「💵 現場收取現金」快捷鍵
     card('💳 待審核匯款', (a.payments || []).map(p => `<div class="item" id="pay_item_${esc(p.id)}">
       <b>${esc(p.parentName)}</b>${p.parentPhone ? ` <a href="tel:${esc(p.parentPhone)}" style="color:var(--pri);font-size:13px;font-weight:700;text-decoration:none">📞 ${esc(p.parentPhone)}</a>` : ''}｜期別：<b>${esc(p.period)}</b>
       <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
+      ${p.expOld ? `<div class="muted" style="margin:0 0 8px;font-weight:700;color:${(Number(p.amount) === p.expOld || Number(p.amount) === p.expNew) ? 'var(--ok)' : 'var(--bad)'}">簡章應收：舊生 $${p.expOld}／新生 $${p.expNew}${Number(p.amount) === p.expOld ? ' ✓ 符合舊生價' : Number(p.amount) === p.expNew ? ' ✓ 符合新生價' : ' ⚠️ 金額與兩種價格都不符，請確認'}</div>` : ''}${p.giftNew ? `<div class="muted" style="margin:0 0 8px;color:var(--pri);font-weight:700">🎁 若為新生：${esc(p.giftNew)}</div>` : ''}
       <div style="background:#f1eae2;padding:12px;border-radius:12px;margin-bottom:8px">
         <div style="font-size:13.5px;font-weight:700;margin-bottom:4px;color:#475569">分別設定增加堂數：</div>
         <div class="muted" style="font-size:12.5px">${p.suggest ? `依簡章每期7堂規則建議 ${p.suggest} 堂（中途插班可自訂修改）` : '手動輸入堂數'}</div>
@@ -792,7 +758,13 @@ async function reviewLeaveUi(id, decision) {
     if (!v.note) throw new Error('請填寫婉拒原因');
     note = v.note;
   }
-  await api('reviewLeave', { id, decision, note });
+  let kind = '';
+  if (decision === 'pass') {
+    const k = await menu('核准這筆申請', [['ok', '✅ 一般核准'], ['dis', '🌧️ 核准並標記為天災／停課（補課不計事假）']]);
+    if (!k) return;
+    if (k === 'dis') kind = '天災';
+  }
+  await api('reviewLeave', { id, decision, note, kind });
   render();
   setTimeout(() => toast('申請處理完成！'), 100);
 }

@@ -280,7 +280,7 @@ document.addEventListener('click', e => {
   if (f) run(b, () => f(b.dataset, b));
 });
 
-const FE_VER = '2026-11-11-r14';
+const FE_VER = '2026-11-11-r16';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -487,7 +487,7 @@ async function viewParent() {
     card('💳 匯款對帳回傳', `
       <p class="muted">${esc(CONFIG.BANK)}</p>
       <select id="pay_period">${(periods || []).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
-      <div class="two"><select id="pay_terms" onchange="calcPay()"><option value="1">報名 1 期（7 堂）</option><option value="2">一次報名 2 期（14 堂）</option></select>
+      <div class="two"><select id="pay_terms" onchange="calcPay()"><option value="1">報名 1 期（7 堂）</option>${(periods || []).length > 1 ? '<option value="2">一次報名 2 期（14 堂）</option>' : ''}</select>
         <input id="pay_shirts" type="number" inputmode="numeric" min="0" value="0" placeholder="另購短T件數" oninput="calcPay()"></div>
       <div class="chk" onchange="calcPay()">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
       <p id="pay_hint" class="muted" style="font-weight:600"></p>
@@ -815,16 +815,19 @@ function overviewCard(a) { // #3 今日各班概況
       <div class="muted" style="margin:6px 0 0;font-size:12.5px">${noCoach && c.coaches.length ? '⚠️ 目前還沒有教練簽到　' : ''}請假 ${c.leave}・補課 ${c.makeup}・調課 ${c.swap}</div></div>`;
   }).join('') || '<p class="muted">今天沒有班級開課</p>');
 }
-function financeCard(a) { // #6 財務月報
-  const f = a.finance || {}, m = n => (n < 0 ? '-$' : '$') + Math.abs(n || 0).toLocaleString();
-  return card('📊 財務月報・' + esc(f.month || ''), `
-    <div class="stats"><div class="stat"><b>${m(f.income)}</b><span>本月收入（${f.count || 0} 筆）</span></div><div class="stat"><b>${m(f.salary)}</b><span>教練薪資支出</span></div></div>
-    <div class="row"><span>淨額（收入 − 薪資）</span><b style="color:${(f.net || 0) < 0 ? 'var(--bad)' : 'var(--ok)'}">${m(f.net)}</b></div>
-    <div class="row"><span>匯款 / 現金</span><span>${m((f.byMethod || {})['匯款'])} ／ ${m((f.byMethod || {})['現金'])}</span></div>
-    ${(f.byPeriod || []).map(p => `<div class="row"><span>${esc(p.period)}</span><span>${m(p.amount)}</span></div>`).join('')}
-    <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">收款明細</summary>${(f.list || []).map(r => `<div class="row" style="padding:7px 0"><div>${esc(r.date)}・<b>${esc(r.students)}</b><div class="muted" style="margin:0;font-size:12.5px">${esc(r.who)}・${esc(r.period)}・${esc(r.method)}</div></div><b>${m(r.amount)}</b></div>`).join('') || '<p class="muted">本月尚無收款</p>'}</details>
-    <button class="ghost" style="width:100%;margin-top:10px" data-act="copyFinance">📋 複製本月收款明細</button>
-    <p class="muted" style="font-size:12.5px;margin:6px 0 0">月份跟上面薪資區相同，切換月份請用薪資區的月份選擇。</p>`);
+function financeCard(a) { // 財務報表：依期別看（兩期合報的款項平均分到各期，T 恤算在第一期）
+  const fp = a.financeP || { periods: [], total: 0, current: '' }, m = n => (n < 0 ? '-$' : '$') + Math.abs(n || 0).toLocaleString();
+  const names = (fp.periods || []).map(p => p.period);
+  if (!names.includes(S.finPeriod)) S.finPeriod = names.includes(fp.current) ? fp.current : (names[0] || '');
+  const g = (fp.periods || []).find(p => p.period === S.finPeriod) || { amount: 0, count: 0, byMethod: {}, list: [] };
+  return card('📊 財務報表（依期別）', `
+    <select onchange="S.finPeriod=this.value;render()">${(fp.periods || []).map(p => `<option value="${esc(p.period)}" ${p.period === S.finPeriod ? 'selected' : ''}>${esc(p.period)}（${m(p.amount)}）</option>`).join('') || '<option>尚無收款紀錄</option>'}</select>
+    <div class="stats" style="margin-top:8px"><div class="stat"><b>${m(g.amount)}</b><span>${esc(S.finPeriod || '')}收入（${g.count || 0} 筆）</span></div><div class="stat"><b>${m(fp.total)}</b><span>全部期別合計</span></div></div>
+    <div class="row"><span>匯款 / 現金</span><span>${m((g.byMethod || {})['匯款'])} ／ ${m((g.byMethod || {})['現金'])}</span></div>
+    <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">${esc(S.finPeriod || '')}收款明細</summary>${(g.list || []).map(r => `<div class="row" style="padding:7px 0"><div>${esc(r.date)}・<b>${esc(r.students)}</b>
+      <div class="muted" style="margin:0;font-size:12.5px">${esc(r.who)}・${esc(r.method)}${r.by ? '・' + esc(r.by) : ''}${r.split ? '・兩期合報共 ' + m(r.total) : ''}</div></div><b>${m(r.amount)}</b></div>`).join('') || '<p class="muted">這一期還沒有收款</p>'}</details>
+    <button class="ghost" style="width:100%;margin-top:10px" data-act="copyFinance">📋 複製這一期收款明細</button>
+    <p class="muted" style="font-size:12.5px;margin:6px 0 0">一次報多期的款項會平均分到各期，短 T 算在第一期。教練薪資仍依月份計算，請看上方薪資區。</p>`);
 }
 function pendingCard(title, key, type) {
   const list = ((S.adm && S.adm.leaves) || []).filter(l => l.type === type);
@@ -900,16 +903,12 @@ async function cashPayUi() {
   const v = await dialog('💵 補登收款（匯款／現金）', [
     { key: 'method', label: '付款方式', type: 'select', value: '匯款', options: [['匯款', '匯款（已轉帳）'], ['現金', '現金（現場收取）']] },
     { key: 'studentId', label: '學員', type: 'select', options: stus.map(s => [s.id, `${s.name} (${s.className}・目前剩${s.balance}堂)`]) },
-    { key: 'period', label: '繳費期別', type: 'select', options: [
-      ['第二期', '第二期（常態 7 堂）'],
-      ['一次報名兩期', '一次報名兩期（14 堂）'],
-      ['試上', '試上（1 堂，興趣班 400／其他 500）'],
-      ['中途插班', '中途插班繳費（自訂堂數）']
-    ]},
+    { key: 'period', label: '繳費期別（一次報多期，選第一期）', type: 'select', value: (S.adm.financeP || {}).current || '', options: ((S.adm.periodsAll || []).map(p => [p, p])).concat([['試上', '試上（1 堂，興趣班 400／其他 500）'], ['中途插班', '中途插班繳費（自訂堂數）']]) },
+    { key: 'terms', label: '報名期數（試上、插班不用管）', type: 'select', value: '1', options: [['1', '1 期（7 堂）'], ['2', '一次報 2 期（14 堂）']] },
     { key: 'amount', label: '實收金額', type: 'number', ph: '例如: 4200 (插班依比例填寫)' },
     { key: 'last5', label: '匯款帳號後五碼（匯款才填）', ph: '5 碼數字，現金免填' },
     { key: 'date', label: '轉帳／收款日期', type: 'date', value: today() },
-    { key: 'lessons', label: '增加堂數', type: 'number', ph: '常態7堂、兩期14堂，插班請自訂', value: '7' },
+    { key: 'lessons', label: '增加堂數', type: 'number', ph: '1 期填 7、2 期填 14，試上填 1，插班自訂', value: '7' },
     { key: 'note', label: '備註說明', ph: '例如: 表單報名後匯款 / 現場交付現金', value: '' }
   ], '確認入帳並加堂');
 
@@ -1142,8 +1141,8 @@ async function unlockMonthUi() {
 }
 
 function copyFinance() {
-  const f = (S.adm && S.adm.finance) || {};
-  const rows = [['月份', '日期', '學員', '家長', '期別', '方式', '金額', '經手人']].concat((f.list || []).map(r => [f.month, r.date, r.students, r.who, r.period, r.method, r.amount, r.by]));
+  const fp = (S.adm && S.adm.financeP) || { periods: [] }, g = (fp.periods || []).find(p => p.period === S.finPeriod) || { list: [] };
+  const rows = [['期別', '日期', '學員', '家長', '方式', '本期金額', '付款總額', '經手人']].concat((g.list || []).map(r => [S.finPeriod, r.date, r.students, r.who, r.method, r.amount, r.total, r.by]));
   copyText(rows.map(r => r.join('\t')).join('\n'));
 }
 function copySalary() {

@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-12-r32';
+const FE_VER = '2026-11-12-r33';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -334,6 +334,7 @@ function viewBind() {
 // ===================== 家長專區 =====================
 function stuById(id) { return (S.me.students || []).find(s => s.studentId === id); }
 function classDates(st, n = 10) {
+  if (st.kind === '補課' || st.kind === '試上') return []; // 補課／試上學員不是每週固定上課，沒有固定日程
   const out = []; let d = today();
   if (st.classStart && st.classStart > d) d = st.classStart;
   for (let i = 0; i < 180 && out.length < n; i++, d = addDays(d, 1)) {
@@ -532,6 +533,11 @@ function scheduleCard(vis, h) { // #1 下一堂課與本期剩餘上課日
   const leaves = (h.leaves || []).filter(l => l.type === '請假' && (l.status === '已核准' || l.status === '待審核'));
   const swaps = (h.leaves || []).filter(l => l.type === '調課' && (l.status === '已核准' || l.status === '待審核'));
   const rows = vis.filter(s => s.status !== '結業').map(s => {
+    if (s.kind === '補課' || s.kind === '試上') { // 只列他預約／安排好的那幾天
+      const vd = (h.leaves || []).filter(l => l.type === '補課' && l.studentId === s.studentId && (l.status === '已核准' || l.status === '待審核') && l.date >= today()).map(l => l.date).sort();
+      return `<div class="item"><b>${esc(s.name)}</b>・${esc(s.grp || s.className)} <span class="pill gray">${esc(s.kind)}</span>
+        ${vd.length ? `<div style="font-size:16px;font-weight:800;color:var(--pri);margin:6px 0 2px">${esc(s.kind)}日：${vd.map(d => esc(d) + '（週' + DN[dow(d) - 1] + '）').join('、')}</div><div class="muted" style="margin:0 0 6px">📍 ${esc(CONFIG.VENUE)}</div>` : `<div class="muted" style="margin:4px 0 0">目前沒有預約的${esc(s.kind)}日期</div>`}</div>`;
+    }
     const ds = classDates(s, 8);
     if (!ds.length) return `<div class="row"><div><b>${esc(s.name)}</b><div class="muted" style="margin:0">近期沒有排定的上課日</div></div></div>`;
     const tag = d => {

@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-12-r34';
+const FE_VER = '2026-11-12-r35';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -343,6 +343,12 @@ function classDates(st, n = 10) {
     if ((st.classDays || []).includes(dow(d)) && (!cal.length || cal.includes(d)) && !noticeOf(st, d)) out.push(d); // 停課的日子不用請假 // 有建「課程日曆」就只列簡章上的上課日
   }
   return out;
+}
+function makeupLine(sid, h) { // 課務狀態下方：還有幾堂要補、哪幾天已經預約補課
+  const t = today(), owed = owedOf(sid, h);
+  const bk = (h.leaves || []).filter(l => l.type === '補課' && l.studentId === sid && (l.status === '已核准' || l.status === '待審核') && l.date >= t).map(l => l.date).sort();
+  if (!owed && !bk.length) return '';
+  return `<div style="margin:2px 0 10px">${owed ? `<div style="margin:3px 0"><span class="pill warn">📌 還有 ${owed} 堂可補課（尚未預約）</span> <span class="muted" style="font-size:12.5px">請到下方「預約補課」選日期</span></div>` : ''}${bk.length ? `<div style="margin:3px 0"><span class="pill">✅ 已預約補課</span> <b style="font-size:13.5px">${bk.map(d => esc(d.slice(5)) + '（週' + DN[dow(d) - 1] + '）').join('、')}</b></div>` : ''}</div>`;
 }
 function owedOf(sid, h) { // 這位孩子「還可補課」的總堂數（事假每期只算 1 堂；已預約或已過期的不算）
   const t = today(), ls = (h.leaves || []).filter(l => l.type === '請假' && l.status === '已核准' && l.studentId === sid);
@@ -478,7 +484,7 @@ async function viewParent() {
   $('#app').innerHTML = noticeBanner() + kidTabs +
     card('⛹️ 孩子的課務狀態', vis.map(s => `<div class="row"><div><b>${esc(s.name)}</b>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}
       <div class="muted" style="margin:0">${esc(s.grp || s.className)}${s.grade ? '・' + esc(s.grade) : ''}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}</div></div>
-      ${balPill(s.balance)}</div>${owedOf(s.studentId, h) ? `<div class="muted" style="margin:2px 0 10px"><span class="pill warn">📌 還有 ${owedOf(s.studentId, h)} 堂可補課</span> <span style="font-size:12.5px">（請到下方「預約補課」安排）</span></div>` : ''}`).join('') || '<p class="muted">尚未綁定學員</p>') +
+      ${balPill(s.balance)}</div>${makeupLine(s.studentId, h)}`).join('') || '<p class="muted">尚未綁定學員</p>') +
     card('📝 我要請假', `
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
       <select id="leave_reason_type">

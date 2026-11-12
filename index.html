@@ -64,7 +64,7 @@ button:active{transform:scale(.97)}button:disabled{opacity:.5;cursor:not-allowed
 .kid-btn{background:#fff;border:1.5px solid #e5ded5;color:#4a5568;padding:8px 14px;border-radius:99px;font-size:14px;white-space:nowrap}
 .kid-btn.active{background:var(--pri-grad);border-color:transparent;color:#fff;font-weight:800}
 .memo-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.memo-btn{background:#f1eae2;border:0;color:#64748b;padding:9px 0;border-radius:12px;font-size:14px;font-weight:700}
+.memo-btn{background:#f1eae2;border:0;color:#64748b;padding:9px 0;border-radius:12px;font-size:13px;font-weight:700}
 .memo-btn.active{background:var(--pri-grad);color:#fff}
 .rules-box{background:#fffaf0;border:1.5px solid #fed7aa;border-radius:16px;padding:14px;margin-top:12px;font-size:13.5px;color:#7c2d12;line-height:1.65}
 .rules-box b{color:#9a3412;font-size:14px}.rules-box ol{margin:8px 0 0;padding-left:18px}
@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-12-r26';
+const FE_VER = '2026-11-12-r30';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -880,8 +880,9 @@ function renderMemoBox() {
   const box = $('#memo_container');
   if (!box || !S.adm) return;
   const a = S.adm, f = S.mf || { cls: '', when: 'future', ended: false }, t = today();
-  const isLeave = S.memoTab === 'leave', isSwap = S.memoTab === 'swap';
-  const src = (isLeave ? a.approvedLeaves : isSwap ? a.approvedSwaps : a.approvedMakeups) || [];
+  const isLeave = S.memoTab === 'leave', isSwap = S.memoTab === 'swap', isTrial = S.memoTab === 'trial';
+  const mkAll = a.approvedMakeups || [], trialAll = mkAll.filter(m => m.kind === '試上'), makeAll = mkAll.filter(m => m.kind !== '試上'); // 試上與補課分開看
+  const src = (isLeave ? a.approvedLeaves : isSwap ? a.approvedSwaps : isTrial ? trialAll : makeAll) || [];
   const classes = [...new Map(((a.approvedLeaves || []).concat(a.approvedMakeups || [], a.approvedSwaps || [])).map(l => [l.classId, l.className])).entries()];
   const keep = l => (!f.cls || l.classId === f.cls) && (f.ended || !l.ended) && (f.when === 'all' || (f.when === 'future' ? l.date >= t : l.date < t));
   const rows = src.filter(keep); if (f.when === 'past') rows.reverse();
@@ -892,23 +893,24 @@ function renderMemoBox() {
       <div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(l.className)}｜${esc(l.reason || '無備註原因')}｜補課期限：${esc(l.deadline || '無')}${l.by ? '｜' + esc(l.by) + ' 核准' : ''}</div></div>
       <span class="pill warn">已核准請假</span></div>`).join('') || '<p class="muted">沒有符合的請假紀錄</p>';
   const makeupHtml = rows.map(m => `<div class="row"><div>
-      <b>${esc(m.studentName)}</b> 補課日：<b>${esc(m.date)}</b>${endTag(m)}
-      <div class="muted" style="margin:2px 0 0;font-size:12.5px">目標班級：<b>${esc(m.className)}</b></div></div>
-      <span class="pill" style="background:#fffbeb;color:#d97706">⭐ 補課已排定</span></div>`).join('') || '<p class="muted">沒有符合的補課紀錄</p>';
+      <b>${esc(m.studentName)}</b> ${isTrial ? '試上日' : '補課日'}：<b>${esc(m.date)}</b>${endTag(m)}
+      <div class="muted" style="margin:2px 0 0;font-size:12.5px">目標班級：<b>${esc(m.className)}</b>${m.kind === '補課生' ? '｜補課生（指定日期來上課）' : ''}${m.leaveDate ? `<br>🔁 補的是 <b>${esc(m.leaveDate)}</b> 請假的課${m.leaveClass ? '（原班：' + esc(m.leaveClass) + '）' : ''}` : ''}</div></div>
+      ${isTrial ? '<span class="pill" style="background:#fce7f3;color:#be185d">🆕 試上已排定</span>' : '<span class="pill" style="background:#fffbeb;color:#d97706">⭐ 補課已排定</span>'}</div>`).join('') || `<p class="muted">沒有符合的${isTrial ? '試上' : '補課'}紀錄</p>`;
   const swapHtml = rows.map(m => `<div class="row"><div>
       <b>${esc(m.studentName)}</b> 調課日：<b>${esc(m.date)}</b>${endTag(m)}
       <div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(m.fromClass)} → <b>${esc(m.className)}</b></div></div>
       <span class="pill" style="background:#eff6ff;color:#2563eb">🔄 調課已排定</span></div>`).join('') || '<p class="muted">沒有符合的調課紀錄</p>';
   box.innerHTML = `
-    <div class="memo-tabs" style="grid-template-columns:repeat(3,1fr)">
+    <div class="memo-tabs" style="grid-template-columns:repeat(4,1fr)">
       <button class="memo-btn ${isLeave ? 'active' : ''}" onclick="switchMemoTab('leave')">📝 請假 (${(a.approvedLeaves || []).length})</button>
-      <button class="memo-btn ${!isLeave && !isSwap ? 'active' : ''}" onclick="switchMemoTab('makeup')">⭐ 補課 (${(a.approvedMakeups || []).length})</button>
+      <button class="memo-btn ${!isLeave && !isSwap && !isTrial ? 'active' : ''}" onclick="switchMemoTab('makeup')">⭐ 補課 (${makeAll.length})</button>
+      <button class="memo-btn ${isTrial ? 'active' : ''}" onclick="switchMemoTab('trial')">🆕 試上 (${trialAll.length})</button>
       <button class="memo-btn ${isSwap ? 'active' : ''}" onclick="switchMemoTab('swap')">🔄 調課 (${(a.approvedSwaps || []).length})</button>
     </div>
     <div class="two"><select onchange="setMf('cls',this.value)">${sel(f.cls, [['', '全部班級']].concat(classes))}</select>
       <select onchange="setMf('when',this.value)">${sel(f.when, [['future', '今天起'], ['past', '已過'], ['all', '全部']])}</select></div>
     <label class="muted" style="display:block;margin:6px 0"><input type="checkbox" ${f.ended ? 'checked' : ''} onchange="setMf('ended',this.checked)">顯示已過保留期（堂數用完超過14天）／已結業</label>
-    ${isLeave ? leaveHtml : isSwap ? swapHtml : makeupHtml}`;
+    ${isLeave ? leaveHtml : isSwap ? swapHtml : makeupHtml}`; // 補課與試上共用同一個列表樣式
 }
 
 // 總教練點擊「💵 現場收取現金」彈出對話框
@@ -1038,7 +1040,7 @@ async function addStudentUi() {
   const v = await dialog('新增學員', [
     { key: 'name', label: '學員姓名（必填）' },
     { key: 'classId', label: '班級', type: 'select', options: cs.map(c => [c.classId, c.name]) },
-    { key: 'kind', label: '學員類型', type: 'select', value: '', options: [['', '正式學員'], ['試上', '試上（體驗 1 堂）'], ['補課', '補課（上一期學生來補課）']] },
+    { key: 'kind', label: '學員類型', type: 'select', value: '', options: [['', '正式學員'], ['試上', '試上（體驗 1 堂）'], ['補課', '補課（來補課的學生，不固定每週來）']] },
     { key: 'visitDate', label: '上課日期（選試上／補課才填；隔幾週再來，之後可再加日期）', type: 'date' },
     { key: 'visitClassId', label: '上課的班級（試上／補課來上哪一班；不選＝上面的班級）', type: 'select', value: '', options: [['', '同上面的班級']].concat(cs.map(c => [c.classId, c.name])) },
     { key: 'balance', label: '初始堂數', type: 'number', ph: '留空：正式 7 堂；試上、補課 1 堂', value: '' },

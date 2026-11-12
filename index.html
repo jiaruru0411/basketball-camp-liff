@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-12-r36';
+const FE_VER = '2026-11-13-r42';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -328,7 +328,8 @@ async function doBind() {
   setTimeout(() => toast('綁定成功！'), 100);
 }
 function viewBind() {
-  $('#app').innerHTML = bindBox() + card('📋 教練／總教練開通', `<p class="muted">請把下面這串 ID 傳給總教練，開通後重新開啟即可：</p><code>${esc(S.me.id)}</code>`);
+  // 家長不需要看到教練開通碼：收合起來，教練自己點開才會看到
+  $('#app').innerHTML = bindBox() + `<details style="margin:14px 4px;text-align:center"><summary class="muted" style="cursor:pointer;font-size:13px;list-style:none">我是教練／工作人員（點此取得開通碼）</summary>${card('📋 教練／總教練開通', `<p class="muted">請把下面這串 ID 傳給總教練，開通後重新開啟即可：</p><code>${esc(S.me.id)}</code>`)}</details>`;
 }
 
 // ===================== 家長專區 =====================
@@ -352,7 +353,7 @@ function makeupLine(sid, h) { // 課務狀態下方：請假幾堂、還有幾�
   return `<div style="margin:2px 0 10px">${o.total ? `<div class="muted" style="margin:3px 0;font-size:13.5px">請假共 ${o.total} 堂・已補／已預約 ${o.made} 堂</div>` : ''}${o.can ? `<div style="margin:3px 0"><span class="pill warn">📌 還有 ${o.can} 堂可補課（尚未預約）</span> <span class="muted" style="font-size:12.5px">請到下方「預約補課」選日期</span></div>` : ''}${bk.length ? `<div style="margin:3px 0"><span class="pill">✅ 已預約補課</span> <b style="font-size:13.5px">${bk.map(d => esc(d.slice(5)) + '（週' + DN[dow(d) - 1] + '）').join('、')}</b></div>` : ''}${notes.length ? `<div style="margin:3px 0;font-size:12.5px;color:#b45309">※ ${notes.join('；')}</div>` : ''}</div>`;
 }
 function owedStat(sid, h) { // 這位孩子的請假／補課總覽：{總請假, 還可補, 事假超過額度不能補, 已過期, 已補完}
-  const t = today(), ls = (h.leaves || []).filter(l => l.type === '請假' && l.status === '已核准' && l.studentId === sid);
+  const t = today(), ls = (h.leaves || []).filter(l => l.type === '請假' && l.status === '已核准' && l.studentId === sid && !l.noMakeup); // 營隊請假不補課，不算「待補」
   const o = { total: ls.length, can: 0, lost: 0, expired: 0, made: ls.filter(l => l.linkedMakeupId).length };
   [...new Set(ls.map(l => l.period || '本期'))].forEach(p => {
     const g = ls.filter(l => (l.period || '本期') === p), open = g.filter(l => !l.linkedMakeupId && l.deadline >= t), po = open.filter(l => l.kind === '事假');
@@ -523,13 +524,14 @@ async function viewParent() {
         <li><b>病假兩堂以上</b>：請提供醫生診斷證明書。</li>
         <li><b>事假限制</b>：學員私人因素可以請假，但<b>每期僅能補課 1 堂</b>，其餘事假堂數恕不補課退費。</li><li><b>補課班級</b>：不可補回原班，且須是<b>相同時數</b>的班級（1 小時對 1 小時、2 小時對 2 小時）。</li>
         <li><b>補課期限</b>：請於<b>該期課程整期結束後『四週內』完成</b>，未上完之課程視同放棄，無法退費。</li>
-        <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li></ol></div>`) +
+        <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li>${st.some(s => s.camp) ? '<li><b>營隊課程</b>：寒假營等營隊請假<b>不提供補課</b>。</li>' : ''}</ol></div>`) +
     card('💳 匯款對帳回傳', `
       <p class="muted">${esc(CONFIG.BANK)}</p>
       <select id="pay_period">${(periods || []).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
       <div class="two"><select id="pay_terms" onchange="calcPay()"><option value="1">報名 1 期（7 堂）</option>${(periods || []).length > 1 ? '<option value="2">一次報名 2 期（14 堂）</option>' : ''}</select>
         <input id="pay_shirts" type="number" inputmode="numeric" min="0" value="0" placeholder="另購短T件數" oninput="calcPay()"></div>
-      <div class="chk" onchange="calcPay()">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
+      <div id="camp_box" style="display:none;margin:6px 0"></div>
+      <div class="chk" onchange="calcPay()">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}${st.filter(z => z.name === s.name).length > 1 ? '（' + esc(s.className) + '）' : ''}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
       <p id="pay_hint" class="muted" style="font-weight:600"></p>
       <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額 (如: 4200)"><input id="l5" maxlength="5" inputmode="numeric" placeholder="匯款帳號末五碼（5 碼數字）"></div>
       <p class="muted" style="font-weight:600">轉帳日期</p><input id="pdate" type="date" value="${today()}">
@@ -554,7 +556,7 @@ function scheduleCard(vis, h) { // #1 下一堂課與本期剩餘上課日
     if (s.kind === '補課' || s.kind === '試上') { // 只列他預約／安排好的那幾天
       const vd = (h.leaves || []).filter(l => l.type === '補課' && l.studentId === s.studentId && (l.status === '已核准' || l.status === '待審核') && l.date >= today()).map(l => l.date).sort();
       return `<div class="item"><b>${esc(s.name)}</b>・${esc(s.grp || s.className)} <span class="pill gray">${esc(s.kind)}</span>
-        ${vd.length ? `<div style="font-size:16px;font-weight:800;color:var(--pri);margin:6px 0 2px">${esc(s.kind)}日：${vd.map(d => esc(d) + '（週' + DN[dow(d) - 1] + '）').join('、')}</div><div class="muted" style="margin:0 0 6px">📍 ${esc(CONFIG.VENUE)}</div>` : `<div class="muted" style="margin:4px 0 0">目前沒有預約的${esc(s.kind)}日期</div>`}</div>`;
+        ${vd.length ? `<div style="font-size:16px;font-weight:800;color:var(--pri);margin:6px 0 2px">${esc(s.kind)}日：${vd.map(d => esc(d) + '（週' + DN[dow(d) - 1] + '）').join('、')}</div><div class="muted" style="margin:0 0 6px">📍 ${esc(s.venue || CONFIG.VENUE)}</div>` : `<div class="muted" style="margin:4px 0 0">目前沒有預約的${esc(s.kind)}日期</div>`}</div>`;
     }
     const ds = classDates(s, 8);
     if (!ds.length) return `<div class="row"><div><b>${esc(s.name)}</b><div class="muted" style="margin:0">近期沒有排定的上課日</div></div></div>`;
@@ -565,7 +567,7 @@ function scheduleCard(vis, h) { // #1 下一堂課與本期剩餘上課日
     };
     return `<div class="item"><b>${esc(s.name)}</b>・${esc(s.grp || s.className)}
       <div style="font-size:18px;font-weight:800;color:var(--pri);margin:6px 0 2px">下一堂：${esc(ds[0])}（週${DN[dow(ds[0]) - 1]}）${tag(ds[0])}</div>
-      <div class="muted" style="margin:0 0 6px">📍 ${esc(CONFIG.VENUE)}</div>
+      <div class="muted" style="margin:0 0 6px">📍 ${esc(s.venue || CONFIG.VENUE)}</div>
       <div class="muted" style="margin:0;font-size:13px">之後：${ds.slice(1).map(d => esc(d.slice(5)) + tag(d)).join('、') || '（本期已無）'}</div></div>`;
   });
   return card('📅 上課日程', rows.join('') || '<p class="muted">沒有進行中的學員</p>');
@@ -581,6 +583,20 @@ function calcPay() { // 簡章金額試算（新舊生由總教練人工確認�
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
   const fees = ids.map(i => (stuById(i) || {}).fee || 0);
   const hint = $('#pay_hint'); if (!hint) return;
+  const sel = ids.map(stuById).filter(Boolean), nCamp = sel.filter(s => s.camp).length, box = $('#camp_box');
+  const showReg = on => { ['#pay_period', '#pay_terms'].forEach(q => { const e = $(q); if (e) e.style.display = on ? '' : 'none'; }); };
+  if (nCamp) { // 營隊：勾選要報名的期別，金額＝各期價目×人數＋T恤，沒有新舊生折扣
+    showReg(false);
+    if (nCamp !== sel.length) { box.style.display = 'none'; hint.textContent = '營隊和常態班請分開送出匯款（先勾選同一類的學員）'; return; }
+    const cps = sel[0].campPeriods.filter(p => sel.every(s => (s.campPeriods || []).some(z => z.period === p.period))), sig = cps.map(p => p.period).join('|');
+    if (box.dataset.sig !== sig) { box.dataset.sig = sig; box.innerHTML = cps.map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" value="${esc(p.period)}" checked onchange="calcPay()"> ${esc(p.label || p.period)}（${p.lessons} 堂・$${p.amount.toLocaleString()}）</label>`).join('') || '<p class="muted">這個營隊尚未設定期別價格，請依通知的金額匯款</p>'; }
+    box.style.display = '';
+    const pickP = [...box.querySelectorAll('input:checked')].map(i => i.value), sum = cps.filter(p => pickP.includes(p.period)).reduce((a, b) => a + b.amount, 0);
+    if (!pickP.length) { hint.textContent = '請勾選要報名的期別'; return; }
+    hint.innerHTML = `參考金額：<b style="color:var(--pri)">$${(sum * ids.length + shirts * (pl.shirt || 450)).toLocaleString()}</b>（${ids.length} 人・${cps.filter(p => pickP.includes(p.period)).map(p => p.label || p.period).join('＋')}${shirts ? '・T恤 ' + shirts + ' 件' : ''}）<br>請依報名後通知您的金額匯款。`;
+    return;
+  }
+  if (box) box.style.display = 'none'; showReg(true);
   if (!ids.length || fees.some(x => !x)) { hint.textContent = ids.length ? '此班尚未設定費用，請依報名表單通知的金額輸入' : '請先勾選學員'; return; }
   const tot = id => fees.reduce((t, x) => t + x * terms - (((pl.discount || {})[id] || {})[terms] || 0), 0) + shirts * (pl.shirt || 450);
   hint.innerHTML = `參考金額：舊生 <b style="color:var(--pri)">$${tot('舊生').toLocaleString()}</b>／新生 <b style="color:var(--pri)">$${tot('新生').toLocaleString()}</b>（${ids.length} 人・${terms} 期${shirts ? '・T恤 ' + shirts + ' 件' : ''}）<br>請依報名後通知您的金額匯款，新舊生身分由總教練確認。`;
@@ -595,7 +611,9 @@ async function switchKid(id) {
 async function doSubmitPay() {
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
   if (!ids.length) throw new Error('請勾選繳費的學員');
-  await api('pay', { period: $('#pay_period').value, plan: { terms: $('#pay_terms').value, shirts: $('#pay_shirts').value }, studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value });
+  const campOn = $('#camp_box') && $('#camp_box').style.display !== 'none', campPer = campOn ? [...document.querySelectorAll('#camp_box input:checked')].map(i => i.value) : [];
+  if (campOn && !campPer.length) throw new Error('請勾選要報名的營隊期別');
+  await api('pay', { period: $('#pay_period').value, plan: { terms: $('#pay_terms').value, shirts: $('#pay_shirts').value, camp: campPer }, studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value });
   render();
   setTimeout(() => toast('繳費資料已送出，等待總教練確認！'), 100);
 }
@@ -1027,7 +1045,7 @@ async function viewAdmin() {
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +
     card('🗒️ 審核紀錄', reviewedHtml()) +
-    card('💵 教練授課時數與薪資', ((a.salaryKeys || []).length ? `<select onchange="S.salKey=this.value;render()">${a.salaryKeys.map(k => `<option value="${esc(k)}" ${k === S.salKey ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>` : `<input type="month" value="${esc(S.salKey)}" onchange="S.salKey=this.value;render()">`) + `
+    card('💵 教練授課時數與薪資', ((a.salaryKeys || []).length ? `<select onchange="S.salKey=this.value;render()">${a.salaryKeys.map(k => `<option value="${esc(k)}" ${k === S.salKey ? 'selected' : ''}>${esc(k)}${(a.periodLabels || {})[k] ? '（' + esc(a.periodLabels[k]) + '）' : ''}</option>`).join('')}</select>` : `<input type="month" value="${esc(S.salKey)}" onchange="S.salKey=this.value;render()">`) + `
       ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
       ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
@@ -1107,12 +1125,21 @@ async function manageStudent(id) {
   const x = (S.adm.students || []).find(s => s.id === id); if (!x) return;
   const k = await menu(`${x.name}（${x.className}${x.grp ? '・' + x.grp : ''}）・${balT(x.balance)}`, [
     ['edit', '📝 修改學員資料（姓名／班級／電話／備註／可同時調堂數）'],
+    ...((S.me.classes || []).some(c => c.camp) && !x.kind ? [['camp', '🏕️ 加報營隊（幫他新增一筆營隊學員，共用綁定碼）']] : []),
     ...(x.kind ? [['visit', `📅 新增${x.kind}上課日期（不是每週來，要來的那天再加）`]] : []),
     ['adj', '✏️ 手動調整堂數'],
     ['unbind', `🔗 解除家長綁定（目前 ${x.bound} 個帳號）`],
     ['status', x.status === '結業' ? '🔄 恢復為在學' : '🎓 設為結業']
   ]);
   if (!k) return;
+  if (k === 'camp') {
+    const camps = (S.me.classes || []).filter(c => c.camp);
+    const v = await dialog(`${x.name}・加報營隊`, [{ key: 'classId', label: '營隊班級（時段）', type: 'select', value: camps[0].classId, options: camps.map(c => [c.classId, c.name]) }], '新增');
+    if (!v) return;
+    const r = await api('addCamp', { studentId: id, classId: v.classId });
+    render(); setTimeout(() => toast('已新增 ' + r.name + '（' + r.id + '），請到名冊確認堂數並登記匯款'), 100);
+    return;
+  }
   if (k === 'visit') {
     const cs0 = S.me.classes || [];
     const v = await dialog(`${x.name}・新增${x.kind}日期`, [

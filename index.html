@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-12-r31';
+const FE_VER = '2026-11-12-r32';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -350,13 +350,13 @@ function leaveSummary(vis, h) { // 請假／補課統計：每位孩子、每一
     const mine = ls.filter(l => l.studentId === s.studentId), pers = [...new Set(mine.map(l => l.period || '本期'))];
     return `<div style="margin:6px 0 10px"><b>${esc(s.name)}</b>` + pers.map(p => {
       const g = mine.filter(l => (l.period || '本期') === p), cnt = k => g.filter(l => l.kind === k).length;
-      const made = g.filter(l => l.linkedMakeupId).length, open = g.filter(l => !l.linkedMakeupId && l.deadline >= t);
+      const made = g.filter(l => l.linkedMakeupId && l.makeupDate && l.makeupDate <= t).length, booked = g.filter(l => l.linkedMakeupId && !(l.makeupDate && l.makeupDate <= t)).length, open = g.filter(l => !l.linkedMakeupId && l.deadline >= t);
       const pOpen = open.filter(l => l.kind === '事假'), usedP = g.filter(l => l.kind === '事假' && l.linkedMakeupId).length;
       const can = open.length - pOpen.length + (usedP ? 0 : Math.min(1, pOpen.length)), lost = open.length - can;
       const exp = g.filter(l => !l.linkedMakeupId && l.deadline && l.deadline < t).length;
       const kinds = ['事假', '病假', '天災', '其他'].filter(k => cnt(k)).map(k => k + cnt(k)).join('・');
       const nextDl = open.map(l => l.deadline).sort()[0];
-      return `<div class="muted" style="margin:3px 0;font-size:13.5px"><b>${esc(p)}</b>：請假 ${g.length} 堂（${kinds}）・已補 ${made} 堂・<b style="color:var(--pri)">還可補 ${can} 堂</b>${nextDl && can ? '（最晚 ' + esc(nextDl) + '）' : ''}${lost > 0 ? `<br><span style="color:#b45309">※ 事假每期只能補 1 堂，另有 ${lost} 堂事假無法補課</span>` : ''}${exp ? `<br><span style="color:var(--bad)">※ ${exp} 堂已超過補課期限</span>` : ''}</div>`;
+      return `<div class="muted" style="margin:3px 0;font-size:13.5px"><b>${esc(p)}</b>：請假 ${g.length} 堂（${kinds}）・已補 ${made} 堂${booked ? '・已預約 ' + booked + ' 堂（' + g.filter(l => l.linkedMakeupId && !(l.makeupDate && l.makeupDate <= t)).map(l => esc(l.makeupDate)).sort().join('、') + '）' : ''}・<b style="color:var(--pri)">還可補 ${can} 堂</b>${nextDl && can ? '（最晚 ' + esc(nextDl) + '）' : ''}${lost > 0 ? `<br><span style="color:#b45309">※ 事假每期只能補 1 堂，另有 ${lost} 堂事假無法補課</span>` : ''}${exp ? `<br><span style="color:var(--bad)">※ ${exp} 堂已超過補課期限</span>` : ''}</div>`;
     }).join('') + '</div>';
   }).join('');
   return card('📊 請假／補課統計', blocks + '<p class="muted" style="font-size:12.5px;margin:2px 0 0">補課請到下方「預約補課」。若孩子兩期都有報名，補課不能和孩子現在的班同一時段，請改選其他時段（例如下午的班）。</p>');

@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-12-r30';
+const FE_VER = '2026-11-12-r31';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -342,6 +342,24 @@ function classDates(st, n = 10) {
     if ((st.classDays || []).includes(dow(d)) && (!cal.length || cal.includes(d)) && !noticeOf(st, d)) out.push(d); // 停課的日子不用請假 // 有建「課程日曆」就只列簡章上的上課日
   }
   return out;
+}
+function leaveSummary(vis, h) { // 請假／補課統計：每位孩子、每一期各幾堂請假、已補、還能補
+  const ls = (h.leaves || []).filter(l => l.type === '請假' && l.status === '已核准' && (S.curKid === 'ALL' || l.studentId === S.curKid));
+  if (!ls.length) return '';
+  const t = today(), blocks = vis.filter(s => ls.some(l => l.studentId === s.studentId)).map(s => {
+    const mine = ls.filter(l => l.studentId === s.studentId), pers = [...new Set(mine.map(l => l.period || '本期'))];
+    return `<div style="margin:6px 0 10px"><b>${esc(s.name)}</b>` + pers.map(p => {
+      const g = mine.filter(l => (l.period || '本期') === p), cnt = k => g.filter(l => l.kind === k).length;
+      const made = g.filter(l => l.linkedMakeupId).length, open = g.filter(l => !l.linkedMakeupId && l.deadline >= t);
+      const pOpen = open.filter(l => l.kind === '事假'), usedP = g.filter(l => l.kind === '事假' && l.linkedMakeupId).length;
+      const can = open.length - pOpen.length + (usedP ? 0 : Math.min(1, pOpen.length)), lost = open.length - can;
+      const exp = g.filter(l => !l.linkedMakeupId && l.deadline && l.deadline < t).length;
+      const kinds = ['事假', '病假', '天災', '其他'].filter(k => cnt(k)).map(k => k + cnt(k)).join('・');
+      const nextDl = open.map(l => l.deadline).sort()[0];
+      return `<div class="muted" style="margin:3px 0;font-size:13.5px"><b>${esc(p)}</b>：請假 ${g.length} 堂（${kinds}）・已補 ${made} 堂・<b style="color:var(--pri)">還可補 ${can} 堂</b>${nextDl && can ? '（最晚 ' + esc(nextDl) + '）' : ''}${lost > 0 ? `<br><span style="color:#b45309">※ 事假每期只能補 1 堂，另有 ${lost} 堂事假無法補課</span>` : ''}${exp ? `<br><span style="color:var(--bad)">※ ${exp} 堂已超過補課期限</span>` : ''}</div>`;
+    }).join('') + '</div>';
+  }).join('');
+  return card('📊 請假／補課統計', blocks + '<p class="muted" style="font-size:12.5px;margin:2px 0 0">補課請到下方「預約補課」。若孩子兩期都有報名，補課不能和孩子現在的班同一時段，請改選其他時段（例如下午的班）。</p>');
 }
 function leaveDateHtml(st) {
   if (!st) return '';
@@ -455,11 +473,12 @@ async function viewParent() {
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
       <select id="leave_reason_type">
         <option value="病假">🤒 病假（請於官方LINE上傳看診收據）</option>
-        <option value="事假">🚗 私人事假（每期僅限 1 次）</option>
+        <option value="事假">🚗 私人事假（可多次請假，每期僅能補課 1 堂）</option>
       </select>
       <div id="leave_date_box">${leaveDateHtml(vis[0])}</div>
       <input id="leave_rsn" placeholder="原因說明（例如：發燒就醫／外出旅遊）">
       <button class="pri" onclick="run(this,doSubmitLeave)">送出請假申請 ➜</button>`) +
+    leaveSummary(vis, h) +
     card('🕒 最近申請進度',
       ((h.payments || []).map(p => `<div class="row"><div><b>繳費 $${esc(p.amount)}・${esc(p.studentNames)}</b>
         ${p.logs ? `<div class="muted" style="color:var(--ok);font-size:13px;margin:0">${esc(p.logs)}</div>` : ''}
@@ -483,7 +502,7 @@ async function viewParent() {
       <div class="rules-box"><b>📌 115年常態班請假補課規範：</b><ol>
         <li><b>病假單堂</b>：請提供看診收據（接受上課日前後二日）。</li>
         <li><b>病假兩堂以上</b>：請提供醫生診斷證明書。</li>
-        <li><b>事假限制</b>：學員私人因素每期<b>僅限請假 1 次</b>（並補課 1 次），其餘恕不補課退費。</li><li><b>補課班級</b>：不可補回原班，且須是<b>相同時數</b>的班級（1 小時對 1 小時、2 小時對 2 小時）。</li>
+        <li><b>事假限制</b>：學員私人因素可以請假，但<b>每期僅能補課 1 堂</b>，其餘事假堂數恕不補課退費。</li><li><b>補課班級</b>：不可補回原班，且須是<b>相同時數</b>的班級（1 小時對 1 小時、2 小時對 2 小時）。</li>
         <li><b>補課期限</b>：請於<b>該期課程整期結束後『四週內』完成</b>，未上完之課程視同放棄，無法退費。</li>
         <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li></ol></div>`) +
     card('💳 匯款對帳回傳', `
@@ -559,7 +578,9 @@ async function doSubmitPay() {
 async function doSubmitLeave() {
   const dt = $('#leave_date');
   if (!dt || dt.disabled || !dt.value) throw new Error('請選擇請假的上課日');
-  await api('leave', { studentId: $('#leave_sid').value, reasonType: $('#leave_reason_type').value, date: dt.value, reason: $('#leave_rsn').value });
+  const q = { studentId: $('#leave_sid').value, reasonType: $('#leave_reason_type').value, date: dt.value, reason: $('#leave_rsn').value };
+  let r = await api('leave', q);
+  if (r && r.confirm) { if (!(await ask(r.confirm))) return; r = await api('leave', Object.assign({ confirm: 1 }, q)); }
   render();
   setTimeout(() => toast('請假申請已送出，等待總教練核准'), 100);
 }

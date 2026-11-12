@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-12-r35';
+const FE_VER = '2026-11-12-r36';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -344,21 +344,24 @@ function classDates(st, n = 10) {
   }
   return out;
 }
-function makeupLine(sid, h) { // 課務狀態下方：還有幾堂要補、哪幾天已經預約補課
-  const t = today(), owed = owedOf(sid, h);
+function makeupLine(sid, h) { // 課務狀態下方：請假幾堂、還有幾堂要補、哪幾天已經預約補課（只要有請假紀錄或補課預約就會顯示）
+  const t = today(), o = owedStat(sid, h);
   const bk = (h.leaves || []).filter(l => l.type === '補課' && l.studentId === sid && (l.status === '已核准' || l.status === '待審核') && l.date >= t).map(l => l.date).sort();
-  if (!owed && !bk.length) return '';
-  return `<div style="margin:2px 0 10px">${owed ? `<div style="margin:3px 0"><span class="pill warn">📌 還有 ${owed} 堂可補課（尚未預約）</span> <span class="muted" style="font-size:12.5px">請到下方「預約補課」選日期</span></div>` : ''}${bk.length ? `<div style="margin:3px 0"><span class="pill">✅ 已預約補課</span> <b style="font-size:13.5px">${bk.map(d => esc(d.slice(5)) + '（週' + DN[dow(d) - 1] + '）').join('、')}</b></div>` : ''}</div>`;
+  if (!o.total && !bk.length) return '';
+  const notes = [o.lost > 0 ? `事假每期只能補 1 堂，另有 ${o.lost} 堂事假無法補課` : '', o.expired > 0 ? `${o.expired} 堂已超過補課期限` : ''].filter(Boolean);
+  return `<div style="margin:2px 0 10px">${o.total ? `<div class="muted" style="margin:3px 0;font-size:13.5px">請假共 ${o.total} 堂・已補／已預約 ${o.made} 堂</div>` : ''}${o.can ? `<div style="margin:3px 0"><span class="pill warn">📌 還有 ${o.can} 堂可補課（尚未預約）</span> <span class="muted" style="font-size:12.5px">請到下方「預約補課」選日期</span></div>` : ''}${bk.length ? `<div style="margin:3px 0"><span class="pill">✅ 已預約補課</span> <b style="font-size:13.5px">${bk.map(d => esc(d.slice(5)) + '（週' + DN[dow(d) - 1] + '）').join('、')}</b></div>` : ''}${notes.length ? `<div style="margin:3px 0;font-size:12.5px;color:#b45309">※ ${notes.join('；')}</div>` : ''}</div>`;
 }
-function owedOf(sid, h) { // 這位孩子「還可補課」的總堂數（事假每期只算 1 堂；已預約或已過期的不算）
+function owedStat(sid, h) { // 這位孩子的請假／補課總覽：{總請假, 還可補, 事假超過額度不能補, 已過期, 已補完}
   const t = today(), ls = (h.leaves || []).filter(l => l.type === '請假' && l.status === '已核准' && l.studentId === sid);
-  let can = 0;
+  const o = { total: ls.length, can: 0, lost: 0, expired: 0, made: ls.filter(l => l.linkedMakeupId).length };
   [...new Set(ls.map(l => l.period || '本期'))].forEach(p => {
     const g = ls.filter(l => (l.period || '本期') === p), open = g.filter(l => !l.linkedMakeupId && l.deadline >= t), po = open.filter(l => l.kind === '事假');
-    can += open.length - po.length + (g.some(l => l.kind === '事假' && l.linkedMakeupId) ? 0 : Math.min(1, po.length));
+    const can = open.length - po.length + (g.some(l => l.kind === '事假' && l.linkedMakeupId) ? 0 : Math.min(1, po.length));
+    o.can += can; o.lost += open.length - can; o.expired += g.filter(l => !l.linkedMakeupId && l.deadline && l.deadline < t).length;
   });
-  return can;
+  return o;
 }
+function owedOf(sid, h) { return owedStat(sid, h).can; }
 function leaveSummary(vis, h) { // 請假／補課統計：每位孩子、每一期各幾堂請假、已補、還能補
   const ls = (h.leaves || []).filter(l => l.type === '請假' && l.status === '已核准' && (S.curKid === 'ALL' || l.studentId === S.curKid));
   if (!ls.length) return '';

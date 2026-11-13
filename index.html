@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r45';
+const FE_VER = '2026-11-13-r47';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -718,16 +718,30 @@ function mySalaryCard(m) { // 教練的班表與授課明細（不顯示時薪�
 }
 async function changeClass(v) { S.cls = v; await safe(viewCoach); }
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
-function boardCard(s) { // 補課／調課／試上 一覽（可展開）
+const CLS_PAL = [['#dbeafe', '#1d4ed8'], ['#dcfce7', '#15803d'], ['#fef3c7', '#b45309'], ['#fce7f3', '#be185d'], ['#ede9fe', '#6d28d9'], ['#ccfbf1', '#0f766e'], ['#ffedd5', '#c2410c'], ['#e0e7ff', '#4338ca']];
+function clsPill(name) { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 997; const c = CLS_PAL[h % CLS_PAL.length]; return `<span class="pill" style="background:${c[0]};color:${c[1]};font-weight:700">${esc(name)}</span>`; }
+const md = d => String(d || '').slice(5).replace('-', '/'); // 2026-10-04 → 10/04
+function boardCard(s) { // 補課／調課／試上 一覽（依班級分色、依學員合併）
   if (!s || !s.board) return card('📋 補課／調課／試上 一覽', '<p class="muted">⚠️ 後端還是舊版，請把最新的 Code.gs 貼到 Apps Script，並「部署 → 管理部署作業 → 編輯 → 新版本」重新部署，這裡才會有資料。</p>');
-  const b = s.board;
-  const grp = (title, arr, fn, open) => `<details ${open ? 'open' : ''} style="margin:6px 0"><summary style="cursor:pointer;font-weight:800">${title}（${arr.length}）</summary>${arr.map(x => `<div class="row" style="padding:6px 0"><span>${fn(x)}</span></div>`).join('') || '<div class="muted" style="margin:4px 0">目前沒有</div>'}</details>`;
-  return card('📋 補課／調課／試上 一覽',
-    grp('⭐ 待補課（請假還沒選補課日・共 ' + new Set(b.toMakeup.map(x => x.name)).size + ' 位學員）', b.toMakeup, x => `<b>${esc(x.name)}</b>　${esc(x.kind)} ${esc(x.date)}（${esc(x.className)}）<span class="muted">・補課期限 ${esc(x.deadline)}</span>`, true) +
-    grp('✅ 已預約補課（還沒上）', b.booked, x => `<b>${esc(x.name)}</b>　${esc(x.date)} 到 ${esc(x.className)}${x.leaveDate ? `<span class="muted">・補 ${esc(x.leaveDate)} 的課</span>` : ''}${x.pending ? ' <span class="pill warn">待審核</span>' : ''}`) +
-    grp('🔄 調課', b.swaps, x => `<b>${esc(x.name)}</b>　${esc(x.date)} 從 ${esc(x.fromClass)} 調到 ${esc(x.className)}${x.pending ? ' <span class="pill warn">待審核</span>' : ''}`) +
-    grp('🆕 試上／補課生（已排日期）', b.trials, x => `<b>${esc(x.name)}</b>　<span class="pill" style="background:#fce7f3;color:#be185d">${esc(x.kind)}</span> ${esc(x.date)}（${esc(x.className)}）`));
+  const all = s.board, names = [...new Set([].concat(all.toMakeup, all.booked, all.swaps, all.trials).map(x => x.className))].sort(), fc = names.indexOf(S.boardCls) !== -1 ? S.boardCls : '';
+  const pick = a => fc ? a.filter(x => x.className === fc) : a, b = { toMakeup: pick(all.toMakeup), booked: pick(all.booked), swaps: pick(all.swaps), trials: pick(all.trials) };
+  const filt = `<select onchange="setBoardCls(this.value)" style="margin:0 0 6px"><option value="">全部班級</option>${names.map(n => `<option value="${esc(n)}" ${n === fc ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
+  const kindChip = (k, d) => `<span class="pill" style="${k === '病假' ? 'background:#e0f2fe;color:#0369a1' : 'background:#fff7ed;color:#c2410c'}">${esc(k)} ${md(d)}</span>`;
+  const byClass = (arr, rowFn) => { const m = new Map(); arr.forEach(x => { if (!m.has(x.className)) m.set(x.className, []); m.get(x.className).push(x); }); return [...m.entries()].map(([cn, list]) => `<div style="margin:8px 0 2px">${clsPill(cn)} <span class="muted">${list.length}</span></div>${rowFn(list)}`).join(''); };
+  const grp = (title, arr, body, open) => `<details ${open ? 'open' : ''} style="margin:8px 0"><summary style="cursor:pointer;font-weight:800">${title}（${arr.length}）</summary>${arr.length ? body : '<div class="muted" style="margin:4px 0">目前沒有</div>'}</details>`;
+  const toBody = byClass(b.toMakeup, list => { // 同一位學員合併成一行，請假日用小標籤
+    const by = new Map(); list.forEach(x => { if (!by.has(x.name)) by.set(x.name, []); by.get(x.name).push(x); });
+    return [...by.entries()].map(([nm, xs]) => `<div class="row" style="padding:5px 0;align-items:flex-start"><span><b>${esc(nm)}</b></span><span style="text-align:right">${xs.map(x => kindChip(x.kind, x.date)).join(' ')}<div class="muted" style="font-size:12px;margin:2px 0 0">期限 ${md(xs.map(x => x.deadline).sort()[0])}</div></span></div>`).join('');
+  });
+  const bookedBody = byClass(b.booked, list => list.map(x => `<div class="row" style="padding:5px 0"><span><b>${esc(x.name)}</b>${x.pending ? ' <span class="pill warn">待審核</span>' : ''}</span><span class="muted">${md(x.date)} 來補${x.leaveDate ? '（補 ' + md(x.leaveDate) + '）' : ''}</span></div>`).join(''));
+  const swapBody = byClass(b.swaps, list => list.map(x => `<div class="row" style="padding:5px 0"><span><b>${esc(x.name)}</b>${x.pending ? ' <span class="pill warn">待審核</span>' : ''}</span><span class="muted">${md(x.date)} ${esc(x.fromClass)} → 此班</span></div>`).join(''));
+  const trialBody = byClass(b.trials, list => list.map(x => `<div class="row" style="padding:5px 0"><span><b>${esc(x.name)}</b></span><span><span class="pill" style="background:#fce7f3;color:#be185d">${esc(x.kind)}</span> ${md(x.date)}</span></div>`).join(''));
+  const people = new Set(b.toMakeup.map(x => x.name)).size;
+  return '<div id="board_wrap">' + card('📋 補課／調課／試上 一覽', filt +
+    grp(`⭐ 待補課（${people} 位・請假還沒選補課日）`.replace(/（(\d+) 位/, '（$1 位'), b.toMakeup, toBody, true).replace(/（\d+）<\/summary>/, '</summary>') +
+    grp('✅ 已預約補課（還沒上）', b.booked, bookedBody) + grp('🔄 調課', b.swaps, swapBody) + grp('🆕 試上／補課生（已排日期）', b.trials, trialBody)) + '</div>';
 }
+function setBoardCls(v) { S.boardCls = v; const e = document.getElementById('board_wrap'); if (e && S.adm) e.outerHTML = boardCard(S.adm.stats || {}); }
 function leaveBox() { // 教練一眼看到：這天誰請假、誰補課、之後誰要請假
   const sw = S.list.filter(x => x.swap), swo = S.swapOut || [], lv = S.list.filter(x => x.leave), pend = S.list.filter(x => x.pendingLeave && !x.leave), mk = S.list.filter(x => x.makeup && !x.kind), tr = S.list.filter(x => x.kind === '試上'), bk = S.list.filter(x => x.kind === '補課生'), up = S.upcoming || [];
   const line = (t, arr) => arr.length ? `<div style="margin:4px 0">${t}：${arr.map(x => `<b>${esc(x.name)}</b>${x.leaveReason ? `<span class="muted">（${esc(x.leaveReason)}）</span>` : ''}`).join('、')}</div>` : '';

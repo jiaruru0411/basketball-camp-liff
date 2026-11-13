@@ -267,7 +267,7 @@ const ACT = {
   reviewLeave: d => reviewLeaveUi(d.id, d.d, d.k),
   manageStu: d => manageStudent(d.id),
   campSignup: d => campSignup(d.sid),
-  reviewCamp: d => reviewCampUi(d.id, d.d),
+  reviewCamp: d => reviewCampUi(d.k, d.d),
   delAdj: d => delAdj(d.id),
   lockMonth: () => lockMonthUi(),
   unlockMonth: () => unlockMonthUi(),
@@ -286,7 +286,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r59';
+const FE_VER = '2026-11-13-r60';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -463,9 +463,11 @@ async function viewParent() {
   const st = S.me.students || [];
   if (S.curKid !== 'ALL' && !st.some(s => s.studentId === S.curKid)) S.curKid = 'ALL';
 
+  const regKids = st.filter(s => !s.camp), campKids = st.filter(s => s.camp), cn = x => String(x).replace(/^冬令營|^營隊/, '');
+  const tab = (s, label) => `<button class="kid-btn ${S.curKid === s.studentId ? 'active' : ''}" data-act="switchKid" data-id="${esc(s.studentId)}">${label} (${balT(s.balance)})</button>`;
   const kidTabs = st.length > 1 ? `<div class="kid-tabs">
-    <button class="kid-btn ${S.curKid === 'ALL' ? 'active' : ''}" data-act="switchKid" data-id="ALL">全部學員 (${st.length})</button>
-    ${st.map(s => `<button class="kid-btn ${S.curKid === s.studentId ? 'active' : ''}" data-act="switchKid" data-id="${esc(s.studentId)}">👦 ${esc(s.name)} (${balT(s.balance)})</button>`).join('')}</div>` : '';
+    <button class="kid-btn ${S.curKid === 'ALL' ? 'active' : ''}" data-act="switchKid" data-id="ALL">全部 (${st.length})</button>
+    ${regKids.map(s => tab(s, '👦 ' + esc(s.name))).join('')}</div>${campKids.length ? `<div class="muted" style="margin:0 0 4px;font-weight:700">🏕️ 冬令營</div><div class="kid-tabs">${campKids.map(s => tab(s, '🏕️ ' + esc(s.name.replace(/（.*）$/, '')) + '・' + esc(cn(s.className)))).join('')}</div>` : ''}` : '';
 
   const vis = S.curKid === 'ALL' ? st : st.filter(s => s.studentId === S.curKid);
   const opt = vis.map(s => `<option value="${esc(s.studentId)}">${esc(s.name)}</option>`).join('');
@@ -615,26 +617,27 @@ async function switchKid(id) {
 }
 
 function toggleShirt() { const on = $('#shirt_on').checked, e = $('#pay_shirts'); e.style.display = on ? '' : 'none'; e.value = on ? (Number(e.value) > 0 ? e.value : 1) : 0; calcPay(); }
-function campAppsCard(a) { const l = a.campApps || []; if (!l.length) return '';
-  return card('🏕️ 待審核營隊報名 <span class="pill warn">' + l.length + '</span>', l.map(x => `<div class="item"><b>${esc(x.name)}</b> → ${esc(x.className)}${(x.periods || []).length ? '（' + x.periods.map(esc).join('、') + '）' : ''} <span class="muted">${esc(x.at)}</span>
-    <div class="two" style="margin-top:8px"><button class="pri" data-act="reviewCamp" data-id="${esc(x.id)}" data-d="pass">✅ 核准</button><button class="ghost" data-act="reviewCamp" data-id="${esc(x.id)}" data-d="reject">婉拒</button></div></div>`).join(''));
+function campAppsCard(a) { // 營隊報名審核：同一位孩子的申請合併成一張，期別可取消勾選（修正家長勾錯），一次全部核准
+  const l = a.campApps || []; if (!l.length) return '';
+  const by = new Map(); l.forEach(x => { const k = x.sid || x.name; if (!by.has(k)) by.set(k, []); by.get(k).push(x); });
+  return card('🏕️ 待審核營隊報名 <span class="pill warn">' + by.size + ' 位</span>', [...by.entries()].map(([k, xs]) => `<div class="item" data-ca="${esc(k)}"><b style="font-size:16px">${esc(xs[0].name)}</b> <span class="muted">${esc(xs[0].at)}</span>
+    ${xs.map(x => `<div style="margin:8px 0;padding:8px 10px;border:1px solid #f3e8da;border-radius:12px"><b>${esc(x.className)}</b>${(x.periods || []).map(q => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" class="ca_chk" data-app="${esc(x.id)}" value="${esc(q)}" checked> ${esc(q)}</label>`).join('')}</div>`).join('')}
+    <div class="two" style="margin-top:8px"><button class="pri" data-act="reviewCamp" data-k="${esc(k)}" data-d="pass">✅ 全部核准（依勾選）</button><button class="ghost" data-act="reviewCamp" data-k="${esc(k)}" data-d="reject">婉拒全部</button></div>
+    <p class="muted" style="font-size:12.5px;margin:6px 0 0">家長勾錯可先取消勾選；整個班都沒勾＝不核准那個班。</p></div>`).join(''));
 }
-async function reviewCampUi(id, decision) {
+async function reviewCampUi(k, decision) {
+  const l = ((S.adm && S.adm.campApps) || []).filter(x => (x.sid || x.name) === k); if (!l.length) return;
+  const box = [...document.querySelectorAll('[data-ca]')].find(e => e.dataset.ca === k);
   let note = '';
   if (decision === 'reject') { const v = await dialog('婉拒營隊報名', [{ key: 'note', label: '原因（家長會看到）', ph: '例如：名額已滿' }], '確認婉拒'); if (!v) return; note = v.note; }
-  await api('reviewCamp', { id, decision, note });
-  render(); setTimeout(() => toast(decision === 'pass' ? '已核准，已建立營隊學員並通知家長' : '已婉拒'), 100);
-}
-function statusRows(vis) { // 同一位孩子的常態班與冬令營合併成一張：常態班一行、每個營隊班一行（顯示報名期別與堂數）
-  const base = n => n.replace(/（(冬令營|營隊)[^）]*）$/, ''), groups = new Map();
-  vis.forEach(s => { const b = base(s.name); if (!groups.has(b)) groups.set(b, []); groups.get(b).push(s); });
-  const row = s => {
-    const camp = s.camp, per = (s.campAllowed || []);
-    const cn = x => String(x).replace(/^冬令營|^營隊/, ''), sub = camp ? `🏕️ <b>冬令營</b>：${per.length ? per.map(q => esc(cn(q)) + ' <b>' + esc(cn(s.className)) + '</b>').join('、') : esc(s.className)}` : `${esc(s.grp || s.className)}${s.grade ? '・' + esc(s.grade) : ''}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}`;
-    const pill = camp ? (s.balance > 0 || s.campPaid ? `<span class="pill">冬令營 剩 ${s.balance} 堂</span>` : `<span class="pill warn">冬令營・尚未匯款</span>`) : balPill(s.balance);
-    return `<div class="row" style="padding:6px 0"><div><span class="muted" style="margin:0">${sub}</span>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}</div>${pill}</div>${makeupLine(s.studentId, S.parentData.h)}`;
-  };
-  return [...groups.entries()].map(([b, list]) => `<div style="margin:6px 0 12px;padding-bottom:6px;border-bottom:1px dashed #f0e7dd"><b style="font-size:16px">${esc(b)}</b>${list.map(row).join('')}</div>`).join('');
+  const items = l.map(x => ({ id: x.id, periods: [...box.querySelectorAll('.ca_chk')].filter(e => e.dataset.app === x.id && e.checked).map(e => e.value) }));
+  if (decision === 'pass') {
+    if (!items.some(i => i.periods.length)) throw new Error('請至少勾選一個期別');
+    const txt = l.map(x => { const it = items.find(i => i.id === x.id); return '・' + x.className + '：' + (it.periods.length ? it.periods.join('、') : '（未勾選，不核准）'); }).join('\n');
+    if (!await ask(`確定核准 ${l[0].name} 的營隊報名？\n\n${txt}`)) return;
+  }
+  await api('reviewCamp', { items, decision, note });
+  render(); setTimeout(() => toast(decision === 'pass' ? '已核准並通知家長' : '已婉拒'), 100);
 }
 function campSignupCard(st, cl) { // 家長自己報名冬令營：每位常態班孩子，勾選要報的「班級 × 期別」（可多選），一次送出申請
   const pend = ((S.parentData && S.parentData.campApps) || []), camps = (cl || []).filter(c => c.camp); if (!camps.length) return '';

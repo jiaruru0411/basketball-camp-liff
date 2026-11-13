@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r42';
+const FE_VER = '2026-11-13-r43';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -718,12 +718,21 @@ function mySalaryCard(m) { // 教練的班表與授課明細（不顯示時薪�
 }
 async function changeClass(v) { S.cls = v; await safe(viewCoach); }
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
+function boardCard(s) { // 補課／調課／試上 一覽（可展開）
+  const b = (s && s.board) || { toMakeup: [], booked: [], swaps: [], trials: [] };
+  const grp = (title, arr, fn, open) => `<details ${open ? 'open' : ''} style="margin:6px 0"><summary style="cursor:pointer;font-weight:800">${title}（${arr.length}）</summary>${arr.map(x => `<div class="row" style="padding:6px 0"><span>${fn(x)}</span></div>`).join('') || '<div class="muted" style="margin:4px 0">目前沒有</div>'}</details>`;
+  return card('📋 補課／調課／試上 一覽',
+    grp('⭐ 待補課（請假還沒選補課日）', b.toMakeup, x => `<b>${esc(x.name)}</b>　${esc(x.kind)} ${esc(x.date)}（${esc(x.className)}）<span class="muted">・補課期限 ${esc(x.deadline)}</span>`, true) +
+    grp('✅ 已預約補課（還沒上）', b.booked, x => `<b>${esc(x.name)}</b>　${esc(x.date)} 到 ${esc(x.className)}${x.leaveDate ? `<span class="muted">・補 ${esc(x.leaveDate)} 的課</span>` : ''}${x.pending ? ' <span class="pill warn">待審核</span>' : ''}`) +
+    grp('🔄 調課', b.swaps, x => `<b>${esc(x.name)}</b>　${esc(x.date)} 從 ${esc(x.fromClass)} 調到 ${esc(x.className)}${x.pending ? ' <span class="pill warn">待審核</span>' : ''}`) +
+    grp('🆕 試上／補課生（已排日期）', b.trials, x => `<b>${esc(x.name)}</b>　<span class="pill" style="background:#fce7f3;color:#be185d">${esc(x.kind)}</span> ${esc(x.date)}（${esc(x.className)}）`));
+}
 function leaveBox() { // 教練一眼看到：這天誰請假、誰補課、之後誰要請假
-  const sw = S.list.filter(x => x.swap), swo = S.swapOut || [], lv = S.list.filter(x => x.leave), pend = S.list.filter(x => x.pendingLeave && !x.leave), mk = S.list.filter(x => x.makeup), up = S.upcoming || [];
+  const sw = S.list.filter(x => x.swap), swo = S.swapOut || [], lv = S.list.filter(x => x.leave), pend = S.list.filter(x => x.pendingLeave && !x.leave), mk = S.list.filter(x => x.makeup && !x.kind), tr = S.list.filter(x => x.kind === '試上'), bk = S.list.filter(x => x.kind === '補課生'), up = S.upcoming || [];
   const line = (t, arr) => arr.length ? `<div style="margin:4px 0">${t}：${arr.map(x => `<b>${esc(x.name)}</b>${x.leaveReason ? `<span class="muted">（${esc(x.leaveReason)}）</span>` : ''}`).join('、')}</div>` : '';
-  const upHtml = up.length ? `<div style="border-top:1px dashed #f0e7dd;margin-top:6px;padding-top:6px"><div class="muted" style="font-weight:700">之後 30 天已核准</div>${up.map(u => `<div class="row" style="padding:5px 0"><span>${esc(u.date)}・<b>${esc(u.name)}</b></span><span class="pill ${u.type === '補課' ? 'warn' : ''}">${esc(u.type)}</span></div>`).join('')}</div>` : '';
+  const upHtml = up.length ? `<div style="border-top:1px dashed #f0e7dd;margin-top:6px;padding-top:6px"><div class="muted" style="font-weight:700">之後 30 天已核准</div>${up.map(u => `<div class="row" style="padding:5px 0"><span>${esc(u.date)}・<b>${esc(u.name)}</b></span><span class="pill ${u.type === '補課' ? 'warn' : ''}" ${u.type === '試上' ? 'style="background:#fce7f3;color:#be185d"' : ''}>${esc(u.type)}</span></div>`).join('')}</div>` : '';
   return `<div class="item" style="background:#fffaf0"><div style="font-weight:800">📝 ${esc(S.date)} 請假／補課</div>
-    ${lv.length || pend.length || mk.length || sw.length || swo.length ? line('請假', lv) + line('待審核請假', pend) + line('補課學員', mk) + (sw.length ? `<div style="margin:4px 0">調課來上：${sw.map(x => `<b>${esc(x.name)}</b><span class="muted">（${esc(x.swap)}）</span>`).join('、')}</div>` : '') + (swo.length ? `<div style="margin:4px 0">調去別班：${swo.map(x => `<b>${esc(x.name)}</b><span class="muted">（→${esc(x.to)}）</span>`).join('、')}</div>` : '') : '<p class="muted" style="margin:4px 0">今天沒有人請假或補課</p>'}${upHtml}</div>`;
+    ${lv.length || pend.length || mk.length || tr.length || bk.length || sw.length || swo.length ? line('請假', lv) + line('待審核請假', pend) + line('補課學員', mk) + line('🆕 試上', tr) + line('補課生', bk) + (sw.length ? `<div style="margin:4px 0">調課來上：${sw.map(x => `<b>${esc(x.name)}</b><span class="muted">（${esc(x.swap)}）</span>`).join('、')}</div>` : '') + (swo.length ? `<div style="margin:4px 0">調去別班：${swo.map(x => `<b>${esc(x.name)}</b><span class="muted">（→${esc(x.to)}）</span>`).join('、')}</div>` : '') : '<p class="muted" style="margin:4px 0">今天沒有人請假或補課</p>'}${upHtml}</div>`;
 }
 function rosterSummary() {
   if (!S.list.length) return '';
@@ -736,7 +745,7 @@ function rosterHtml() {
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
         <b>${esc(x.name)}</b> ${x.grade ? `<span class="pill gray">${esc(x.grade)}</span>` : ''}${x.grp ? `<span class="pill gray">${esc(x.grp)}</span>` : ''}${x.kind ? `<span class="pill" style="background:#fce7f3;color:#be185d">${x.kind === '試上' ? '🆕 試上' : '🔁 補課生'}</span>` : ''}
-        ${x.makeup ? '<span class="pill" style="background:#fef3c7;color:#b45309">⭐ 跨班補課</span>' : ''}${x.swap ? `<span class="pill" style="background:#eff6ff;color:#2563eb">🔄 ${esc(x.swap)}</span>` : ''} 
+        ${x.makeup && !x.kind ? '<span class="pill" style="background:#fef3c7;color:#b45309">⭐ 補課（來別班上課）</span>' : ''}${x.swap ? `<span class="pill" style="background:#eff6ff;color:#2563eb">🔄 ${esc(x.swap)}</span>` : ''} 
         ${x.leave ? `<span class="pill warn">📝 事前請假（${esc(x.leaveReason || '已核准')}）</span>` : ''}
         ${x.saved ? `<span class="pill">${x.saved === '出席' ? '✓ 已出席' : esc(x.saved)}</span>` : ''}
       </div>
@@ -1023,6 +1032,7 @@ async function viewAdmin() {
 
   $('#app').innerHTML =
     `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${box(s.approvedMakeupCount ?? 0, '⭐ 待補課學員')}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
+    boardCard(s) +
     overviewCard(a) +
     scheduleCardAdmin(a) +
     // 待審核匯款卡片：標題右側新增「💵 現場收取現金」快捷鍵 +

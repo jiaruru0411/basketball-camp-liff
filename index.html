@@ -297,16 +297,16 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r73';
+const FE_VER = '2026-11-14-r74';
 const GUIDE = {
   parent: [
-    ['🎒 第一次使用：綁定孩子', ['輸入老師給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
-    ['📝 請假', ['找到「📝 我要請假」卡片。', '選孩子 → 選要請假的上課日 → 選病假或事假。', '按送出，確認後等老師核准。', '事假每期只能補 1 堂；冬令營可以請假，但不提供補課。']],
-    ['🏀 預約補課', ['請假被老師核准後，「🏀 預約補課」才會出現那張假單。', '先選補課日期（只能選週日），再選要補的班級。', '本期有報名：只能選和自己班錯開的時段；本期沒報名：上午、下午都能選。', '送出後等老師確認。']],
-    ['🔄 調課（同一天換時段）', ['找到「🔄 當天換時段（調課）」。', '選孩子、日期、要換去的班級。', '調課不算請假，不用補課。', '送出後等老師核准。']],
-    ['💳 匯款', ['找到「💳 匯款對帳回傳」。', '① 先勾選要繳費的孩子 → ② 選期別 → ③ 要買短 T 就打勾並填件數。', '填金額、帳號後五碼、轉帳日期，確認後送出。', '老師對帳完成後，堂數會自動加上去。', '看到「已經對帳完成」代表這一期不用再匯。現金請直接交給老師。']],
-    ['🏕️ 冬令營報名', ['找到「🏕️ 冬令營報名」卡片。', '勾選班級（A 班 08:00–10:00、B 班 10:00–12:00）和期別（可多選）。', '送出後等老師審核通過，再回到「匯款」繳費。', '營隊請假不能補課，調課只能 A、B 班互換，而且要同一期。']],
-    ['❓ 常見問題', ['看不到補課選項：請假還沒被核准，或是冬令營的請假。', '送錯了：在「🕒 最近申請進度」可以取消還在等待的申請。', '匯款後堂數沒變：要等老師對帳，超過一天請聯絡老師。', '輸入綁定碼失敗：確認 6 碼；連續錯 5 次要等 10 分鐘。']]
+    ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
+    ['📝 請假', ['找到「📝 我要請假」卡片。', '選孩子 → 選要請假的上課日 → 選病假或事假。', '按送出，確認後等總教練核准。', '事假每期只能補 1 堂；冬令營可以請假，但不提供補課。']],
+    ['🏀 預約補課', ['請假被總教練核准後，「🏀 預約補課」才會出現那張假單。', '先選補課日期（只能選週日），再選要補的班級。', '本期有報名：只能選和自己班錯開的時段；本期沒報名：上午、下午都能選。', '送出後等總教練確認。']],
+    ['🔄 調課（同一天換時段）', ['找到「🔄 當天換時段（調課）」。', '選孩子、日期、要換去的班級。', '調課不算請假，不用補課。', '送出後等總教練核准。']],
+    ['💳 匯款', ['找到「💳 匯款對帳回傳」。', '① 先勾選要繳費的孩子 → ② 選期別 → ③ 要買短 T 就打勾並填件數。', '填金額、帳號後五碼、轉帳日期，確認後送出。', '總教練對帳完成後，堂數會自動加上去。', '看到「已經對帳完成」代表這一期不用再匯。現金請直接交給總教練。']],
+    ['🏕️ 冬令營報名', ['找到「🏕️ 冬令營報名」卡片。', '勾選班級（A 班 08:00–10:00、B 班 10:00–12:00）和期別（可多選）。', '送出後等總教練審核通過，再回到「匯款」繳費。', '營隊請假不能補課，調課只能 A、B 班互換，而且要同一期。']],
+    ['❓ 常見問題', ['看不到補課選項：請假還沒被核准，或是冬令營的請假。', '送錯了：在「🕒 最近申請進度」可以取消還在等待的申請。', '匯款後堂數沒變：要等總教練對帳，超過一天請聯絡總教練。', '輸入綁定碼失敗：確認 6 碼；連續錯 5 次要等 10 分鐘。']]
   ],
   coach: [
     ['📍 上課前：簽到', ['先選自己的班級和日期。', '按「簽到」，只有排到這個班的教練才能簽到。', '沒排到班或要換人，請找總教練調整排班。']],
@@ -337,7 +337,7 @@ function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
   vb.textContent = '前端 ' + FE_VER + '｜後端 ' + ((S.me && S.me.ver) || '舊版（尚未更新）') + (S.me && S.me.testMode ? '｜測試模式開啟' : '');
   let gb = document.getElementById('guidebar');
-  if (!gb) { gb = document.createElement('div'); gb.id = 'guidebar'; gb.style.cssText = 'text-align:center;padding:6px 16px 10px'; gb.innerHTML = '<button class="ghost" style="width:auto;padding:10px 22px;font-weight:800" onclick="openGuide()">❓ 操作指南（點我）</button>'; vb.before(gb); }
+  if (!gb) { gb = document.createElement('div'); gb.id = 'guidebar'; gb.style.cssText = 'text-align:right;padding:8px 16px 0'; gb.innerHTML = '<button class="ghost mini" style="width:auto;padding:8px 16px;font-weight:800" onclick="openGuide()">❓ 操作指南（點我）</button>'; document.querySelector('main').before(gb); }
   let b = document.getElementById('testbar');
   if (!S.me || !S.me.testMode) { if (b) b.remove(); return; }
   if (!b) { b = document.createElement('div'); b.id = 'testbar'; b.style.cssText = 'background:#fef3c7;border-bottom:1.5px solid #fde68a;padding:8px 14px;font-size:13px;font-weight:700;color:#92400e;display:flex;gap:8px;align-items:center'; document.querySelector('header').after(b); }

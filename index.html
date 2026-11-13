@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r47';
+const FE_VER = '2026-11-13-r48';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -726,16 +726,18 @@ function boardCard(s) { // 補課／調課／試上 一覽（依班級分色、�
   const all = s.board, names = [...new Set([].concat(all.toMakeup, all.booked, all.swaps, all.trials).map(x => x.className))].sort(), fc = names.indexOf(S.boardCls) !== -1 ? S.boardCls : '';
   const pick = a => fc ? a.filter(x => x.className === fc) : a, b = { toMakeup: pick(all.toMakeup), booked: pick(all.booked), swaps: pick(all.swaps), trials: pick(all.trials) };
   const filt = `<select onchange="setBoardCls(this.value)" style="margin:0 0 6px"><option value="">全部班級</option>${names.map(n => `<option value="${esc(n)}" ${n === fc ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
-  const kindChip = (k, d) => `<span class="pill" style="${k === '病假' ? 'background:#e0f2fe;color:#0369a1' : 'background:#fff7ed;color:#c2410c'}">${esc(k)} ${md(d)}</span>`;
-  const byClass = (arr, rowFn) => { const m = new Map(); arr.forEach(x => { if (!m.has(x.className)) m.set(x.className, []); m.get(x.className).push(x); }); return [...m.entries()].map(([cn, list]) => `<div style="margin:8px 0 2px">${clsPill(cn)} <span class="muted">${list.length}</span></div>${rowFn(list)}`).join(''); };
-  const grp = (title, arr, body, open) => `<details ${open ? 'open' : ''} style="margin:8px 0"><summary style="cursor:pointer;font-weight:800">${title}（${arr.length}）</summary>${arr.length ? body : '<div class="muted" style="margin:4px 0">目前沒有</div>'}</details>`;
-  const toBody = byClass(b.toMakeup, list => { // 同一位學員合併成一行，請假日用小標籤
+  const kindChip = (k, d) => `<span class="pill" style="padding:5px 12px;font-size:14px;${k === '病假' ? 'background:#e0f2fe;color:#0369a1' : 'background:#ffedd5;color:#c2410c'}">${esc(k)} ${md(d)}</span>`;
+  const byClass = (arr, rowFn) => { const m = new Map(); arr.forEach(x => { if (!m.has(x.className)) m.set(x.className, []); m.get(x.className).push(x); }); return [...m.entries()].map(([cn, list]) => `<div style="margin:16px 0 6px;display:flex;align-items:center;gap:8px">${clsPill(cn)} <span class="muted" style="font-size:13px">${new Set(list.map(x => x.name)).size} 位</span></div>${rowFn(list)}`).join(''); };
+  const grp = (title, arr, body, open) => `<details ${open ? 'open' : ''} style="margin:14px 0 4px"><summary style="cursor:pointer;font-weight:800;padding:6px 0">${title}</summary>${arr.length ? body : '<div class="muted" style="margin:6px 0">目前沒有</div>'}</details>`;
+  const BOX = 'padding:12px 14px;margin:8px 0;border-radius:14px;background:#fffaf3;border:1px solid #f3e8da';
+  const one = (name, right, sub) => `<div style="${BOX}"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:16px">${name}</b><span style="text-align:right">${right}</span></div>${sub ? `<div class="muted" style="font-size:12.5px;margin-top:6px">${sub}</div>` : ''}</div>`;
+  const toBody = byClass(b.toMakeup, list => { // 同一位學員合併成一張小卡
     const by = new Map(); list.forEach(x => { if (!by.has(x.name)) by.set(x.name, []); by.get(x.name).push(x); });
-    return [...by.entries()].map(([nm, xs]) => `<div class="row" style="padding:5px 0;align-items:flex-start"><span><b>${esc(nm)}</b></span><span style="text-align:right">${xs.map(x => kindChip(x.kind, x.date)).join(' ')}<div class="muted" style="font-size:12px;margin:2px 0 0">期限 ${md(xs.map(x => x.deadline).sort()[0])}</div></span></div>`).join('');
+    return [...by.entries()].map(([nm, xs]) => `<div style="${BOX}"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><b style="font-size:16px">${esc(nm)}</b><span class="muted" style="font-size:12.5px">還有 ${xs.length} 堂・期限 ${md(xs.map(x => x.deadline).sort()[0])}</span></div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${xs.map(x => kindChip(x.kind, x.date)).join('')}</div></div>`).join('');
   });
-  const bookedBody = byClass(b.booked, list => list.map(x => `<div class="row" style="padding:5px 0"><span><b>${esc(x.name)}</b>${x.pending ? ' <span class="pill warn">待審核</span>' : ''}</span><span class="muted">${md(x.date)} 來補${x.leaveDate ? '（補 ' + md(x.leaveDate) + '）' : ''}</span></div>`).join(''));
-  const swapBody = byClass(b.swaps, list => list.map(x => `<div class="row" style="padding:5px 0"><span><b>${esc(x.name)}</b>${x.pending ? ' <span class="pill warn">待審核</span>' : ''}</span><span class="muted">${md(x.date)} ${esc(x.fromClass)} → 此班</span></div>`).join(''));
-  const trialBody = byClass(b.trials, list => list.map(x => `<div class="row" style="padding:5px 0"><span><b>${esc(x.name)}</b></span><span><span class="pill" style="background:#fce7f3;color:#be185d">${esc(x.kind)}</span> ${md(x.date)}</span></div>`).join(''));
+  const bookedBody = byClass(b.booked, list => list.map(x => one(esc(x.name) + (x.pending ? ' <span class="pill warn">待審核</span>' : ''), `<span class="pill" style="background:#dcfce7;color:#15803d">${md(x.date)} 補課</span>`, x.leaveDate ? '補的是 ' + md(x.leaveDate) + ' 請假的課' : '')).join(''));
+  const swapBody = byClass(b.swaps, list => list.map(x => one(esc(x.name) + (x.pending ? ' <span class="pill warn">待審核</span>' : ''), `<span class="pill" style="background:#eff6ff;color:#2563eb">${md(x.date)} 調課</span>`, esc(x.fromClass) + ' → 此班')).join(''));
+  const trialBody = byClass(b.trials, list => list.map(x => one(esc(x.name), `<span class="pill" style="background:#fce7f3;color:#be185d">${esc(x.kind)} ${md(x.date)}</span>`, '')).join(''));
   const people = new Set(b.toMakeup.map(x => x.name)).size;
   return '<div id="board_wrap">' + card('📋 補課／調課／試上 一覽', filt +
     grp(`⭐ 待補課（${people} 位・請假還沒選補課日）`.replace(/（(\d+) 位/, '（$1 位'), b.toMakeup, toBody, true).replace(/（\d+）<\/summary>/, '</summary>') +

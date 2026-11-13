@@ -286,7 +286,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r63';
+const FE_VER = '2026-11-14-r64';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -415,10 +415,14 @@ async function doSubmitSwap() {
   render();
   setTimeout(() => toast('調課申請已送出，等待總教練核准'), 100);
 }
+const tmMin = t => { const m = /(\d{1,2}):(\d{2})/.exec(t || ''); return m ? Number(m[1]) * 60 + Number(m[2]) : 0; };
+const mkFam = c => !c ? '' : (/高框/.test(c.name) || tmMin(c.tm) >= 960 ? 'high' : (/基礎|競技/.test(c.name) ? 'base' : ''));
+function mkFamOk(own, c) { const f = mkFam(own); if (!f) return true; const g = mkFam(c), m = tmMin(c.tm); return f === 'base' ? g === 'base' : (g === 'high' || (m >= 840 && m < 960)); }
 function fillMkClasses() { // 只列出「不是原班」且「時數相同」的班級
   const sel = $('#mk_leave'), cs = $('#mk_cls'); if (!sel || !cs || !sel.selectedOptions[0]) return;
   const op = sel.selectedOptions[0], cid = op.dataset.cid, h = Number(op.dataset.h) || 0, keep = cs.value;
-  const list = ((S.parentData && S.parentData.cl) || []).filter(c => c.classId !== cid && (!h || c.hours === h) && (!c.days || !c.days.length || c.days.includes(7)));
+  const own0 = ((S.parentData && S.parentData.cl) || []).find(c => c.classId === cid);
+  const list = ((S.parentData && S.parentData.cl) || []).filter(c => c.classId !== cid && (!h || c.hours === h) && (!c.days || !c.days.length || c.days.includes(7)) && mkFamOk(own0, c));
   cs.innerHTML = list.length ? list.map(c => `<option value="${esc(c.classId)}">${esc(c.name)} (${c.hours}h${c.days && c.days.length ? '・' + dayTxt(c.days) : ''})</option>`).join('') : '<option value="">沒有可補課的班級（需不同班、同時數）</option>';
   if (keep && list.some(c => c.classId === keep)) cs.value = keep;
 }

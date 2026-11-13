@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r44';
+const FE_VER = '2026-11-13-r45';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -1032,7 +1032,7 @@ async function viewAdmin() {
        <button class="ghost" data-act="lockMonth">🔒 月結鎖定</button><button class="ghost" data-act="copySalary">📋 複製薪資表</button>`;
 
   $('#app').innerHTML =
-    `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${box(s.approvedMakeupCount ?? 0, '⭐ 待補課堂數（請假未補）')}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
+    `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${(s.board ? box(new Set(s.board.toMakeup.map(x => x.name)).size + ' 人', '⭐ 還有請假沒補課<br>共 ' + (s.approvedMakeupCount ?? 0) + ' 堂待補') : box((s.approvedMakeupCount ?? 0) + ' 堂', '⭐ 請假還沒補的堂數'))}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
     boardCard(s) +
     overviewCard(a) +
     scheduleCardAdmin(a) +

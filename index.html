@@ -108,7 +108,7 @@ code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;f
 <header>
   <div class="brand">
     <div class="logo"><img src="./logo.png" alt="" onerror="this.replaceWith(document.createTextNode('🏀'))"></div>
-    <div><b>永不平凡籃球營</b><span id="greet">請稍後，正在載入中…</span></div>
+    <div><b>永不平凡籃球營</b><span id="greet">載入中…</span></div>
   </div>
 </header>
 <main id="app"><p class="muted" style="text-align:center;padding:30px 0">載入中…</p></main>
@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r74';
+const FE_VER = '2026-11-14-r76';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -337,7 +337,7 @@ function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
   vb.textContent = '前端 ' + FE_VER + '｜後端 ' + ((S.me && S.me.ver) || '舊版（尚未更新）') + (S.me && S.me.testMode ? '｜測試模式開啟' : '');
   let gb = document.getElementById('guidebar');
-  if (!gb) { gb = document.createElement('div'); gb.id = 'guidebar'; gb.style.cssText = 'text-align:right;padding:8px 16px 0'; gb.innerHTML = '<button class="ghost mini" style="width:auto;padding:8px 16px;font-weight:800" onclick="openGuide()">❓ 操作指南（點我）</button>'; document.querySelector('main').before(gb); }
+  if (!gb) { gb = document.createElement('div'); gb.id = 'guidebar'; gb.style.cssText = 'text-align:center;padding:10px 16px 0'; gb.innerHTML = '<button class="ghost" style="width:auto;padding:10px 26px;font-size:16px;font-weight:800" onclick="openGuide()">❓ 操作指南（點我）</button>'; document.querySelector('main').before(gb); }
   let b = document.getElementById('testbar');
   if (!S.me || !S.me.testMode) { if (b) b.remove(); return; }
   if (!b) { b = document.createElement('div'); b.id = 'testbar'; b.style.cssText = 'background:#fef3c7;border-bottom:1.5px solid #fde68a;padding:8px 14px;font-size:13px;font-weight:700;color:#92400e;display:flex;gap:8px;align-items:center'; document.querySelector('header').after(b); }

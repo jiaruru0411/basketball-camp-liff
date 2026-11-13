@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r70';
+const FE_VER = '2026-11-14-r71';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -1132,14 +1132,14 @@ async function cashPayUi() {
     { key: 'amount', label: '實收金額', type: 'number', ph: '例如: 4200 (插班依比例填寫)' },
     { key: 'last5', label: '匯款帳號後五碼（匯款才填）', ph: '5 碼數字，現金免填' },
     { key: 'date', label: '轉帳／收款日期', type: 'date', value: today() },
-    { key: 'lessons', label: '增加堂數', type: 'number', ph: '1 期填 7、2 期填 14，試上填 1，插班自訂', value: '7' },
+    { key: 'lessons', label: '增加堂數（已經加過堂數、只要記帳就填 0）', type: 'number', ph: '1 期填 7、2 期填 14，試上填 1；只記帳填 0', value: '7' },
     { key: 'note', label: '備註說明', ph: '例如: 表單報名後匯款 / 現場交付現金', value: '' }
   ], '確認入帳並加堂');
 
   if (!v) return;
   await api('cashPay', v);
   render();
-  setTimeout(() => toast('已入帳，學員堂數已自動累加！'), 100);
+  setTimeout(() => toast(Number(v.lessons) > 0 ? '已入帳，學員堂數已自動累加！' : '已記帳（未加堂）'), 100);
 }
 
 async function viewAdmin() {

@@ -140,7 +140,7 @@ const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tai
 const parts = d => d.split('-').map(Number);
 const dow = d => { const [y, m, dd] = parts(d); const w = new Date(Date.UTC(y, m - 1, dd)).getUTCDay(); return w === 0 ? 7 : w; };
 const addDays = (d, n) => { const [y, m, dd] = parts(d); return new Date(Date.UTC(y, m - 1, dd + n)).toISOString().slice(0, 10); };
-const foldCard = (key, title, body, n) => `<section class="card"><details ${S.fold && S.fold[key] ? 'open' : ''} ontoggle="(S.fold = S.fold || {})['${key}'] = this.open"><summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">${title}</h2><span class="muted" style="margin:0;white-space:nowrap">${n != null ? n + '　' : ''}▾ 展開</span></summary><div style="margin-top:12px">${body}</div></details></section>`;
+const foldCard = (key, title, body, n, top = '') => `<section class="card">${top ? `<div style="display:flex;justify-content:flex-end;margin:0 0 8px">${top}</div>` : ''}<details ${S.fold && S.fold[key] ? 'open' : ''} ontoggle="(S.fold = S.fold || {})['${key}'] = this.open"><summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">${title}</h2><span class="muted" style="margin:0;white-space:nowrap">${n != null ? n + '　' : ''}▾ 展開</span></summary><div style="margin-top:12px">${body}</div></details></section>`;
 const card = (t, b, x = '') => `<section class="card"><h2>${t}${x}</h2>${b}</section>`;
 const pill = s => `<span class="pill ${/退回|拒絕|缺席/.test(s) ? 'bad' : /取消/.test(s) ? 'gray' : /待/.test(s) ? 'warn' : ''}">${esc(s)}</span>`;
 const balT = b => b < 0 ? `欠 ${-b} 堂` : `剩 ${b} 堂`;
@@ -286,7 +286,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r58';
+const FE_VER = '2026-11-13-r59';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -1139,7 +1139,7 @@ async function viewAdmin() {
       ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className + (x.grp || '') + (x.grade || '')).toLowerCase())}"><div>
         <b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}${x.grp ? '・' + esc(x.grp) : ''}${x.grade ? '・' + esc(x.grade) : ''}${x.kind ? '・' + esc(x.kind) : ''}</span>
         <div class="muted" style="margin:0;font-size:12.5px">${x.bound ? `已綁 ${x.bound} 個帳號` : '未綁定'}${x.status === '結業' ? '・已結業' : ''}${x.note ? '・⚠️ ' + esc(x.note) : ''}</div></div>
-        <div style="display:flex;align-items:center;gap:8px">${balPill(x.balance)}<button class="ghost mini" data-act="manageStu" data-id="${esc(x.id)}">管理</button></div></div>`).join('') || '<p class="muted">尚無學員資料</p>') + `<div style="margin-top:10px"><button class="ghost mini" onclick="run(this,addStudentUi)">＋ 新增學員</button></div>`, (a.students || []).length + ' 位') +
+        <div style="display:flex;align-items:center;gap:8px">${balPill(x.balance)}<button class="ghost mini" data-act="manageStu" data-id="${esc(x.id)}">管理</button></div></div>`).join('') || '<p class="muted">尚無學員資料</p>'), (a.students || []).length + ' 位', `<button class="ghost mini" onclick="run(this,addStudentUi)">＋ 新增學員</button>`) +
     foldCard('adj', '🧾 最近堂數調整', (a.adjustLogs || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.reason)}・${esc(r.by)}</span></span>
       <span class="pill ${r.delta < 0 ? 'bad' : ''}">${r.delta > 0 ? '+' : ''}${r.delta} → ${r.after}</span></div>`).join('') || '<p class="muted">尚無調整紀錄</p>', (a.adjustLogs || []).length + ' 筆') +
     card('🗂️ 最近點名紀錄', (a.recent || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>${pill(r.status)}</div>`).join('') || '<p class="muted">尚無點名紀錄</p>') +

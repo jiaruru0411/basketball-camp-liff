@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r71';
+const FE_VER = '2026-11-14-r72';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -428,6 +428,7 @@ async function doSubmitSwap() {
   render();
   setTimeout(() => toast('調課申請已送出，等待總教練核准'), 100);
 }
+const tmRange = (tm, h) => { const m = /(\d{1,2}):(\d{2})/.exec(tm || ''); if (!m) return tm || ''; const a = Number(m[1]) * 60 + Number(m[2]), b = a + Math.round((Number(h) || 0) * 60), f = x => String(Math.floor(x / 60) % 24).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); return h ? f(a) + '–' + f(b) : f(a); };
 const tmMin = t => { const m = /(\d{1,2}):(\d{2})/.exec(t || ''); return m ? Number(m[1]) * 60 + Number(m[2]) : 0; };
 const mkFam = c => !c ? '' : (/高框/.test(c.name) || tmMin(c.tm) >= 960 ? 'high' : (/基礎|競技/.test(c.name) ? 'base' : ''));
 function mkFamOk(own, c) { const f = mkFam(own); if (!f) return true; const g = mkFam(c), m = tmMin(c.tm); return f === 'base' ? g === 'base' : (g === 'high' || (m >= 840 && m < 960)); }
@@ -693,7 +694,7 @@ function campSignupCard(st, cl) { // 家長自己報名冬令營：每位常態�
     const base = k.name.replace(/（.*）$/, ''), blocks = camps.map(c => {
       if (names.has(base + '（' + c.name.replace(/\s+/g, '') + '）')) return `<div class="muted" style="margin:6px 0">✅ ${esc(c.name)} 已報名成功</div>`;
       if (pend.some(a => a.studentId === k.studentId && a.classId === c.classId)) return `<div style="margin:6px 0"><span class="pill warn">⏳ ${esc(c.name)} 等待總教練審核</span></div>`;
-      return `<div style="margin:8px 0;padding:10px 12px;border:1px solid #f3e8da;border-radius:12px;background:#fffaf3"><div style="font-size:16px;font-weight:800">${clsPill(c.name)}${c.tm ? `<span class="muted" style="font-weight:400">　${esc(c.tm)} 開始</span>` : ''}</div>${(c.periods || []).map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" class="cs_chk" data-kid="${esc(k.studentId)}" data-cid="${esc(c.classId)}" value="${esc(p.period)}"> <span><b>${esc(c.name)}</b>・${esc(p.label || p.period)}<span class="muted">（${p.lessons} 堂・$${Number(p.amount).toLocaleString()}）</span></span></label>`).join('')}${(c.periods || []).length ? '' : '<div class="muted">這個班目前沒有可報名的期別（課程日曆／價目表尚未設定）</div>'}</div>`;
+      return `<div style="margin:8px 0;padding:10px 12px;border:1px solid #f3e8da;border-radius:12px;background:#fffaf3"><div style="font-size:16px;font-weight:800">${clsPill(c.name)}${c.tm ? `<span class="muted" style="font-weight:400">　🕗 ${esc(tmRange(c.tm, c.hours))}</span>` : ''}</div>${(c.periods || []).map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" class="cs_chk" data-kid="${esc(k.studentId)}" data-cid="${esc(c.classId)}" value="${esc(p.period)}"> <span><b>${esc(c.name)}</b>・${esc(p.label || p.period)}<span class="muted">（${p.lessons} 堂・$${Number(p.amount).toLocaleString()}）</span></span></label>`).join('')}${(c.periods || []).length ? '' : '<div class="muted">這個班目前沒有可報名的期別（課程日曆／價目表尚未設定）</div>'}</div>`;
     }).join('');
     const canSend = camps.some(c => !names.has(base + '（' + c.name.replace(/\s+/g, '') + '）') && !pend.some(a => a.studentId === k.studentId && a.classId === c.classId));
     return `<div style="margin:10px 0"><b>${esc(k.name)}</b>${blocks}${canSend ? `<button class="pri" data-act="campSignup" data-sid="${esc(k.studentId)}">送出 ${esc(k.name)} 的營隊報名申請 ➜</button>` : ''}</div>`;
@@ -821,7 +822,7 @@ function mySalaryCard(m) { // 教練的班表與授課明細（不顯示時薪�
   if (!m) return '';
   return card('🗓️ 我的班表與授課明細', `
     <div style="font-weight:800;margin:0 0 6px">接下來的上班日</div>
-    ${(m.upcoming || []).map(u => `<div class="row" style="padding:7px 0"><span><b>${esc(u.date)}</b>（週${DN[dow(u.date) - 1]}）</span><span style="text-align:right">${esc(u.className)}<div class="muted" style="margin:0;font-size:12.5px">${u.tm ? esc(u.tm) + ' 開始・' : ''}${u.hours} 小時</div></span></div>`).join('') || '<p class="muted">目前沒有排到班，請洽總教練</p>'}
+    ${(m.upcoming || []).map(u => `<div class="row" style="padding:7px 0"><span><b>${esc(u.date)}</b>（週${DN[dow(u.date) - 1]}）</span><span style="text-align:right">${esc(u.className)}<div class="muted" style="margin:0;font-size:12.5px">${u.tm ? esc(tmRange(u.tm, u.hours)) + '・' : ''}${u.hours} 小時</div></span></div>`).join('') || '<p class="muted">目前沒有排到班，請洽總教練</p>'}
     <div style="border-top:1px dashed #f0e7dd;margin-top:10px;padding-top:10px">${(m.keys || []).length ? `<select onchange="S.cmonth=this.value;safe(viewCoach)">${m.keys.map(k => `<option value="${esc(k)}" ${k === m.month ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>` : `<input type="month" value="${esc(m.month)}" onchange="S.cmonth=this.value;safe(viewCoach)">`}
     <div class="stats"><div class="stat"><b>${m.lessonCount}</b><span>${esc(m.month)} 授課堂數</span></div><div class="stat"><b>${m.totalHours}</b><span>授課小時</span></div></div>
     <details><summary class="muted" style="cursor:pointer">授課明細（${(m.days || []).length} 筆）</summary>${(m.days || []).map(d => `<div class="row" style="padding:6px 0"><span>${esc(d.date)}・${esc(d.className)}${d.note ? `<span class="muted">（${esc(d.note)}）</span>` : ''}</span><span class="muted" style="margin:0">${d.hours} 小時</span></div>`).join('') || '<p class="muted">本月尚無簽到</p>'}</details></div>`);
@@ -952,7 +953,7 @@ function schedBody(sc) {
   const d = (sc.dates || []).find(x => x.date === S.schedDate) || (sc.dates || [])[0];
   if (!d) return '<p class="muted">近期沒有上課日</p>';
   const nameOf = id => ((sc.staff || []).find(x => x.id === id) || {}).name || '未登錄';
-  return d.classes.map(c => `<div class="row" style="padding:8px 0"><div>${esc(c.name)}${c.tm && c.name.indexOf(c.tm) === -1 ? `<span class="muted"> ${esc(c.tm)}</span>` : ''}
+  return d.classes.map(c => `<div class="row" style="padding:8px 0"><div>${esc(c.name)}${c.tm && c.name.indexOf(c.tm) === -1 ? `<span class="muted"> ${esc(tmRange(c.tm, c.hours))}</span>` : ''}
     <div class="muted" style="margin:0;font-size:12.5px">${c.ids.map(nameOf).map(esc).join('、') || '尚未指派教練'}${c.custom ? ' <span class="pill warn">已排班</span>' : ''}</div></div>
     <button class="ghost mini" onclick="editSchedule('${esc(d.date)}','${esc(c.id)}')">調整</button></div>`).join('');
 }

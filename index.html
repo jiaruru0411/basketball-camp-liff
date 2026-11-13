@@ -286,7 +286,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r60';
+const FE_VER = '2026-11-13-r61';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -638,6 +638,17 @@ async function reviewCampUi(k, decision) {
   }
   await api('reviewCamp', { items, decision, note });
   render(); setTimeout(() => toast(decision === 'pass' ? '已核准並通知家長' : '已婉拒'), 100);
+}
+function statusRows(vis) { // 同一位孩子的常態班與冬令營合併成一張：常態班一行、每個營隊班一行（顯示報名期別與堂數）
+  const base = n => n.replace(/（(冬令營|營隊)[^）]*）$/, ''), groups = new Map();
+  vis.forEach(s => { const b = base(s.name); if (!groups.has(b)) groups.set(b, []); groups.get(b).push(s); });
+  const row = s => {
+    const camp = s.camp, per = (s.campAllowed || []);
+    const cn = x => String(x).replace(/^冬令營|^營隊/, ''), sub = camp ? `🏕️ <b>冬令營</b>：${per.length ? per.map(q => esc(cn(q)) + ' <b>' + esc(cn(s.className)) + '</b>').join('、') : esc(s.className)}` : `${esc(s.grp || s.className)}${s.grade ? '・' + esc(s.grade) : ''}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}`;
+    const pill = camp ? (s.balance > 0 || s.campPaid ? `<span class="pill">冬令營 剩 ${s.balance} 堂</span>` : `<span class="pill warn">冬令營・尚未匯款</span>`) : balPill(s.balance);
+    return `<div class="row" style="padding:6px 0"><div><span class="muted" style="margin:0">${sub}</span>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}</div>${pill}</div>${makeupLine(s.studentId, S.parentData.h)}`;
+  };
+  return [...groups.entries()].map(([b, list]) => `<div style="margin:6px 0 12px;padding-bottom:6px;border-bottom:1px dashed #f0e7dd"><b style="font-size:16px">${esc(b)}</b>${list.map(row).join('')}</div>`).join('');
 }
 function campSignupCard(st, cl) { // 家長自己報名冬令營：每位常態班孩子，勾選要報的「班級 × 期別」（可多選），一次送出申請
   const pend = ((S.parentData && S.parentData.campApps) || []), camps = (cl || []).filter(c => c.camp); if (!camps.length) return '';

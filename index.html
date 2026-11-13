@@ -27,6 +27,7 @@ header b{font-size:17.5px;font-weight:800;color:#1e293b;display:block;line-heigh
 #greet{font-size:12.5px;color:var(--pri);font-weight:700;margin-top:1px;display:block}
 main{padding:16px;max-width:520px;margin:0 auto}
 .card{background:var(--card);border-radius:var(--radius-lg);padding:18px;margin-bottom:16px;border:1.5px solid var(--line);box-shadow:var(--shadow-sm)}
+summary::-webkit-details-marker{display:none}
 h2{margin:0 0 14px;font-size:17px;font-weight:800;color:#1e293b;display:flex;align-items:center;justify-content:space-between;gap:8px}
 input,select{display:block;width:100%!important;font:inherit;font-size:15px;padding:12px 14px;border:1.5px solid #e5e0d8;
   border-radius:var(--radius-md);background:#fdfcf9;margin:0 0 10px;color:var(--ink)}
@@ -139,6 +140,7 @@ const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tai
 const parts = d => d.split('-').map(Number);
 const dow = d => { const [y, m, dd] = parts(d); const w = new Date(Date.UTC(y, m - 1, dd)).getUTCDay(); return w === 0 ? 7 : w; };
 const addDays = (d, n) => { const [y, m, dd] = parts(d); return new Date(Date.UTC(y, m - 1, dd + n)).toISOString().slice(0, 10); };
+const foldCard = (key, title, body, n) => `<section class="card"><details ${S.fold && S.fold[key] ? 'open' : ''} ontoggle="(S.fold = S.fold || {})['${key}'] = this.open"><summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">${title}</h2><span class="muted" style="margin:0;white-space:nowrap">${n != null ? n + '　' : ''}▾ 展開</span></summary><div style="margin-top:12px">${body}</div></details></section>`;
 const card = (t, b, x = '') => `<section class="card"><h2>${t}${x}</h2>${b}</section>`;
 const pill = s => `<span class="pill ${/退回|拒絕|缺席/.test(s) ? 'bad' : /取消/.test(s) ? 'gray' : /待/.test(s) ? 'warn' : ''}">${esc(s)}</span>`;
 const balT = b => b < 0 ? `欠 ${-b} 堂` : `剩 ${b} 堂`;
@@ -284,7 +286,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r56';
+const FE_VER = '2026-11-13-r58';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -628,7 +630,7 @@ function statusRows(vis) { // 同一位孩子的常態班與冬令營合併成�
   vis.forEach(s => { const b = base(s.name); if (!groups.has(b)) groups.set(b, []); groups.get(b).push(s); });
   const row = s => {
     const camp = s.camp, per = (s.campAllowed || []);
-    const sub = camp ? `🏕️ ${esc(s.className)}${per.length ? '・' + per.map(esc).join('、') : ''}` : `${esc(s.grp || s.className)}${s.grade ? '・' + esc(s.grade) : ''}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}`;
+    const cn = x => String(x).replace(/^冬令營|^營隊/, ''), sub = camp ? `🏕️ <b>冬令營</b>：${per.length ? per.map(q => esc(cn(q)) + ' <b>' + esc(cn(s.className)) + '</b>').join('、') : esc(s.className)}` : `${esc(s.grp || s.className)}${s.grade ? '・' + esc(s.grade) : ''}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}`;
     const pill = camp ? (s.balance > 0 || s.campPaid ? `<span class="pill">冬令營 剩 ${s.balance} 堂</span>` : `<span class="pill warn">冬令營・尚未匯款</span>`) : balPill(s.balance);
     return `<div class="row" style="padding:6px 0"><div><span class="muted" style="margin:0">${sub}</span>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}</div>${pill}</div>${makeupLine(s.studentId, S.parentData.h)}`;
   };
@@ -1009,14 +1011,16 @@ function pendingCard(title, key, type) {
   return card(title + (list.length ? ` <span class="pill warn">${list.length}</span>` : ''),
     list.map(l => `<div class="item">${body(l)}${btns(l)}</div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>');
 }
-function setRv(v) { S.rvMine = v; const e = document.getElementById('rv_list'); if (e) e.parentElement.outerHTML = card('🗒️ 審核紀錄', reviewedHtml()); }
-function reviewedHtml() {
-  const all = (S.adm && S.adm.reviewed) || [], mine = !!S.rvMine, me = S.me.name;
-  const rows = all.filter(r => !mine || r.by === me);
-  return `<label class="muted" style="display:block;margin:0 0 8px"><input type="checkbox" ${mine ? 'checked' : ''} onchange="setRv(this.checked)">只看我審核的</label><div id="rv_list">` +
-    (rows.slice(0, 40).map(r => `<div class="row"><div><b>${esc(r.who)}</b>・${esc(r.summary)}
+function setRv(v) { S.rvMine = v; const e = document.getElementById('rv_list'); if (e) e.innerHTML = rvRows(); }
+function rvRows() {
+  const all = (S.adm && S.adm.reviewed) || [], mine = !!S.rvMine, me = S.me.name, rows = all.filter(r => !mine || r.by === me);
+  return rows.slice(0, 40).map(r => `<div class="row"><div><b>${esc(r.who)}</b>・${esc(r.summary)}
       <div class="muted" style="margin:0;font-size:12.5px">${esc(r.by)} ${esc(r.at)}${r.note ? '｜' + esc(r.note) : ''}</div></div>
-      <span class="pill ${r.result === '核准' ? '' : 'bad'}">${esc(r.kind)}${esc(r.result)}</span></div>`).join('') || '<p class="muted">尚無審核紀錄</p>') + '</div>';
+      <span class="pill ${r.result === '核准' ? '' : 'bad'}">${esc(r.kind)}${esc(r.result)}</span></div>`).join('') || '<p class="muted">尚無審核紀錄</p>';
+}
+function reviewedHtml() {
+  const mine = !!S.rvMine;
+  return `<label class="muted" style="display:block;margin:0 0 8px"><input type="checkbox" ${mine ? 'checked' : ''} onchange="setRv(this.checked)">只看我審核的</label><div id="rv_list">` + rvRows() + '</div>';
 }
 function setMf(k, v) { S.mf = Object.assign({ cls: '', when: 'future', ended: false }, S.mf || {}, { [k]: v }); renderMemoBox(); }
 function renderMemoBox() {
@@ -1126,24 +1130,23 @@ async function viewAdmin() {
     pendingCard('📝 待審核請假', 'leave', '請假') +
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +
-    card('🗒️ 審核紀錄', reviewedHtml()) +
+    foldCard('rv', '🗒️ 審核紀錄', reviewedHtml(), ((S.adm && S.adm.reviewed) || []).length) +
     card('💵 教練授課時數與薪資', ((a.salaryKeys || []).length ? `<select onchange="S.salKey=this.value;render()">${a.salaryKeys.map(k => `<option value="${esc(k)}" ${k === S.salKey ? 'selected' : ''}>${esc(k)}${(a.periodLabels || {})[k] ? '（' + esc(a.periodLabels[k]) + '）' : ''}</option>`).join('')}</select>` : `<input type="month" value="${esc(S.salKey)}" onchange="S.salKey=this.value;render()">`) + `
       ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
       ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
-    card('⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
+    foldCard('stu', '⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
       ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className + (x.grp || '') + (x.grade || '')).toLowerCase())}"><div>
         <b>${esc(x.name)}</b> <span class="muted">${esc(x.className)}${x.grp ? '・' + esc(x.grp) : ''}${x.grade ? '・' + esc(x.grade) : ''}${x.kind ? '・' + esc(x.kind) : ''}</span>
         <div class="muted" style="margin:0;font-size:12.5px">${x.bound ? `已綁 ${x.bound} 個帳號` : '未綁定'}${x.status === '結業' ? '・已結業' : ''}${x.note ? '・⚠️ ' + esc(x.note) : ''}</div></div>
-        <div style="display:flex;align-items:center;gap:8px">${balPill(x.balance)}<button class="ghost mini" data-act="manageStu" data-id="${esc(x.id)}">管理</button></div></div>`).join('') || '<p class="muted">尚無學員資料</p>'),
-      `<button class="ghost mini" onclick="run(this,addStudentUi)">＋ 新增學員</button>`) +
-    card('🧾 最近堂數調整', (a.adjustLogs || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.reason)}・${esc(r.by)}</span></span>
-      <span class="pill ${r.delta < 0 ? 'bad' : ''}">${r.delta > 0 ? '+' : ''}${r.delta} → ${r.after}</span></div>`).join('') || '<p class="muted">尚無調整紀錄</p>') +
+        <div style="display:flex;align-items:center;gap:8px">${balPill(x.balance)}<button class="ghost mini" data-act="manageStu" data-id="${esc(x.id)}">管理</button></div></div>`).join('') || '<p class="muted">尚無學員資料</p>') + `<div style="margin-top:10px"><button class="ghost mini" onclick="run(this,addStudentUi)">＋ 新增學員</button></div>`, (a.students || []).length + ' 位') +
+    foldCard('adj', '🧾 最近堂數調整', (a.adjustLogs || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.reason)}・${esc(r.by)}</span></span>
+      <span class="pill ${r.delta < 0 ? 'bad' : ''}">${r.delta > 0 ? '+' : ''}${r.delta} → ${r.after}</span></div>`).join('') || '<p class="muted">尚無調整紀錄</p>', (a.adjustLogs || []).length + ' 筆') +
     card('🗂️ 最近點名紀錄', (a.recent || []).map(r => `<div class="row"><span>${esc(r.date)} <b>${esc(r.name)}</b> <span class="muted">${esc(r.className)}・${esc(r.by)}</span></span>${pill(r.status)}</div>`).join('') || '<p class="muted">尚無點名紀錄</p>') +
     financeCard(a) +
     noticeCardAdmin(a) +
-    card('🧾 操作紀錄（最近 10 筆）', (a.opLogs || []).slice(0,10).map(r => `<div class="row" style="padding:8px 0"><div><b>${esc(r.action)}</b>・${esc(r.target)}
-      <div class="muted" style="margin:0;font-size:12.5px">${esc(r.by)} ${esc(r.at)}${r.detail ? '｜' + esc(r.detail) : ''}</div></div></div>`).join('') || '<p class="muted">尚無操作紀錄</p>');
+    foldCard('ops', '🧾 操作紀錄（最近 30 筆）', (a.opLogs || []).slice(0, 30).map(r => `<div class="row" style="padding:8px 0"><div><b>${esc(r.action)}</b>・${esc(r.target)}
+      <div class="muted" style="margin:0;font-size:12.5px">${esc(r.by)} ${esc(r.at)}${r.detail ? '｜' + esc(r.detail) : ''}</div></div></div>`).join('') || '<p class="muted">尚無操作紀錄</p>', Math.min(30, (a.opLogs || []).length) + ' 筆');
 
   renderMemoBox();
 }

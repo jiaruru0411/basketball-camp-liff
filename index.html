@@ -286,7 +286,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r61';
+const FE_VER = '2026-11-13-r62';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -393,7 +393,8 @@ function leaveDateHtml(st) {
   if (!ds.length) return `<select id="leave_date" disabled><option value="">近期沒有可請假的上課日</option></select>`;
   return `<select id="leave_date">${ds.map(d => `<option value="${d}">${d}（週${DN[dow(d) - 1]}）</option>`).join('')}</select>`;
 }
-function onLeaveKid(id) { const b = $('#leave_date_box'); if (b) b.innerHTML = leaveDateHtml(stuById(id)); const o = document.querySelector('#leave_reason_type option[value="事假"]'), k = stuById(id); if (o && k) o.textContent = k.camp ? '🚗 私人事假（營隊可請假，不提供補課）' : '🚗 私人事假（可多次請假，每期僅能補課 1 堂）'; }
+function campNote(k) { return k && k.camp ? `<div style="margin:6px 0;padding:10px 12px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-weight:700;line-height:1.5">⚠️ 冬令營請假「不提供補課」，恕不退費。<br><span style="font-weight:500">只能請孩子「已報名的那一期」的上課日。</span></div>` : ''; }
+function onLeaveKid(id) { const nb = $('#leave_note'); if (nb) nb.innerHTML = campNote(stuById(id)); const b = $('#leave_date_box'); if (b) b.innerHTML = leaveDateHtml(stuById(id)); const o = document.querySelector('#leave_reason_type option[value="事假"]'), k = stuById(id); if (o && k) o.textContent = k.camp ? '🚗 私人事假（營隊可請假，不提供補課）' : '🚗 私人事假（可多次請假，每期僅能補課 1 堂）'; }
 
 function swapRefresh(keepDate) {
   const sidEl = $('#sw_sid'), de = $('#sw_date'), ce = $('#sw_cls'); if (!sidEl || !de || !ce) return;
@@ -501,6 +502,7 @@ async function viewParent() {
         <option value="病假">🤒 病假（請於官方LINE上傳看診收據）</option>
         <option value="事假">${vis[0] && vis[0].camp ? '🚗 私人事假（營隊可請假，不提供補課）' : '🚗 私人事假（可多次請假，每期僅能補課 1 堂）'}</option>
       </select>
+      <div id="leave_note">${campNote(vis[0])}</div>
       <div id="leave_date_box">${leaveDateHtml(vis[0])}</div>
       <input id="leave_rsn" placeholder="原因說明（例如：發燒就醫／外出旅遊）">
       <button class="pri" onclick="run(this,doSubmitLeave)">送出請假申請 ➜</button>`) +
@@ -519,12 +521,13 @@ async function viewParent() {
     card('📋 出勤／請假／缺席紀錄', attHtml) +
     card('🔄 當天換時段（調課）', `
       <p class="muted">例如上午的課改到下午上、或下午的課提早來上午。需經總教練核准，不算請假、不扣事假次數。</p>
+      ${st.some(s => s.camp) ? `<div style="margin:6px 0;padding:10px 12px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;line-height:1.6"><b>🏕️ 冬令營調課規則</b><br>・只能 <b>A 班 ↔ B 班</b> 互調，當天換時段。<br>・<b>第一期只能調第一期、第二期只能調第二期</b>，不能把第一期的課調到第二期。<br>・例如：第一期 A 班，可以只調某幾天去 B 班，或整期都調去 B 班（每一天各送一次申請）。</div>` : ''}
       <select id="sw_sid" onchange="swapRefresh()">${opt}</select>
       <select id="sw_date" onchange="swapRefresh(true)"></select>
       <select id="sw_cls"></select>
       <input id="sw_rsn" placeholder="原因說明（選填，例如：早上有事）">
       <button class="pri" onclick="run(this,doSubmitSwap)">送出調課申請 ➜</button>`) +
-    card('🏀 預約補課', makeupForm + `
+    card('🏀 預約補課', (st.some(s => s.camp) ? `<div style="margin:0 0 10px;padding:10px 12px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-weight:700">⚠️ 冬令營課程一律不提供補課；下方補課功能只適用常態班。</div>` : '') + makeupForm + `
       ${st.some(s => !s.camp) ? `<div class="rules-box"><b>📌 115年常態班請假補課規範：</b><ol>
         <li><b>病假單堂</b>：請提供看診收據（接受上課日前後二日）。</li>
         <li><b>病假兩堂以上</b>：請提供醫生診斷證明書。</li>
@@ -596,7 +599,7 @@ function calcPay() { // 簡章金額試算（新舊生由總教練人工確認�
   if (nCamp) { // 營隊：勾選要報名的期別，金額＝各期價目×人數＋T恤，沒有新舊生折扣
     showReg(false);
     if (nCamp !== sel.length) { box.style.display = 'none'; hint.textContent = '營隊和常態班請分開送出匯款（先勾選同一類的學員）'; return; }
-    const cps = sel[0].campPeriods.filter(p => sel.every(s => (s.campPeriods || []).some(z => z.period === p.period))), sig = cps.map(p => p.period).join('|');
+    const okPk = sel.every(s => (s.campPick || []).length) ? sel.reduce((a, z) => a.concat(z.campPick), []) : null, cps = sel[0].campPeriods.filter(p => sel.every(s => (s.campPeriods || []).some(z => z.period === p.period)) && (!okPk || okPk.includes(p.period))), sig = cps.map(p => p.period).join('|');
     if (box.dataset.sig !== sig) { box.dataset.sig = sig; box.innerHTML = cps.map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" value="${esc(p.period)}" ${(() => { const pk = sel.reduce((a, z) => a.concat(z.campPick || []), []); return !pk.length || pk.includes(p.period) ? 'checked' : ''; })()} onchange="calcPay()"> ${esc(p.label || p.period)}（${p.lessons} 堂・$${p.amount.toLocaleString()}）</label>`).join('') || '<p class="muted">這個營隊尚未設定期別價格，請依通知的金額匯款</p>'; }
     box.style.display = '';
     const pickP = [...box.querySelectorAll('input:checked')].map(i => i.value), sum = cps.filter(p => pickP.includes(p.period)).reduce((a, b) => a + b.amount, 0);
@@ -749,8 +752,8 @@ async function viewCoach() {
 
   $('#app').innerHTML =
     card('🏫 選擇班級' + (isAdmin ? '與日期' : ''), `
-      <select onchange="changeClass(this.value)">${cs.map(c => `<option value="${esc(c.classId)}" ${c.classId === S.cls ? 'selected' : ''}>${esc(c.name)} (${c.hours}h)</option>`).join('')}</select>
-      ${isAdmin ? `<p class="muted" style="margin:0 0 4px">日期（總教練可補點過去的名）</p><input type="date" value="${S.date}" max="${today()}" onchange="changeDate(this.value)">` : `<p class="muted" style="margin:0">今天：${today()}</p>`}`) +
+      <select onchange="changeClass(this.value)">${cs.map(c => c.camp && (c.campPer || []).length && isAdmin ? c.campPer.map(p => { const v = c.classId + '|' + p.period, on = c.classId === S.cls && (S.campPer || (S.period || '')) === p.period; return `<option value="${esc(v)}" ${on ? 'selected' : ''}>🏕️ ${esc(String(p.label).replace(/^冬令營/, ''))}・${esc(String(c.name).replace(/^冬令營/, ''))}</option>`; }).join('') : `<option value="${esc(c.classId)}" ${c.classId === S.cls ? 'selected' : ''}>${esc(c.name)} (${c.hours}h)</option>`).join('')}</select>
+      ${isAdmin ? `<p class="muted" style="margin:0 0 4px">日期（總教練可補點過去的名）</p>${cur && cur.camp && (cur.campPer || []).length ? `<select onchange="changeDate(this.value)">${cur.campPer.filter(p => !S.campPer || p.period === S.campPer).map(p => p.dates.map(d => `<option value="${d}" ${d === S.date ? 'selected' : ''}>${d}（週${DN[dow(d) - 1]}）・${esc(String(p.label).replace(/^冬令營/, ''))}</option>`).join('')).join('')}</select>` : `<input type="date" value="${S.date}" max="${today()}" onchange="changeDate(this.value)">`}` : `<p class="muted" style="margin:0">今天：${today()}</p>`}`) +
     card('📍 簽到：' + esc(cur.name), `
       <div class="row" style="border-top:0">
         <span>${isToday ? (S.checkedIn ? '<span class="pill">✓ 今日已簽到</span>' : '<span class="pill warn">尚未簽到</span>') : '<span class="muted" style="margin:0">簽到僅限當天</span>'}</span>
@@ -786,7 +789,12 @@ function mySalaryCard(m) { // 教練的班表與授課明細（不顯示時薪�
     <div class="stats"><div class="stat"><b>${m.lessonCount}</b><span>${esc(m.month)} 授課堂數</span></div><div class="stat"><b>${m.totalHours}</b><span>授課小時</span></div></div>
     <details><summary class="muted" style="cursor:pointer">授課明細（${(m.days || []).length} 筆）</summary>${(m.days || []).map(d => `<div class="row" style="padding:6px 0"><span>${esc(d.date)}・${esc(d.className)}${d.note ? `<span class="muted">（${esc(d.note)}）</span>` : ''}</span><span class="muted" style="margin:0">${d.hours} 小時</span></div>`).join('') || '<p class="muted">本月尚無簽到</p>'}</details></div>`);
 }
-async function changeClass(v) { S.cls = v; await safe(viewCoach); }
+async function changeClass(v) {
+  const [cid, per] = String(v).split('|'); S.cls = cid; S.campPer = per || '';
+  const c = (S.me.classes || []).find(x => x.classId === cid), p = c && (c.campPer || []).find(x => x.period === per);
+  if (p && p.dates.length && S.me.role === 'admin') { const t = today(); S.date = p.dates.includes(S.date) ? S.date : (p.dates.find(d => d >= t) || p.dates[0]); }
+  await safe(viewCoach);
+}
 async function changeDate(v) { if (v) { S.date = v; await safe(viewCoach); } }
 const CLS_PAL = [['#dbeafe', '#1d4ed8'], ['#dcfce7', '#15803d'], ['#fef3c7', '#b45309'], ['#fce7f3', '#be185d'], ['#ede9fe', '#6d28d9'], ['#ccfbf1', '#0f766e'], ['#ffedd5', '#c2410c'], ['#e0e7ff', '#4338ca']];
 function clsPill(name) { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 997; const c = CLS_PAL[h % CLS_PAL.length]; return `<span class="pill" style="background:${c[0]};color:${c[1]};font-weight:700">${esc(name)}</span>`; }

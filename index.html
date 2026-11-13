@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r50';
+const FE_VER = '2026-11-13-r51';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -1156,7 +1156,7 @@ async function manageStudent(id) {
   const x = (S.adm.students || []).find(s => s.id === id); if (!x) return;
   const k = await menu(`${x.name}（${x.className}${x.grp ? '・' + x.grp : ''}）・${balT(x.balance)}`, [
     ['edit', '📝 修改學員資料（姓名／班級／電話／備註／可同時調堂數）'],
-    ...((S.me.classes || []).some(c => c.camp) && !x.kind ? [['camp', '🏕️ 加報營隊（幫他新增一筆營隊學員，共用綁定碼）']] : []),
+    ...(!x.kind && !/（冬令營/.test(x.name) && !(S.me.classes || []).some(c => c.classId === x.classId && c.camp) ? [['camp', '🏕️ 加報營隊（幫他新增一筆營隊學員，共用綁定碼）']] : []),
     ...(x.kind ? [['visit', `📅 新增${x.kind}上課日期（不是每週來，要來的那天再加）`]] : []),
     ['adj', '✏️ 手動調整堂數'],
     ['unbind', `🔗 解除家長綁定（目前 ${x.bound} 個帳號）`],
@@ -1165,6 +1165,7 @@ async function manageStudent(id) {
   if (!k) return;
   if (k === 'camp') {
     const camps = (S.me.classes || []).filter(c => c.camp);
+    if (!camps.length) return toast('找不到營隊班：請先在「班級列表」K 欄填「營隊」（或跑 setupCamp），再完全關掉網頁重開');
     const v = await dialog(`${x.name}・加報營隊`, [{ key: 'classId', label: '營隊班級（時段）', type: 'select', value: camps[0].classId, options: camps.map(c => [c.classId, c.name]) }], '新增');
     if (!v) return;
     const r = await api('addCamp', { studentId: id, classId: v.classId });

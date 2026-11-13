@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r49';
+const FE_VER = '2026-11-13-r50';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -370,6 +370,7 @@ function leaveSummary(vis, h) { // 請假／補課統計：每位孩子、每一
     const mine = ls.filter(l => l.studentId === s.studentId), pers = [...new Set(mine.map(l => l.period || '本期'))];
     return `<div style="margin:6px 0 10px"><b>${esc(s.name)}</b>` + pers.map(p => {
       const g = mine.filter(l => (l.period || '本期') === p), cnt = k => g.filter(l => l.kind === k).length;
+      if (g.length && g.every(l => l.noMakeup)) return `<div class="muted" style="margin:3px 0;font-size:13.5px"><b>${esc(p)}</b>：請假 ${g.length} 堂（${['事假', '病假', '天災', '其他'].filter(k => cnt(k)).map(k => k + cnt(k)).join('・')}）・<b>營隊課程不提供補課</b></div>`;
       const made = g.filter(l => l.linkedMakeupId && l.makeupDate && l.makeupDate <= t).length, booked = g.filter(l => l.linkedMakeupId && !(l.makeupDate && l.makeupDate <= t)).length, open = g.filter(l => !l.linkedMakeupId && l.deadline >= t);
       const pOpen = open.filter(l => l.kind === '事假'), usedP = g.filter(l => l.kind === '事假' && l.linkedMakeupId).length;
       const can = open.length - pOpen.length + (usedP ? 0 : Math.min(1, pOpen.length)), lost = open.length - can;
@@ -398,7 +399,7 @@ function swapRefresh(keepDate) {
     de.innerHTML = ds.length ? ds.map(d => `<option value="${d}">${d}（週${DN[dow(d) - 1]}）</option>`).join('') : '<option value="">近期沒有上課日</option>';
   }
   const own = ((S.parentData && S.parentData.cl) || []).find(c => c.classId === st.classId), d = de.value;
-  const list = ((S.parentData && S.parentData.cl) || []).filter(c => c.classId !== st.classId && own && c.hours === own.hours && (!c.days || !c.days.length || (d && c.days.includes(dow(d)))));
+  const list = ((S.parentData && S.parentData.cl) || []).filter(c => c.classId !== st.classId && own && !!c.camp === !!own.camp && c.hours === own.hours && (!c.days || !c.days.length || (d && c.days.includes(dow(d)))));
   ce.innerHTML = list.length ? list.map(c => `<option value="${esc(c.classId)}">${esc(c.name)} (${c.hours}h)</option>`).join('') : '<option value="">沒有可換的班級（需不同時段、相同時數）</option>';
 }
 async function doSubmitSwap() {
@@ -444,6 +445,7 @@ function restoreForm(o) {
   if ($('#sw_sid')) { swapRefresh(); set('sw_date'); swapRefresh(true); set('sw_cls'); }
   if (o.leave_sid !== undefined && $('#leave_sid')) onLeaveKid($('#leave_sid').value);
   updateMk(); set('leave_date'); set('mk_date');
+  if ($('#shirt_on') && $('#pay_shirts')) { const n = Number($('#pay_shirts').value) > 0; $('#shirt_on').checked = n; $('#pay_shirts').style.display = n ? '' : 'none'; }
 }
 
 async function viewParent() {
@@ -506,7 +508,7 @@ async function viewParent() {
       (h.leaves || []).filter(l => S.curKid === 'ALL' || l.studentId === S.curKid).map(l => `<div class="row"><div>
         <b>${esc(l.type)} ${esc(l.date)}・${esc(l.studentName)}</b>${l.type === '請假' && l.kind ? ` <span class="pill ${l.kind === '病假' ? '' : 'warn'}">${esc(l.kind)}</span>` : ''}
         ${l.reasonText ? `<div class="muted" style="font-size:12.5px;margin:2px 0 0">原因：${esc(l.reasonText)}${l.at ? '（' + esc(l.at) + ' 申請）' : ''}</div>` : ''}
-        ${l.deadline ? `<div class="muted" style="font-size:12.5px;color:#b45309;margin:2px 0 0">補課截止日：${esc(l.deadline)}</div>` : ''}
+        ${l.noMakeup ? '<div class="muted" style="font-size:12.5px;color:#b45309;margin:2px 0 0">營隊課程不提供補課</div>' : l.deadline ? `<div class="muted" style="font-size:12.5px;color:#b45309;margin:2px 0 0">補課截止日：${esc(l.deadline)}</div>` : ''}
         ${l.linkedMakeupId ? `<div class="muted" style="color:var(--pri);font-weight:700;font-size:13px;margin:2px 0 0">已預約補課：單號 ${esc(l.linkedMakeupId)}</div>` : ''}
         ${l.note ? `<div class="muted" style="color:var(--bad);font-size:13px;margin:0">說明：${esc(l.note)}</div>` : ''}${cancelBtn(l)}</div>${pill(l.status)}</div>`).join('')) || '<p class="muted">尚無歷史紀錄</p>') +
     scheduleCard(vis, h) +
@@ -529,7 +531,8 @@ async function viewParent() {
       <p class="muted">${esc(CONFIG.BANK)}</p>
       <select id="pay_period">${(periods || []).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
       <div class="two"><select id="pay_terms" onchange="calcPay()"><option value="1">報名 1 期（7 堂）</option>${(periods || []).length > 1 ? '<option value="2">一次報名 2 期（14 堂）</option>' : ''}</select>
-        <input id="pay_shirts" type="number" inputmode="numeric" min="0" value="0" placeholder="另購短T件數" oninput="calcPay()"></div>
+        <label style="display:flex;gap:8px;align-items:center;margin:0"><input id="shirt_on" type="checkbox" onchange="toggleShirt()"> 另購短T</label></div>
+      <input id="pay_shirts" type="number" inputmode="numeric" min="1" value="0" placeholder="要幾件？" oninput="calcPay()" style="display:none;margin:6px 0">
       <div id="camp_box" style="display:none;margin:6px 0"></div>
       <div class="chk" onchange="calcPay()">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}${st.filter(z => z.name === s.name).length > 1 ? '（' + esc(s.className) + '）' : ''}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
       <p id="pay_hint" class="muted" style="font-weight:600"></p>
@@ -608,6 +611,7 @@ async function switchKid(id) {
   restoreForm(snap);
 }
 
+function toggleShirt() { const on = $('#shirt_on').checked, e = $('#pay_shirts'); e.style.display = on ? '' : 'none'; e.value = on ? (Number(e.value) > 0 ? e.value : 1) : 0; calcPay(); }
 async function doSubmitPay() {
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
   if (!ids.length) throw new Error('請勾選繳費的學員');

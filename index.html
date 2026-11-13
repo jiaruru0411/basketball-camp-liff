@@ -265,6 +265,7 @@ const ACT = {
   reviewLeave: d => reviewLeaveUi(d.id, d.d, d.k),
   manageStu: d => manageStudent(d.id),
   campSignup: d => campSignup(d.sid, d.cid),
+  reviewCamp: d => reviewCampUi(d.id, d.d),
   delAdj: d => delAdj(d.id),
   lockMonth: () => lockMonthUi(),
   unlockMonth: () => unlockMonthUi(),
@@ -283,7 +284,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r52';
+const FE_VER = '2026-11-13-r53';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -452,7 +453,7 @@ function restoreForm(o) {
 async function viewParent() {
   if (!S.parentData) {
     const d = await api('parentHome', {}, true);
-    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods, notices: d.notices || [], cal: d.calendar || [], plan: d.plan || { shirt: 450, discount: { '舊生': { 1: 200, 2: 600 }, '新生': { 1: 200, 2: 0 } }, gift: {}, lessons: 7 } };
+    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods, notices: d.notices || [], cal: d.calendar || [], campApps: d.campApps || [], plan: d.plan || { shirt: 450, discount: { '舊生': { 1: 200, 2: 600 }, '新生': { 1: 200, 2: 0 } }, gift: {}, lessons: 7 } };
     updateGreeting();
   }
   const { h, cl, mo, periods } = S.parentData;
@@ -614,22 +615,32 @@ async function switchKid(id) {
 }
 
 function toggleShirt() { const on = $('#shirt_on').checked, e = $('#pay_shirts'); e.style.display = on ? '' : 'none'; e.value = on ? (Number(e.value) > 0 ? e.value : 1) : 0; calcPay(); }
-function campSignupCard(st, cl) { // 家長自己報名冬令營：每位常態班孩子、每個營隊班一顆按鈕（已報過的不再出現）
+function campAppsCard(a) { const l = a.campApps || []; if (!l.length) return '';
+  return card('🏕️ 待審核營隊報名 <span class="pill warn">' + l.length + '</span>', l.map(x => `<div class="item"><b>${esc(x.name)}</b> → ${esc(x.className)} <span class="muted">${esc(x.at)}</span>
+    <div class="two" style="margin-top:8px"><button class="pri" data-act="reviewCamp" data-id="${esc(x.id)}" data-d="pass">✅ 核准</button><button class="ghost" data-act="reviewCamp" data-id="${esc(x.id)}" data-d="reject">婉拒</button></div></div>`).join(''));
+}
+async function reviewCampUi(id, decision) {
+  let note = '';
+  if (decision === 'reject') { const v = await dialog('婉拒營隊報名', [{ key: 'note', label: '原因（家長會看到）', ph: '例如：名額已滿' }], '確認婉拒'); if (!v) return; note = v.note; }
+  await api('reviewCamp', { id, decision, note });
+  render(); setTimeout(() => toast(decision === 'pass' ? '已核准，已建立營隊學員並通知家長' : '已婉拒'), 100);
+}
+function campSignupCard(st, cl) { const pend = ((S.parentData && S.parentData.campApps) || []); // 家長自己報名冬令營：每位常態班孩子、每個營隊班一顆按鈕（已報過的不再出現）
   const camps = (cl || []).filter(c => c.camp); if (!camps.length) return '';
   const names = new Set(st.map(s => s.name)), kids = st.filter(s => !s.camp && !s.kind && !/（冬令營|（營隊/.test(s.name));
   const rows = kids.map(k => {
-    const base = k.name.replace(/（.*）$/, ''), todo = camps.filter(c => !names.has(base + '（' + c.name.replace(/\s+/g, '') + '）'));
-    return `<div style="margin:8px 0"><b>${esc(k.name)}</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${todo.map(c => `<button class="ghost" data-act="campSignup" data-sid="${esc(k.studentId)}" data-cid="${esc(c.classId)}">＋ 報名 ${esc(c.name)}${c.tm ? '（' + esc(c.tm) + ' 開始）' : ''}</button>`).join('') || '<span class="muted">已報名所有營隊班，請到下方匯款</span>'}</div></div>`;
+    const base = k.name.replace(/（.*）$/, ''), todo = camps.filter(c => !names.has(base + '（' + c.name.replace(/\s+/g, '') + '）')), wait = c => pend.some(a => a.studentId === k.studentId && a.classId === c.classId);
+    return `<div style="margin:8px 0"><b>${esc(k.name)}</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${todo.map(c => wait(c) ? `<span class="pill warn">⏳ ${esc(c.name)} 等待總教練審核</span>` : `<button class="ghost" data-act="campSignup" data-sid="${esc(k.studentId)}" data-cid="${esc(c.classId)}">＋ 報名 ${esc(c.name)}${c.tm ? '（' + esc(c.tm) + ' 開始）' : ''}</button>`).join('') || '<span class="muted">已報名所有營隊班，請到下方匯款</span>'}</div></div>`;
   }).join('');
   if (!rows) return '';
-  return card('🏕️ 冬令營報名', `<p class="muted" style="margin:0 0 6px">按下報名後，孩子的營隊班會出現在「匯款對帳回傳」，再勾選要報名的期別（第一期／第二期）並匯款。A 班、B 班都要上就各按一次。營隊請假<b>不提供補課</b>，A、B 班之間可以調課。</p>` + rows);
+  return card('🏕️ 冬令營報名', `<p class="muted" style="margin:0 0 6px">按下報名送出申請，<b>總教練審核通過</b>後會通知您，孩子的營隊班就會出現在「匯款對帳回傳」，再勾選期別（第一期／第二期）並匯款。A 班、B 班都要上就各按一次。營隊請假<b>不提供補課</b>，A、B 班之間可以調課。</p>` + rows);
 }
 async function campSignup(sid, cid) {
   const c = ((S.parentData && S.parentData.cl) || []).find(x => x.classId === cid), k = (S.me.students || []).find(x => x.studentId === sid);
   if (!c || !k) return;
-  if (!await ask(`要幫 ${k.name} 報名「${c.name}」嗎？\n報名後請到下方「匯款對帳回傳」勾選期別並匯款，才算完成。`)) return;
+  if (!await ask(`要幫 ${k.name} 申請報名「${c.name}」嗎？\n送出後等總教練審核，通過後才能匯款。`)) return;
   await api('parentAddCamp', { studentId: sid, classId: cid });
-  S.parentData = null; await viewParent(); setTimeout(() => toast('已報名 ' + c.name + '，請到下方匯款'), 100);
+  S.parentData = null; await viewParent(); setTimeout(() => toast('已送出報名申請，等總教練審核通過再匯款'), 100);
 }
 async function doSubmitPay() {
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
@@ -1073,6 +1084,7 @@ async function viewAdmin() {
   $('#app').innerHTML =
     `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${(s.board ? box(new Set(s.board.toMakeup.map(x => x.name)).size + ' 人', '⭐ 還有請假沒補課<br>共 ' + (s.approvedMakeupCount ?? 0) + ' 堂待補') : box((s.approvedMakeupCount ?? 0) + ' 堂', '⭐ 請假還沒補的堂數'))}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
     boardCard(s) +
+    campAppsCard(a) +
     overviewCard(a) +
     scheduleCardAdmin(a) +
     // 待審核匯款卡片：標題右側新增「💵 現場收取現金」快捷鍵 +

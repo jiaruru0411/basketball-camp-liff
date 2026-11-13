@@ -282,7 +282,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r48';
+const FE_VER = '2026-11-13-r49';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -838,14 +838,14 @@ function schedBody(sc) {
   if (!d) return '<p class="muted">近期沒有上課日</p>';
   const nameOf = id => ((sc.staff || []).find(x => x.id === id) || {}).name || '未登錄';
   return d.classes.map(c => `<div class="row" style="padding:8px 0"><div>${esc(c.name)}${c.tm && c.name.indexOf(c.tm) === -1 ? `<span class="muted"> ${esc(c.tm)}</span>` : ''}
-    <div class="muted" style="margin:0;font-size:12.5px">${c.ids.map(nameOf).map(esc).join('、') || '尚未指派教練'}${c.custom ? ' <span class="pill warn">已調整</span>' : ''}</div></div>
+    <div class="muted" style="margin:0;font-size:12.5px">${c.ids.map(nameOf).map(esc).join('、') || '尚未指派教練'}${c.custom ? ' <span class="pill warn">已排班</span>' : ''}</div></div>
     <button class="ghost mini" onclick="editSchedule('${esc(d.date)}','${esc(c.id)}')">調整</button></div>`).join('');
 }
 function scheduleCardAdmin(a) { // 排班：選日期看那天各班的教練，一次只顯示一天，畫面不會太長
   const sc = a.schedule || { dates: [], staff: [] };
   if (!sc.dates.some(x => x.date === S.schedDate)) S.schedDate = (sc.dates[0] || {}).date;
   return card('👥 排班', `<p class="muted">平常用「班級列表」設定的教練；臨時要換人，選日期後按該班的「調整」。只有排到班的教練可以簽到。</p>
-    <select onchange="schedPick(this.value)">${(sc.dates || []).map(d => `<option value="${esc(d.date)}" ${d.date === S.schedDate ? 'selected' : ''}>${esc(d.date)}（週${DN[dow(d.date) - 1]}）${d.classes.some(c => c.custom) ? '・有調整' : ''}</option>`).join('')}</select>
+    <select onchange="schedPick(this.value)">${(sc.dates || []).map(d => `<option value="${esc(d.date)}" ${d.date === S.schedDate ? 'selected' : ''}>${esc(d.date)}（週${DN[dow(d.date) - 1]}）${d.classes.some(c => c.custom) ? '・已排班' : ''}</option>`).join('')}</select>
     <div id="sched_box">${schedBody(sc)}</div>
     <button class="ghost" style="margin-top:10px;width:100%" onclick="batchSchedule()">📅 批次排班（一次排整期）</button>`);
 }

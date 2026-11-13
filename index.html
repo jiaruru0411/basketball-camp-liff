@@ -284,7 +284,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r54';
+const FE_VER = '2026-11-13-r55';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -632,7 +632,7 @@ function campSignupCard(st, cl) { // 家長自己報名冬令營：每位常態�
     const base = k.name.replace(/（.*）$/, ''), blocks = camps.map(c => {
       if (names.has(base + '（' + c.name.replace(/\s+/g, '') + '）')) return `<div class="muted" style="margin:6px 0">✅ ${esc(c.name)} 已報名成功</div>`;
       if (pend.some(a => a.studentId === k.studentId && a.classId === c.classId)) return `<div style="margin:6px 0"><span class="pill warn">⏳ ${esc(c.name)} 等待總教練審核</span></div>`;
-      return `<div style="margin:8px 0;padding:8px 10px;border:1px solid #f3e8da;border-radius:12px"><b>${esc(c.name)}</b>${c.tm ? `<span class="muted">（${esc(c.tm)} 開始）</span>` : ''}${(c.periods || []).map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" class="cs_chk" data-kid="${esc(k.studentId)}" data-cid="${esc(c.classId)}" value="${esc(p.period)}"> ${esc(p.label || p.period)}（${p.lessons} 堂・$${Number(p.amount).toLocaleString()}）</label>`).join('')}</div>`;
+      return `<div style="margin:8px 0;padding:10px 12px;border:1px solid #f3e8da;border-radius:12px;background:#fffaf3"><div style="font-size:16px;font-weight:800">${clsPill(c.name)}${c.tm ? `<span class="muted" style="font-weight:400">　${esc(c.tm)} 開始</span>` : ''}</div>${(c.periods || []).map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" class="cs_chk" data-kid="${esc(k.studentId)}" data-cid="${esc(c.classId)}" value="${esc(p.period)}"> <span><b>${esc(c.name)}</b>・${esc(p.label || p.period)}<span class="muted">（${p.lessons} 堂・$${Number(p.amount).toLocaleString()}）</span></span></label>`).join('')}${(c.periods || []).length ? '' : '<div class="muted">這個班目前沒有可報名的期別（課程日曆／價目表尚未設定）</div>'}</div>`;
     }).join('');
     const canSend = camps.some(c => !names.has(base + '（' + c.name.replace(/\s+/g, '') + '）') && !pend.some(a => a.studentId === k.studentId && a.classId === c.classId));
     return `<div style="margin:10px 0"><b>${esc(k.name)}</b>${blocks}${canSend ? `<button class="pri" data-act="campSignup" data-sid="${esc(k.studentId)}">送出 ${esc(k.name)} 的營隊報名申請 ➜</button>` : ''}</div>`;

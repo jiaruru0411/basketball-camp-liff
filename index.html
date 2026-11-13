@@ -284,7 +284,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r55';
+const FE_VER = '2026-11-13-r56';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -343,7 +343,7 @@ function classDates(st, n = 10) {
   for (let i = 0; i < 180 && out.length < n; i++, d = addDays(d, 1)) {
     if (st.classEnd && d > st.classEnd) break;
     const cal = (S.parentData && S.parentData.cal) || [];
-    if ((st.classDays || []).includes(dow(d)) && (!cal.length || cal.includes(d)) && !noticeOf(st, d)) out.push(d); // 停課的日子不用請假 // 有建「課程日曆」就只列簡章上的上課日
+    if ((st.classDays || []).includes(dow(d)) && (!cal.length || cal.includes(d)) && (!st.camp || !(st.campAllowed || []).length || !((S.parentData.calPer || {})[d]) || st.campAllowed.includes(S.parentData.calPer[d])) && !noticeOf(st, d)) out.push(d); // 停課的日子不用請假 // 有建「課程日曆」就只列簡章上的上課日
   }
   return out;
 }
@@ -453,7 +453,7 @@ function restoreForm(o) {
 async function viewParent() {
   if (!S.parentData) {
     const d = await api('parentHome', {}, true);
-    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods, notices: d.notices || [], cal: d.calendar || [], campApps: d.campApps || [], plan: d.plan || { shirt: 450, discount: { '舊生': { 1: 200, 2: 600 }, '新生': { 1: 200, 2: 0 } }, gift: {}, lessons: 7 } };
+    S.me = d.me; S.parentData = { h: d.history, cl: d.classes, mo: d.makeup, periods: d.periods, notices: d.notices || [], cal: d.calendar || [], calPer: d.calPer || {}, campApps: d.campApps || [], plan: d.plan || { shirt: 450, discount: { '舊生': { 1: 200, 2: 600 }, '新生': { 1: 200, 2: 0 } }, gift: {}, lessons: 7 } };
     updateGreeting();
   }
   const { h, cl, mo, periods } = S.parentData;
@@ -490,9 +490,7 @@ async function viewParent() {
   const cancelBtn = x => x.canCancel ? `<div><button class="ghost mini" style="margin-top:6px" data-act="cancel" data-id="${esc(x.id)}">取消這筆</button></div>` : '';
 
   $('#app').innerHTML = noticeBanner() + kidTabs +
-    card('⛹️ 孩子的課務狀態', vis.map(s => `<div class="row"><div><b>${esc(s.name)}</b>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}
-      <div class="muted" style="margin:0">${esc(s.grp || s.className)}${s.grade ? '・' + esc(s.grade) : ''}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}</div></div>
-      ${balPill(s.balance)}</div>${makeupLine(s.studentId, h)}`).join('') || '<p class="muted">尚未綁定學員</p>') +
+    card('⛹️ 孩子的課務狀態', statusRows(vis) || '<p class="muted">尚未綁定學員</p>') +
     card('📝 我要請假', `
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
       <select id="leave_reason_type">
@@ -625,6 +623,17 @@ async function reviewCampUi(id, decision) {
   await api('reviewCamp', { id, decision, note });
   render(); setTimeout(() => toast(decision === 'pass' ? '已核准，已建立營隊學員並通知家長' : '已婉拒'), 100);
 }
+function statusRows(vis) { // 同一位孩子的常態班與冬令營合併成一張：常態班一行、每個營隊班一行（顯示報名期別與堂數）
+  const base = n => n.replace(/（(冬令營|營隊)[^）]*）$/, ''), groups = new Map();
+  vis.forEach(s => { const b = base(s.name); if (!groups.has(b)) groups.set(b, []); groups.get(b).push(s); });
+  const row = s => {
+    const camp = s.camp, per = (s.campAllowed || []);
+    const sub = camp ? `🏕️ ${esc(s.className)}${per.length ? '・' + per.map(esc).join('、') : ''}` : `${esc(s.grp || s.className)}${s.grade ? '・' + esc(s.grade) : ''}${s.classDays && s.classDays.length ? '・' + dayTxt(s.classDays) : ''}`;
+    const pill = camp ? (s.balance > 0 || s.campPaid ? `<span class="pill">冬令營 剩 ${s.balance} 堂</span>` : `<span class="pill warn">冬令營・尚未匯款</span>`) : balPill(s.balance);
+    return `<div class="row" style="padding:6px 0"><div><span class="muted" style="margin:0">${sub}</span>${s.status === '結業' ? ' <span class="pill gray">已結業</span>' : ''}</div>${pill}</div>${makeupLine(s.studentId, S.parentData.h)}`;
+  };
+  return [...groups.entries()].map(([b, list]) => `<div style="margin:6px 0 12px;padding-bottom:6px;border-bottom:1px dashed #f0e7dd"><b style="font-size:16px">${esc(b)}</b>${list.map(row).join('')}</div>`).join('');
+}
 function campSignupCard(st, cl) { // 家長自己報名冬令營：每位常態班孩子，勾選要報的「班級 × 期別」（可多選），一次送出申請
   const pend = ((S.parentData && S.parentData.campApps) || []), camps = (cl || []).filter(c => c.camp); if (!camps.length) return '';
   const names = new Set(st.map(s => s.name)), kids = st.filter(s => !s.camp && !s.kind && !/（冬令營|（營隊/.test(s.name));
@@ -709,7 +718,7 @@ async function viewCoach() {
   const isAdmin = S.me.role === 'admin';
   if (!isAdmin || !S.date) S.date = today();
   const r = await api('roster', { classId: S.cls, date: S.date }, true);
-  S.upcoming = r.upcoming || []; S.swapOut = r.swapOut || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin; S.duty = r.duty || {}; S.cancelled = r.cancelled || '';
+  S.period = r.period || ''; S.upcoming = r.upcoming || []; S.swapOut = r.swapOut || []; S.list = r.list; S.checkedIn = r.checkedIn; S.needCheckin = r.needCheckin; S.duty = r.duty || {}; S.cancelled = r.cancelled || '';
   
   S.list.forEach(x => { 
     x.v = x.saved || (x.leave ? '請假' : '未到'); 
@@ -736,7 +745,7 @@ async function viewCoach() {
       <div style="border-top:1px dashed #f0e7dd;padding-top:8px;margin-top:6px"><div class="muted" style="font-weight:700">近期出勤紀錄</div>${logs}</div>`) +
     card('🏀 課堂學員點名', `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span class="muted" style="margin:0;font-weight:700">${esc(cur.name)}・${esc(S.date)}</span>
+        <span class="muted" style="margin:0;font-weight:700">${esc(cur.name)}・${esc(S.date)}${S.period ? ` <span class="pill" style="background:#ffedd5;color:#c2410c">🏕️ ${esc(S.period)}</span>` : ''}</span>
         <button class="ghost mini" onclick="safe(viewCoach)">🔄 重新整理</button>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:12px;font-size:13px">

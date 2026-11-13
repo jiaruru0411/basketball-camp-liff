@@ -286,7 +286,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r67';
+const FE_VER = '2026-11-14-r68';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -411,6 +411,8 @@ async function doSubmitSwap() {
   const d = $('#sw_date').value, c = $('#sw_cls').value;
   if (!d) throw new Error('請選擇調課日期');
   if (!c) throw new Error('沒有可換的班級');
+  const sw = e => { const x = $(e); return x && x.selectedOptions[0] ? x.selectedOptions[0].textContent.trim() : ''; };
+  if (!(await ask(`請再確認這筆調課申請是否正確：\n\n學員：${sw('#sw_sid')}\n日期：${d}（週${DN[dow(d) - 1]}）\n換去：${sw('#sw_cls')}\n\n送出後等待總教練核准。`))) return;
   await api('swap', { studentId: $('#sw_sid').value, date: d, targetClassId: c, reason: $('#sw_rsn').value });
   render();
   setTimeout(() => toast('調課申請已送出，等待總教練核准'), 100);
@@ -713,6 +715,8 @@ async function doSubmitLeave() {
   const dt = $('#leave_date');
   if (!dt || dt.disabled || !dt.value) throw new Error('請選擇請假的上課日');
   const q = { studentId: $('#leave_sid').value, reasonType: $('#leave_reason_type').value, date: dt.value, reason: $('#leave_rsn').value };
+  const so = e => { const x = $(e); return x && x.selectedOptions[0] ? x.selectedOptions[0].textContent.trim() : ''; };
+  if (!(await ask(`請再確認這筆請假是否正確：\n\n學員：${so('#leave_sid')}\n日期：${dt.value}（週${DN[dow(dt.value) - 1]}）\n類型：${so('#leave_reason_type')}${q.reason ? '\n原因：' + q.reason : ''}\n\n送出後等待總教練核准。`))) return;
   let r = await api('leave', q);
   if (r && r.confirm) { if (!(await ask(r.confirm))) return; r = await api('leave', Object.assign({ confirm: 1 }, q)); }
   render();
@@ -736,6 +740,8 @@ async function doSubmitMakeup() {
   }
 
   if (!$('#mk_cls').value) throw new Error('沒有可補課的班級（補課須選不同班、相同時數的班級）');
+  const mc = $('#mk_cls').selectedOptions[0];
+  if (!(await ask(`請再確認這筆補課預約是否正確：\n\n學員：${sel.selectedOptions[0].textContent.split('・')[0]}\n補課日期：${d}（週日）\n補課班級：${mc ? mc.textContent.trim() : ''}\n\n送出後等待總教練確認。`))) return;
   await api('makeup', { leaveId: sel.value, targetClassId: $('#mk_cls').value, targetDate: d });
   render();
   setTimeout(() => toast('補課預約已送出，等待總教練確認！'), 100);

@@ -101,6 +101,7 @@ code{background:#f5efe6;padding:4px 8px;border-radius:8px;word-break:break-all;f
 }
 .loading-text{color:#fff;font-size:15px;font-weight:700;letter-spacing:0.5px;}
 @keyframes spin{to{transform:rotate(360deg);}}
+@keyframes newpulse{0%,100%{opacity:1}50%{opacity:.55}}
 </style>
 </head>
 <body>
@@ -142,6 +143,16 @@ const dow = d => { const [y, m, dd] = parts(d); const w = new Date(Date.UTC(y, m
 const addDays = (d, n) => { const [y, m, dd] = parts(d); return new Date(Date.UTC(y, m - 1, dd + n)).toISOString().slice(0, 10); };
 const foldCard = (key, title, body, n, top = '') => `<section class="card" style="padding:0;overflow:hidden"><details ${S.fold && S.fold[key] ? 'open' : ''} ontoggle="(S.fold = S.fold || {})['${key}'] = this.open"><summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px"><h2 style="margin:0;font-size:16px">${title}</h2><span style="display:flex;align-items:center;gap:8px;white-space:nowrap">${n != null ? `<span style="background:#fff1e0;color:var(--pri);border-radius:999px;padding:2px 10px;font-size:13px;font-weight:800">${n}</span>` : ''}<span class="muted" style="margin:0;font-size:13px">▾</span></span></summary>${top ? `<div style="padding:0 16px 12px;display:flex;justify-content:flex-end">${top}</div>` : ''}<div style="padding:4px 16px 16px;border-top:1px solid #f3e8da">${body}</div></details></section>`;
 const card = (t, b, x = '') => `<section class="card"><h2>${t}${x}</h2>${b}</section>`;
+const NEWTAG = '<span class="pill" style="background:#ef4444;color:#fff;font-weight:800;margin:0 6px 4px 0;animation:newpulse 1.4s infinite">🆕 NEW</span>';
+const anch = (id, h) => `<div id="${id}">${h}</div>`;
+const foldify = (key, html, n) => { const m = /^\s*<section class="card"><h2>([\s\S]*?)<\/h2>([\s\S]*)<\/section>\s*$/.exec(html || ''); return m ? foldCard(key, m[1], m[2], n) : html; };
+function todoBar(a) { // 一進後台就看到：有哪些待處理（匯款／請假／補課／調課／營隊報名），點一下跳到該區
+  const lv = (S.adm && S.adm.leaves) || [], cnt = t => lv.filter(l => l.type === t).length, camp = new Set((a.campApps || []).map(x => x.sid || x.name)).size;
+  const items = [['a_pay', '💳 匯款', (a.payments || []).length], ['a_leave', '📝 請假', cnt('請假')], ['a_makeup', '⭐ 補課', cnt('補課')], ['a_swap', '🔄 調課', cnt('調課')], ['a_camp', '🏕️ 營隊報名', camp]].filter(x => x[2] > 0), tot = items.reduce((t, x) => t + x[2], 0);
+  if (!tot) return '<div class="card" style="text-align:center;color:var(--ok);font-weight:800">✅ 目前沒有待處理的事項</div>';
+  return `<div class="card" style="border:2px solid #ef4444;background:#fff5f5"><div style="font-weight:900;font-size:16px;margin-bottom:8px">🔔 你有 ${tot} 件待處理 ${NEWTAG}</div><div style="display:flex;flex-wrap:wrap;gap:8px">${items.map(x => `<button class="ghost" style="margin:0;padding:8px 12px;font-weight:800" onclick="goTo('${x[0]}')">${x[1]} <span class="pill" style="background:#ef4444;color:#fff">${x[2]}</span></button>`).join('')}</div></div>`;
+}
+function goTo(id) { const e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 const pill = s => `<span class="pill ${/退回|拒絕|缺席/.test(s) ? 'bad' : /取消/.test(s) ? 'gray' : /待/.test(s) ? 'warn' : ''}">${esc(s)}</span>`;
 const balT = b => b < 0 ? `欠 ${-b} 堂` : `剩 ${b} 堂`;
 const bal = b => (b <= 1 ? '⚠️ ' : '') + balT(b);
@@ -286,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r69';
+const FE_VER = '2026-11-14-r70';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -645,10 +656,10 @@ function toggleShirt() { const on = $('#shirt_on').checked, e = $('#pay_shirts')
 function campAppsCard(a) { // 營隊報名審核：同一位孩子的申請合併成一張，期別可取消勾選（修正家長勾錯），一次全部核准
   const l = a.campApps || []; if (!l.length) return '';
   const by = new Map(); l.forEach(x => { const k = x.sid || x.name; if (!by.has(k)) by.set(k, []); by.get(k).push(x); });
-  return card('🏕️ 待審核營隊報名 <span class="pill warn">' + by.size + ' 位</span>', [...by.entries()].map(([k, xs]) => `<div class="item" data-ca="${esc(k)}"><b style="font-size:16px">${esc(xs[0].name)}</b> <span class="muted">${esc(xs[0].at)}</span>
+  return anch('a_camp', card('🏕️ 待審核營隊報名 <span class="pill warn">' + by.size + ' 位</span>', [...by.entries()].map(([k, xs]) => `<div class="item" style="border-left:4px solid #ef4444" data-ca="${esc(k)}">${NEWTAG}<br><b style="font-size:16px">${esc(xs[0].name)}</b> <span class="muted">${esc(xs[0].at)}</span>
     ${xs.map(x => `<div style="margin:8px 0;padding:8px 10px;border:1px solid #f3e8da;border-radius:12px"><b>${esc(x.className)}</b>${(x.periods || []).map(q => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" class="ca_chk" data-app="${esc(x.id)}" value="${esc(q)}" checked> ${esc(q)}</label>`).join('')}</div>`).join('')}
     <div class="two" style="margin-top:8px"><button class="pri" data-act="reviewCamp" data-k="${esc(k)}" data-d="pass">✅ 全部核准（依勾選）</button><button class="ghost" data-act="reviewCamp" data-k="${esc(k)}" data-d="reject">婉拒全部</button></div>
-    <p class="muted" style="font-size:12.5px;margin:6px 0 0">家長勾錯可先取消勾選；整個班都沒勾＝不核准那個班。</p></div>`).join(''));
+    <p class="muted" style="font-size:12.5px;margin:6px 0 0">家長勾錯可先取消勾選；整個班都沒勾＝不核准那個班。</p></div>`).join('')));
 }
 async function reviewCampUi(k, decision) {
   const l = ((S.adm && S.adm.campApps) || []).filter(x => (x.sid || x.name) === k); if (!l.length) return;
@@ -843,9 +854,9 @@ function boardCard(s) { // 補課／調課／試上 一覽（依班級分色、�
   const swapBody = byClass(b.swaps, list => list.map(x => one(esc(x.name) + (x.pending ? ' <span class="pill warn">待審核</span>' : ''), `<span class="pill" style="background:#eff6ff;color:#2563eb">${md(x.date)} 調課</span>`, esc(x.fromClass) + ' → 此班')).join(''));
   const trialBody = byClass(b.trials, list => list.map(x => one(esc(x.name), `<span class="pill" style="background:#fce7f3;color:#be185d">${esc(x.kind)} ${md(x.date)}</span>`, '')).join(''));
   const people = new Set(b.toMakeup.map(x => x.name)).size;
-  return '<div id="board_wrap">' + card('📋 補課／調課／試上 一覽', filt +
+  return '<div id="board_wrap">' + foldify('board', card('📋 補課／調課／試上 一覽', filt +
     grp(`⭐ 待補課（${people} 位・請假還沒選補課日）`.replace(/（(\d+) 位/, '（$1 位'), b.toMakeup, toBody, true).replace(/（\d+）<\/summary>/, '</summary>') +
-    grp('✅ 已預約補課（還沒上）', b.booked, bookedBody) + grp('🔄 調課', b.swaps, swapBody) + grp('🆕 試上／補課生（已排日期）', b.trials, trialBody)) + '</div>';
+    grp('✅ 已預約補課（還沒上）', b.booked, bookedBody) + grp('🔄 調課', b.swaps, swapBody) + grp('🆕 試上／補課生（已排日期）', b.trials, trialBody)), b.toMakeup.length + b.booked.length + b.swaps.length + b.trials.length + ' 筆') + '</div>';
 }
 function setBoardCls(v) { S.boardCls = v; const e = document.getElementById('board_wrap'); if (e && S.adm) e.outerHTML = boardCard(S.adm.stats || {}); }
 function leaveBox() { // 教練一眼看到：這天誰請假、誰補課、之後誰要請假
@@ -1056,8 +1067,8 @@ function pendingCard(title, key, type) {
     return `<b>${esc(l.studentName)}</b> 調課日：<b>${esc(l.date)}</b>
       <div class="muted" style="margin:4px 0 0;color:var(--pri);font-weight:700">${esc(l.reasonText || l.reason)}</div>`;
   };
-  return card(title + (list.length ? ` <span class="pill warn">${list.length}</span>` : ''),
-    list.map(l => `<div class="item">${body(l)}${btns(l)}</div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>');
+  return anch('a_' + key, card(title + (list.length ? ` <span class="pill warn">${list.length}</span>` : ''),
+    list.map(l => `<div class="item" style="border-left:4px solid #ef4444">${NEWTAG}<br>${body(l)}${btns(l)}</div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>'));
 }
 function setRv(v) { S.rvMine = v; const e = document.getElementById('rv_list'); if (e) e.innerHTML = rvRows(); }
 function rvRows() {
@@ -1155,12 +1166,13 @@ async function viewAdmin() {
 
   $('#app').innerHTML =
     `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${(s.board ? box(new Set(s.board.toMakeup.map(x => x.name)).size + ' 人', '⭐ 還有請假沒補課<br>共 ' + (s.approvedMakeupCount ?? 0) + ' 堂待補') : box((s.approvedMakeupCount ?? 0) + ' 堂', '⭐ 請假還沒補的堂數'))}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
+    todoBar(a) +
     boardCard(s) +
     campAppsCard(a) +
     overviewCard(a) +
-    scheduleCardAdmin(a) +
+    foldify('sch', scheduleCardAdmin(a)) +
     // 待審核匯款卡片：標題右側新增「💵 現場收取現金」快捷鍵 +
-    card('💳 待審核匯款', (a.payments || []).map(p => `<div class="item" id="pay_item_${esc(p.id)}">
+    anch('a_pay', card('💳 待審核匯款' + ((a.payments || []).length ? ` <span class="pill warn">${a.payments.length}</span>` : ''), (a.payments || []).map(p => `<div class="item" style="border-left:4px solid #ef4444" id="pay_item_${esc(p.id)}">${NEWTAG}<br>
       <b>${esc(p.parentName)}</b>${p.parentPhone ? ` <a href="tel:${esc(p.parentPhone)}" style="color:var(--pri);font-size:13px;font-weight:700;text-decoration:none">📞 ${esc(p.parentPhone)}</a>` : ''}｜期別：<b>${esc(p.period)}</b>
       <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
       ${p.expOld ? `<div class="muted" style="margin:0 0 8px;font-weight:700;color:${(Number(p.amount) === p.expOld || Number(p.amount) === p.expNew) ? 'var(--ok)' : 'var(--bad)'}">簡章應收：舊生 $${p.expOld}／新生 $${p.expNew}${Number(p.amount) === p.expOld ? ' ✓ 符合舊生價' : Number(p.amount) === p.expNew ? ' ✓ 符合新生價' : ' ⚠️ 金額與兩種價格都不符，請確認'}</div>` : ''}${p.giftNew ? `<div class="muted" style="margin:0 0 8px;color:var(--pri);font-weight:700">🎁 若為新生：${esc(p.giftNew)}</div>` : ''}
@@ -1174,14 +1186,14 @@ async function viewAdmin() {
       <input id="nt_${esc(p.id)}" placeholder="退回說明（退回必填）">
       <div class="two"><button class="pri" data-act="reviewPay" data-id="${esc(p.id)}" data-d="pass">核准並加堂 ➜</button>
         <button class="ghost" data-act="reviewPay" data-id="${esc(p.id)}" data-d="reject">退回匯款</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>',
-      `<button class="ghost mini" onclick="run(this,cashPayUi)">💵 補登收款</button>`) +
+      `<button class="ghost mini" onclick="run(this,cashPayUi)">💵 補登收款</button>`)) +
     pendingCard('📝 待審核請假', 'leave', '請假') +
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +
     foldCard('rv', '🗒️ 審核紀錄', reviewedHtml(), ((S.adm && S.adm.reviewed) || []).length) +
-    card('💵 教練授課時數與薪資', ((a.salaryKeys || []).length ? `<select onchange="S.salKey=this.value;render()">${a.salaryKeys.map(k => `<option value="${esc(k)}" ${k === S.salKey ? 'selected' : ''}>${esc(k)}${(a.periodLabels || {})[k] ? '（' + esc(a.periodLabels[k]) + '）' : ''}</option>`).join('')}</select>` : `<input type="month" value="${esc(S.salKey)}" onchange="S.salKey=this.value;render()">`) + `
+    foldify('sal', card('💵 教練授課時數與薪資', ((a.salaryKeys || []).length ? `<select onchange="S.salKey=this.value;render()">${a.salaryKeys.map(k => `<option value="${esc(k)}" ${k === S.salKey ? 'selected' : ''}>${esc(k)}${(a.periodLabels || {})[k] ? '（' + esc(a.periodLabels[k]) + '）' : ''}</option>`).join('')}</select>` : `<input type="month" value="${esc(S.salKey)}" onchange="S.salKey=this.value;render()">`) + `
       ${locked ? `<div class="lockbar">🔒 已由 ${esc(locked.by)} 於 ${esc(locked.time)} 月結鎖定，以下為鎖定當時的金額</div>` : ''}
-      ${coachHtml}<div class="btns">${salaryBtns}</div>`) +
+      ${coachHtml}<div class="btns">${salaryBtns}</div>`)) +
     card('📋 出勤備忘錄（已核准名單）', `<div id="memo_container"></div>`) +
     foldCard('stu', '⛹️ 全部學員名冊', `<input type="search" placeholder="🔍 搜尋姓名／班級／編號" oninput="filterStu(this.value)">` +
       ((a.students || []).map(x => `<div class="row stu-row" data-q="${esc((x.name + x.id + x.className + (x.grp || '') + (x.grade || '')).toLowerCase())}"><div>

@@ -264,7 +264,7 @@ const ACT = {
   reviewPay: d => reviewPaySafe(d.id, d.d),
   reviewLeave: d => reviewLeaveUi(d.id, d.d, d.k),
   manageStu: d => manageStudent(d.id),
-  campSignup: d => campSignup(d.sid, d.cid),
+  campSignup: d => campSignup(d.sid),
   reviewCamp: d => reviewCampUi(d.id, d.d),
   delAdj: d => delAdj(d.id),
   lockMonth: () => lockMonthUi(),
@@ -284,7 +284,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-13-r53';
+const FE_VER = '2026-11-13-r54';
 function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練才看得到
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
@@ -391,7 +391,7 @@ function leaveDateHtml(st) {
   if (!ds.length) return `<select id="leave_date" disabled><option value="">近期沒有可請假的上課日</option></select>`;
   return `<select id="leave_date">${ds.map(d => `<option value="${d}">${d}（週${DN[dow(d) - 1]}）</option>`).join('')}</select>`;
 }
-function onLeaveKid(id) { const b = $('#leave_date_box'); if (b) b.innerHTML = leaveDateHtml(stuById(id)); }
+function onLeaveKid(id) { const b = $('#leave_date_box'); if (b) b.innerHTML = leaveDateHtml(stuById(id)); const o = document.querySelector('#leave_reason_type option[value="事假"]'), k = stuById(id); if (o && k) o.textContent = k.camp ? '🚗 私人事假（營隊可請假，不提供補課）' : '🚗 私人事假（可多次請假，每期僅能補課 1 堂）'; }
 
 function swapRefresh(keepDate) {
   const sidEl = $('#sw_sid'), de = $('#sw_date'), ce = $('#sw_cls'); if (!sidEl || !de || !ce) return;
@@ -497,7 +497,7 @@ async function viewParent() {
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
       <select id="leave_reason_type">
         <option value="病假">🤒 病假（請於官方LINE上傳看診收據）</option>
-        <option value="事假">🚗 私人事假（可多次請假，每期僅能補課 1 堂）</option>
+        <option value="事假">${vis[0] && vis[0].camp ? '🚗 私人事假（營隊可請假，不提供補課）' : '🚗 私人事假（可多次請假，每期僅能補課 1 堂）'}</option>
       </select>
       <div id="leave_date_box">${leaveDateHtml(vis[0])}</div>
       <input id="leave_rsn" placeholder="原因說明（例如：發燒就醫／外出旅遊）">
@@ -523,12 +523,12 @@ async function viewParent() {
       <input id="sw_rsn" placeholder="原因說明（選填，例如：早上有事）">
       <button class="pri" onclick="run(this,doSubmitSwap)">送出調課申請 ➜</button>`) +
     card('🏀 預約補課', makeupForm + `
-      <div class="rules-box"><b>📌 115年常態班請假補課規範：</b><ol>
+      ${st.some(s => !s.camp) ? `<div class="rules-box"><b>📌 115年常態班請假補課規範：</b><ol>
         <li><b>病假單堂</b>：請提供看診收據（接受上課日前後二日）。</li>
         <li><b>病假兩堂以上</b>：請提供醫生診斷證明書。</li>
         <li><b>事假限制</b>：學員私人因素可以請假，但<b>每期僅能補課 1 堂</b>，其餘事假堂數恕不補課退費。</li><li><b>補課班級</b>：不可補回原班，且須是<b>相同時數</b>的班級（1 小時對 1 小時、2 小時對 2 小時）。</li>
         <li><b>補課期限</b>：請於<b>該期課程整期結束後『四週內』完成</b>，未上完之課程視同放棄，無法退費。</li>
-        <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li>${st.some(s => s.camp) ? '<li><b>營隊課程</b>：寒假營等營隊請假<b>不提供補課</b>。</li>' : ''}</ol></div>`) +
+        <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li></ol></div></div>` : ''}${st.some(s => s.camp) ? `<div class="rules-box"><b>📌 冬令營請假規範：</b><ol><li>營隊期間可以請<b>事假或病假</b>，<b>一律不提供補課</b>，恕不退費。</li><li>A 班、B 班之間可以<b>調課</b>（需總教練核准）。</li></ol></div>` : ''}`) +
     campSignupCard(st, cl) +
     card('💳 匯款對帳回傳', `
       <p class="muted">${esc(CONFIG.BANK)}</p>
@@ -595,7 +595,7 @@ function calcPay() { // 簡章金額試算（新舊生由總教練人工確認�
     showReg(false);
     if (nCamp !== sel.length) { box.style.display = 'none'; hint.textContent = '營隊和常態班請分開送出匯款（先勾選同一類的學員）'; return; }
     const cps = sel[0].campPeriods.filter(p => sel.every(s => (s.campPeriods || []).some(z => z.period === p.period))), sig = cps.map(p => p.period).join('|');
-    if (box.dataset.sig !== sig) { box.dataset.sig = sig; box.innerHTML = cps.map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" value="${esc(p.period)}" checked onchange="calcPay()"> ${esc(p.label || p.period)}（${p.lessons} 堂・$${p.amount.toLocaleString()}）</label>`).join('') || '<p class="muted">這個營隊尚未設定期別價格，請依通知的金額匯款</p>'; }
+    if (box.dataset.sig !== sig) { box.dataset.sig = sig; box.innerHTML = cps.map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" value="${esc(p.period)}" ${(() => { const pk = sel.reduce((a, z) => a.concat(z.campPick || []), []); return !pk.length || pk.includes(p.period) ? 'checked' : ''; })()} onchange="calcPay()"> ${esc(p.label || p.period)}（${p.lessons} 堂・$${p.amount.toLocaleString()}）</label>`).join('') || '<p class="muted">這個營隊尚未設定期別價格，請依通知的金額匯款</p>'; }
     box.style.display = '';
     const pickP = [...box.querySelectorAll('input:checked')].map(i => i.value), sum = cps.filter(p => pickP.includes(p.period)).reduce((a, b) => a + b.amount, 0);
     if (!pickP.length) { hint.textContent = '請勾選要報名的期別'; return; }
@@ -616,7 +616,7 @@ async function switchKid(id) {
 
 function toggleShirt() { const on = $('#shirt_on').checked, e = $('#pay_shirts'); e.style.display = on ? '' : 'none'; e.value = on ? (Number(e.value) > 0 ? e.value : 1) : 0; calcPay(); }
 function campAppsCard(a) { const l = a.campApps || []; if (!l.length) return '';
-  return card('🏕️ 待審核營隊報名 <span class="pill warn">' + l.length + '</span>', l.map(x => `<div class="item"><b>${esc(x.name)}</b> → ${esc(x.className)} <span class="muted">${esc(x.at)}</span>
+  return card('🏕️ 待審核營隊報名 <span class="pill warn">' + l.length + '</span>', l.map(x => `<div class="item"><b>${esc(x.name)}</b> → ${esc(x.className)}${(x.periods || []).length ? '（' + x.periods.map(esc).join('、') + '）' : ''} <span class="muted">${esc(x.at)}</span>
     <div class="two" style="margin-top:8px"><button class="pri" data-act="reviewCamp" data-id="${esc(x.id)}" data-d="pass">✅ 核准</button><button class="ghost" data-act="reviewCamp" data-id="${esc(x.id)}" data-d="reject">婉拒</button></div></div>`).join(''));
 }
 async function reviewCampUi(id, decision) {
@@ -625,21 +625,30 @@ async function reviewCampUi(id, decision) {
   await api('reviewCamp', { id, decision, note });
   render(); setTimeout(() => toast(decision === 'pass' ? '已核准，已建立營隊學員並通知家長' : '已婉拒'), 100);
 }
-function campSignupCard(st, cl) { const pend = ((S.parentData && S.parentData.campApps) || []); // 家長自己報名冬令營：每位常態班孩子、每個營隊班一顆按鈕（已報過的不再出現）
-  const camps = (cl || []).filter(c => c.camp); if (!camps.length) return '';
+function campSignupCard(st, cl) { // 家長自己報名冬令營：每位常態班孩子，勾選要報的「班級 × 期別」（可多選），一次送出申請
+  const pend = ((S.parentData && S.parentData.campApps) || []), camps = (cl || []).filter(c => c.camp); if (!camps.length) return '';
   const names = new Set(st.map(s => s.name)), kids = st.filter(s => !s.camp && !s.kind && !/（冬令營|（營隊/.test(s.name));
   const rows = kids.map(k => {
-    const base = k.name.replace(/（.*）$/, ''), todo = camps.filter(c => !names.has(base + '（' + c.name.replace(/\s+/g, '') + '）')), wait = c => pend.some(a => a.studentId === k.studentId && a.classId === c.classId);
-    return `<div style="margin:8px 0"><b>${esc(k.name)}</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${todo.map(c => wait(c) ? `<span class="pill warn">⏳ ${esc(c.name)} 等待總教練審核</span>` : `<button class="ghost" data-act="campSignup" data-sid="${esc(k.studentId)}" data-cid="${esc(c.classId)}">＋ 報名 ${esc(c.name)}${c.tm ? '（' + esc(c.tm) + ' 開始）' : ''}</button>`).join('') || '<span class="muted">已報名所有營隊班，請到下方匯款</span>'}</div></div>`;
+    const base = k.name.replace(/（.*）$/, ''), blocks = camps.map(c => {
+      if (names.has(base + '（' + c.name.replace(/\s+/g, '') + '）')) return `<div class="muted" style="margin:6px 0">✅ ${esc(c.name)} 已報名成功</div>`;
+      if (pend.some(a => a.studentId === k.studentId && a.classId === c.classId)) return `<div style="margin:6px 0"><span class="pill warn">⏳ ${esc(c.name)} 等待總教練審核</span></div>`;
+      return `<div style="margin:8px 0;padding:8px 10px;border:1px solid #f3e8da;border-radius:12px"><b>${esc(c.name)}</b>${c.tm ? `<span class="muted">（${esc(c.tm)} 開始）</span>` : ''}${(c.periods || []).map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" class="cs_chk" data-kid="${esc(k.studentId)}" data-cid="${esc(c.classId)}" value="${esc(p.period)}"> ${esc(p.label || p.period)}（${p.lessons} 堂・$${Number(p.amount).toLocaleString()}）</label>`).join('')}</div>`;
+    }).join('');
+    const canSend = camps.some(c => !names.has(base + '（' + c.name.replace(/\s+/g, '') + '）') && !pend.some(a => a.studentId === k.studentId && a.classId === c.classId));
+    return `<div style="margin:10px 0"><b>${esc(k.name)}</b>${blocks}${canSend ? `<button class="pri" data-act="campSignup" data-sid="${esc(k.studentId)}">送出 ${esc(k.name)} 的營隊報名申請 ➜</button>` : ''}</div>`;
   }).join('');
   if (!rows) return '';
-  return card('🏕️ 冬令營報名', `<p class="muted" style="margin:0 0 6px">按下報名送出申請，<b>總教練審核通過</b>後會通知您，孩子的營隊班就會出現在「匯款對帳回傳」，再勾選期別（第一期／第二期）並匯款。A 班、B 班都要上就各按一次。營隊請假<b>不提供補課</b>，A、B 班之間可以調課。</p>` + rows);
+  return card('🏕️ 冬令營報名', `<p class="muted" style="margin:0 0 6px">請勾選要報名的<b>班級與期別</b>（可多選，例如 A 班第一期＋B 班第一期）。送出後由<b>總教練審核</b>，通過會通知您，再到下方「匯款對帳回傳」匯款。營隊請假<b>不提供補課</b>，A、B 班之間可以調課。</p>` + rows);
 }
-async function campSignup(sid, cid) {
-  const c = ((S.parentData && S.parentData.cl) || []).find(x => x.classId === cid), k = (S.me.students || []).find(x => x.studentId === sid);
-  if (!c || !k) return;
-  if (!await ask(`要幫 ${k.name} 申請報名「${c.name}」嗎？\n送出後等總教練審核，通過後才能匯款。`)) return;
-  await api('parentAddCamp', { studentId: sid, classId: cid });
+async function campSignup(sid) {
+  const k = (S.me.students || []).find(x => x.studentId === sid), cls = (S.parentData && S.parentData.cl) || [];
+  if (!k) return;
+  const by = {}; document.querySelectorAll('.cs_chk:checked').forEach(e => { if (e.dataset.kid === sid) (by[e.dataset.cid] = by[e.dataset.cid] || []).push(e.value); });
+  const picks = Object.keys(by).map(cid => ({ classId: cid, periods: by[cid] }));
+  if (!picks.length) throw new Error('請先勾選要報名的班級與期別');
+  const txt = picks.map(p => { const c = cls.find(x => x.classId === p.classId); return '・' + (c ? c.name : p.classId) + '：' + p.periods.map(q => { const z = c && (c.periods || []).find(y => y.period === q); return z ? (z.label || z.period) : q; }).join('、'); }).join('\n');
+  if (!await ask(`確定幫 ${k.name} 送出以下營隊報名申請嗎？\n\n${txt}\n\n送出後等總教練審核，通過後才能匯款。`)) return;
+  await api('parentAddCamp', { studentId: sid, picks });
   S.parentData = null; await viewParent(); setTimeout(() => toast('已送出報名申請，等總教練審核通過再匯款'), 100);
 }
 async function doSubmitPay() {
@@ -647,6 +656,8 @@ async function doSubmitPay() {
   if (!ids.length) throw new Error('請勾選繳費的學員');
   const campOn = $('#camp_box') && $('#camp_box').style.display !== 'none', campPer = campOn ? [...document.querySelectorAll('#camp_box input:checked')].map(i => i.value) : [];
   if (campOn && !campPer.length) throw new Error('請勾選要報名的營隊期別');
+  const nm = ids.map(i => (stuById(i) || {}).name).filter(Boolean).join('、'), per = campOn ? campPer.join('＋') : (($('#pay_period') || {}).value || '') + '・' + ($('#pay_terms') ? $('#pay_terms').value : 1) + ' 期', sh0 = Number(($('#pay_shirts') || {}).value) || 0;
+  if (!await ask(`請再確認此筆報名資料是否正確：\n\n學員：${nm}\n報名：${per}${sh0 ? '\nT恤：' + sh0 + ' 件' : ''}\n匯款金額：$${Number($('#amt').value || 0).toLocaleString()}\n帳號後五碼：${$('#l5').value.trim() || '（未填）'}\n匯款日期：${$('#pdate').value || '（未填）'}\n\n確定送出嗎？送出後將由總教練核對。`)) return;
   await api('pay', { period: $('#pay_period').value, plan: { terms: $('#pay_terms').value, shirts: $('#pay_shirts').value, camp: campPer }, studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value });
   render();
   setTimeout(() => toast('繳費資料已送出，等待總教練確認！'), 100);

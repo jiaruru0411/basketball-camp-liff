@@ -150,14 +150,14 @@ function todoBar(a) { // 一進後台就看到：每一件待處理都是一顆�
   const lv = (S.adm && S.adm.leaves) || [], md2 = d => String(d || '').slice(5).replace('-', '/');
   const nm = (arr, n = 2) => { const t = (arr || []).filter(Boolean); return t.length > n ? t.slice(0, n).join('、') + ' 等' + t.length + '位' : t.join('、'); };
   const btn = (txt, act) => `<button class="ghost" style="margin:0;padding:8px 12px;font-weight:800;text-align:left" ${act}>${txt}</button>`;
-  const sec = (title, arr) => arr.length ? `<div style="margin:10px 0 4px;font-weight:900;color:#475569">${title}　<span class="pill" style="background:#ef4444;color:#fff">${arr.length}</span></div><div style="display:flex;flex-wrap:wrap;gap:8px">${arr.join('')}</div>` : '';
-  const pay = (a.payments || []).map(p => btn(`${esc(nm((p.students || []).map(x => x.name)) || p.parentName)}　<span class="muted" style="font-weight:700">$${esc(p.amount)}${p.last5 === '現金' ? '・現金' : ''}</span>`, `onclick="goTo('pay_item_${esc(p.id)}')"`));
-  const lvB = t => lv.filter(l => l.type === t).map(l => btn(`${esc(l.studentName)}　<span class="muted" style="font-weight:700">${md2(l.date)}</span>`, `onclick="goTo('lv_item_${esc(l.id)}')"`));
+  const sec = (title, arr, anchor) => arr.length ? `<div style="margin:12px 0 6px"><button class="pri" style="width:auto;margin:0;padding:8px 14px;font-size:14.5px" onclick="goTo('${anchor}')">${title} ${arr.length} 件　前往審核 ➜</button></div><div style="display:flex;flex-wrap:wrap;gap:8px">${arr.join('')}</div>` : '';
+  const pay = (a.payments || []).map(p => btn(esc(nm((p.students || []).map(x => x.name)) || p.parentName), `onclick="goTo('pay_item_${esc(p.id)}')"`));
+  const lvB = t => lv.filter(l => l.type === t).map(l => btn(esc(l.studentName), `onclick="goTo('lv_item_${esc(l.id)}')"`));
   const campMap = new Map(); (a.campApps || []).forEach(x => { const k = x.sid || x.name; if (!campMap.has(k)) campMap.set(k, x.name); });
   const camp = [...campMap.entries()].map(([k, n]) => btn(esc(n), `data-k="${esc(k)}" onclick="goCamp(this.dataset.k)"`));
-  const groups = [['💳 繳費', pay], ['📝 請假', lvB('請假')], ['⭐ 補課', lvB('補課')], ['🔄 調課', lvB('調課')], ['🏕️ 營隊報名', camp]], tot = groups.reduce((t, g) => t + g[1].length, 0);
+  const groups = [['💳 待審核繳費', pay, 'a_pay'], ['📝 待審核請假', lvB('請假'), 'a_leave'], ['⭐ 待審核補課', lvB('補課'), 'a_makeup'], ['🔄 待審核調課', lvB('調課'), 'a_swap'], ['🏕️ 待審核營隊報名', camp, 'a_camp']], tot = groups.reduce((t, g) => t + g[1].length, 0);
   if (!tot) return '<div class="card" style="text-align:center;color:var(--ok);font-weight:800">✅ 目前沒有待處理的事項</div>';
-  return `<div class="card" style="border:2px solid #ef4444;background:#fff5f5"><div style="font-weight:900;font-size:16px">🔔 你有 ${tot} 件待處理 ${NEWTAG}</div><div class="muted" style="margin:2px 0 0;font-size:12.5px">點名字就會跳到那一筆</div>${groups.map(g => sec(g[0], g[1])).join('')}</div>`;
+  return `<div class="card" style="border:2px solid #ef4444;background:#fff5f5"><div style="font-weight:900;font-size:16px">🔔 你有 ${tot} 件待處理 ${NEWTAG}</div><div class="muted" style="margin:2px 0 0;font-size:12.5px">按橘色按鈕跳到那一區，按名字跳到那一筆</div>${groups.map(g => sec(g[0], g[1], g[2])).join('')}</div>`;
 }
 function flashEl(e) { if (!e) return; e.scrollIntoView({ behavior: 'smooth', block: 'start' }); const o = e.style.boxShadow; e.style.transition = 'box-shadow .3s'; e.style.boxShadow = '0 0 0 3px #f97316'; setTimeout(() => { e.style.boxShadow = o; }, 2000); } // 跳到那一筆並閃一下橘框
 function goTo(id) { flashEl(document.getElementById(id)); }
@@ -306,7 +306,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r99';
+const FE_VER = '2026-11-14-r100';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],

@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r80';
+const FE_VER = '2026-11-14-r81';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -572,7 +572,7 @@ async function viewParent() {
 
   const cancelBtn = x => x.canCancel ? `<div><button class="ghost mini" style="margin-top:6px" data-act="cancel" data-id="${esc(x.id)}">取消這筆</button></div>` : '';
 
-  $('#app').innerHTML = noticeBanner() + kidTabs +
+  $('#app').innerHTML = duesBanner() + noticeBanner() + kidTabs +
     card('⛹️ 孩子的課務狀態', statusRows(vis) || '<p class="muted">尚未綁定學員</p>') +
     card('📝 我要請假', `
       <select id="leave_sid" onchange="onLeaveKid(this.value)">${opt}</select>
@@ -613,7 +613,7 @@ async function viewParent() {
         <li><b>補課期限</b>：請於<b>該期課程整期結束後『四週內』完成</b>，未上完之課程視同放棄，無法退費。</li>
         <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li></ol></div></div>` : ''}${st.some(s => s.camp) ? `<div class="rules-box"><b>📌 冬令營請假規範：</b><ol><li>營隊期間可以請<b>事假或病假</b>，<b>一律不提供補課</b>，恕不退費。</li><li>A 班、B 班之間可以<b>調課</b>（需總教練核准）。</li></ol></div>` : ''}`) +
     campSignupCard(st, cl) +
-    card('💳 匯款對帳回傳', `
+    '<div id="p_pay"></div>' + card('💳 匯款對帳回傳', `
       <p class="muted">${esc(CONFIG.BANK)}</p>
       <p class="muted" style="margin:10px 0 4px;font-weight:800;color:var(--ink)">① 選擇要繳費的學員</p>
       <div class="chk" onchange="calcPay()">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}${st.filter(z => z.name === s.name).length > 1 ? '（' + esc(s.className) + '）' : ''}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
@@ -634,6 +634,17 @@ async function viewParent() {
   calcPay();
 }
 const noticeOf = (st, d) => ((S.parentData && S.parentData.notices) || []).find(n => n.date === d && (!n.cid || n.cid === st.classId));
+function duesBanner() { // 繳費提醒（家長）：冬令營或常態班還沒繳費／等待對帳
+  const kids = ((S.me && S.me.students) || []).filter(s => (s.dues || []).length);
+  if (!kids.length) return '';
+  const line = s => s.dues.map(d => d.t === 'pending'
+    ? `<div style="margin:3px 0">⏳ <b>${esc(s.name)}</b>：${esc(d.label)} 匯款已送出，等總教練對帳</div>`
+    : `<div style="margin:3px 0">💳 <b>${esc(s.name)}</b>：${d.label === '常態班' ? '剩餘堂數已用完，請記得繳費' : esc(d.label) + ' 尚未繳費'}</div>`).join('');
+  const hasUnpaid = kids.some(s => s.dues.some(d => d.t === 'unpaid'));
+  return `<div class="card" style="background:${hasUnpaid ? '#fff7ed' : '#f0f9ff'};border-color:${hasUnpaid ? '#fed7aa' : '#bae6fd'}"><h2 style="color:${hasUnpaid ? '#c2410c' : '#0369a1'}">💳 繳費提醒</h2>
+    ${kids.map(line).join('')}
+    ${hasUnpaid ? `<button class="pri" style="margin-top:10px" onclick="goTo('p_pay')">前往匯款對帳回傳 ➜</button><p class="muted" style="margin:8px 0 0;font-size:13px">已經用現金繳給教練、或剛匯款完成的話，總教練對帳後這個提醒就會消失。</p>` : ''}</div>`;
+}
 function noticeBanner() { // 停課公告（家長）
   const ns = (S.parentData && S.parentData.notices) || [];
   if (!ns.length) return '';
@@ -935,8 +946,21 @@ function rosterHtml() {
       </div>
       <span class="muted" style="margin:0;font-weight:700">${bal(x.balance)}</span></div>
     ${x.saved && x.by ? `<div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(x.by)}・${esc(x.at)} 已點名</div>` : ''}
+    ${x.cnote ? `<div style="margin:8px 0 0;padding:9px 12px;border-radius:12px;background:#fff7d6;border:1px solid #f5d76e;font-weight:700;color:#7a5200">📌 總教練提醒：${esc(x.cnote)}</div>` : ''}
+    ${S.me.role === 'admin' ? `<div style="margin:6px 0 0"><button type="button" class="ghost mini" style="width:auto;padding:5px 12px;font-size:13px" onclick="editCoachNote(${i})">${x.cnoteRaw ? '✏️ 修改備註' : '📌 加備註'}</button>${x.cnoteRaw && !x.cnote ? `<span class="muted" style="font-size:12.5px;margin-left:8px">（備註只限 ${esc(x.cnoteDate)} 顯示）</span>` : ''}</div>` : ''}
     ${x.note || x.phone ? `<div class="safe">${x.note ? `<span class="pill bad">⚠️ ${esc(x.note)}</span>` : ''}${x.phone ? `<a href="tel:${esc(x.phone.replace(/[^\d+]/g, ''))}">📞 ${esc(x.phone)}</a>` : ''}</div>` : ''}
     <div class="seg">${['未到', '出席', '請假', '缺席'].map(s => `<button type="button" data-s="${s}" class="${x.v === s ? 'on' : ''}" onclick="pickStatus(${i},'${s}')">${{ '未到': '⏳ 未到', '出席': '✓ 出席', '請假': '📝 請假', '缺席': '✕ 缺席' }[s]}</button>`).join('')}</div></div>`).join('');
+}
+async function editCoachNote(i) {
+  const x = S.list[i]; if (!x) return;
+  const v = await dialog('📌 給教練的備註：' + x.name, [
+    { key: 'text', label: '內容（清空＝刪除備註；教練點名時會看到）', ph: '例：新生第一堂，請發營隊衣服／今天要提早離開／尚未繳費', value: x.cnoteRaw || '' },
+    { key: 'scope', label: '顯示多久', type: 'select', value: x.cnoteRaw && x.cnoteDate ? 'day' : 'always', options: [['day', '只限這一天（' + S.date + '）'], ['always', '一直顯示，直到我清除']] }
+  ], '儲存');
+  if (!v) return;
+  await api('setCoachNote', { studentId: x.studentId, text: v.text, date: v.scope === 'day' ? S.date : '' });
+  toast(v.text ? '已儲存備註 📌' : '已清除備註');
+  await safe(viewCoach);
 }
 function pickStatus(i, s) { if (S.list[i]) { S.list[i].v = s; $('#roster').innerHTML = rosterHtml(); } }
 function setAll(s) { 

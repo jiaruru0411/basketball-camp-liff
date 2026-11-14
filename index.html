@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r79';
+const FE_VER = '2026-11-14-r80';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -837,7 +837,7 @@ async function viewCoach() {
   const logs = (S.me.recentCheckins || []).map(k => `<div class="row" style="padding:6px 0"><span>${esc(k.date)}・${esc(k.className)}</span><span class="pill">已簽到 ${esc(k.time)}</span></div>`).join('') || '<p class="muted" style="margin:4px 0 0">近期尚無簽到紀錄</p>';
 
   const leaveCount = S.list.filter(x => x.leave).length;
-  const makeupCount = S.list.filter(x => x.makeup).length;
+  const makeupCount = S.list.filter(x => x.makeup && !x.kind).length, trialCount = S.list.filter(x => x.kind === '試上').length, bkCount = S.list.filter(x => x.kind === '補課生').length;
 
   $('#app').innerHTML =
     card('🏫 選擇班級' + (isAdmin ? '與日期' : ''), `
@@ -859,7 +859,7 @@ async function viewCoach() {
       <div style="display:flex;gap:6px;margin-bottom:12px;font-size:13px">
         <span class="pill gray">名冊總計 ${S.list.length} 人</span>
         ${leaveCount ? `<span class="pill warn">📝 請假 ${leaveCount} 人</span>` : ''}
-        ${makeupCount ? `<span class="pill" style="background:#fffbeb;color:#d97706">⭐ 補課 ${makeupCount} 人</span>` : ''}
+        ${makeupCount ? `<span class="pill" style="background:#fffbeb;color:#d97706">⭐ 補課 ${makeupCount} 人</span>` : ''}${trialCount ? `<span class="pill" style="background:#fce7f3;color:#be185d">🆕 試上 ${trialCount} 人</span>` : ''}${bkCount ? `<span class="pill" style="background:#ecfdf5;color:#047857">🔁 補課生 ${bkCount} 人</span>` : ''}
       </div>
       ${S.needCheckin && !S.checkedIn ? '<p class="muted" style="color:var(--bad);font-weight:700">⚠️ 請先「簽到此班」才能儲存點名</p>' : ''}
       ${S.cancelled ? `<div class="item" style="background:#fff1f2;border-color:#fecdd3"><b style="color:#be123c">🚫 這個班 ${esc(S.date)} 已公告停課</b><div class="muted" style="margin:4px 0 0">原因：${esc(S.cancelled)}。不需要簽到與點名。</div></div>` : ''}
@@ -1083,7 +1083,7 @@ function overviewCard(a) { // #3 今日各班概況
     return `<div class="item"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(c.name)}</b>
       ${c.cancelled ? '<span class="pill bad">🚫 停課</span>' : `<span class="pill ${done ? '' : c.saved ? 'warn' : 'gray'}">點名 ${c.saved}／${c.total}</span>`}</div>
       <div style="margin:6px 0 0;font-size:13.5px">${c.coaches.map(k => `<span class="pill ${k.checked ? '' : 'bad'}" style="margin-right:4px">${k.checked ? '✓' : '✗'} ${esc(k.name)}${k.checked ? ' 已簽到' : ' 未簽到'}</span>`).join('') || '<span class="pill bad">未指派教練</span>'}</div>
-      <div class="muted" style="margin:6px 0 0;font-size:12.5px">${noCoach && c.coaches.length ? '⚠️ 目前還沒有教練簽到　' : ''}請假 ${c.leave}・補課 ${c.makeup}・調課 ${c.swap}</div></div>`;
+      <div class="muted" style="margin:6px 0 0;font-size:12.5px">${noCoach && c.coaches.length ? '⚠️ 目前還沒有教練簽到　' : ''}請假 ${c.leave}・補課 ${c.makeup}${c.trial ? '・試上 ' + c.trial : ''}${c.bk ? '・補課生 ' + c.bk : ''}・調課 ${c.swap}</div></div>`;
   }).join('') || '<p class="muted">今天沒有班級開課</p>');
 }
 function financeCard(a) { // 財務報表：依期別看（兩期合報的款項平均分到各期，T 恤算在第一期）

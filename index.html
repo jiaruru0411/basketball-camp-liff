@@ -146,13 +146,22 @@ const card = (t, b, x = '') => `<section class="card"><h2>${t}${x}</h2>${b}</sec
 const NEWTAG = '<span class="pill" style="background:#ef4444;color:#fff;font-weight:800;margin:0 6px 4px 0;animation:newpulse 1.4s infinite">🆕 NEW</span>';
 const anch = (id, h) => `<div id="${id}">${h}</div>`;
 const foldify = (key, html, n) => { const m = /^\s*<section class="card"><h2>([\s\S]*?)<\/h2>([\s\S]*)<\/section>\s*$/.exec(html || ''); return m ? foldCard(key, m[1], m[2], n) : html; };
-function todoBar(a) { // 一進後台就看到：有哪些待處理（匯款／請假／補課／調課／營隊報名），點一下跳到該區
-  const lv = (S.adm && S.adm.leaves) || [], cnt = t => lv.filter(l => l.type === t).length, camp = new Set((a.campApps || []).map(x => x.sid || x.name)).size;
-  const items = [['a_pay', '💳 匯款', (a.payments || []).length], ['a_leave', '📝 請假', cnt('請假')], ['a_makeup', '⭐ 補課', cnt('補課')], ['a_swap', '🔄 調課', cnt('調課')], ['a_camp', '🏕️ 營隊報名', camp]].filter(x => x[2] > 0), tot = items.reduce((t, x) => t + x[2], 0);
+function todoBar(a) { // 一進後台就看到：每一件待處理都是一顆按鈕（寫著名字），點了就跳到那一筆
+  const lv = (S.adm && S.adm.leaves) || [], md2 = d => String(d || '').slice(5).replace('-', '/');
+  const nm = (arr, n = 2) => { const t = (arr || []).filter(Boolean); return t.length > n ? t.slice(0, n).join('、') + ' 等' + t.length + '位' : t.join('、'); };
+  const btn = (txt, act) => `<button class="ghost" style="margin:0;padding:8px 12px;font-weight:800;text-align:left" ${act}>${txt}</button>`;
+  const sec = (title, arr) => arr.length ? `<div style="margin:10px 0 4px;font-weight:900;color:#475569">${title}　<span class="pill" style="background:#ef4444;color:#fff">${arr.length}</span></div><div style="display:flex;flex-wrap:wrap;gap:8px">${arr.join('')}</div>` : '';
+  const pay = (a.payments || []).map(p => btn(`${esc(nm((p.students || []).map(x => x.name)) || p.parentName)}　<span class="muted" style="font-weight:700">$${esc(p.amount)}${p.last5 === '現金' ? '・現金' : ''}</span>`, `onclick="goTo('pay_item_${esc(p.id)}')"`));
+  const lvB = t => lv.filter(l => l.type === t).map(l => btn(`${esc(l.studentName)}　<span class="muted" style="font-weight:700">${md2(l.date)}</span>`, `onclick="goTo('lv_item_${esc(l.id)}')"`));
+  const campMap = new Map(); (a.campApps || []).forEach(x => { const k = x.sid || x.name; if (!campMap.has(k)) campMap.set(k, x.name); });
+  const camp = [...campMap.entries()].map(([k, n]) => btn(esc(n), `data-k="${esc(k)}" onclick="goCamp(this.dataset.k)"`));
+  const groups = [['💳 繳費', pay], ['📝 請假', lvB('請假')], ['⭐ 補課', lvB('補課')], ['🔄 調課', lvB('調課')], ['🏕️ 營隊報名', camp]], tot = groups.reduce((t, g) => t + g[1].length, 0);
   if (!tot) return '<div class="card" style="text-align:center;color:var(--ok);font-weight:800">✅ 目前沒有待處理的事項</div>';
-  return `<div class="card" style="border:2px solid #ef4444;background:#fff5f5"><div style="font-weight:900;font-size:16px;margin-bottom:8px">🔔 你有 ${tot} 件待處理 ${NEWTAG}</div><div style="display:flex;flex-wrap:wrap;gap:8px">${items.map(x => `<button class="ghost" style="margin:0;padding:8px 12px;font-weight:800" onclick="goTo('${x[0]}')">${x[1]} <span class="pill" style="background:#ef4444;color:#fff">${x[2]}</span></button>`).join('')}</div></div>`;
+  return `<div class="card" style="border:2px solid #ef4444;background:#fff5f5"><div style="font-weight:900;font-size:16px">🔔 你有 ${tot} 件待處理 ${NEWTAG}</div><div class="muted" style="margin:2px 0 0;font-size:12.5px">點名字就會跳到那一筆</div>${groups.map(g => sec(g[0], g[1])).join('')}</div>`;
 }
-function goTo(id) { const e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function flashEl(e) { if (!e) return; e.scrollIntoView({ behavior: 'smooth', block: 'start' }); const o = e.style.boxShadow; e.style.transition = 'box-shadow .3s'; e.style.boxShadow = '0 0 0 3px #f97316'; setTimeout(() => { e.style.boxShadow = o; }, 2000); } // 跳到那一筆並閃一下橘框
+function goTo(id) { flashEl(document.getElementById(id)); }
+function goCamp(k) { flashEl([...document.querySelectorAll('[data-ca]')].find(x => x.dataset.ca === k)); }
 const pill = s => `<span class="pill ${/退回|拒絕|缺席/.test(s) ? 'bad' : /取消/.test(s) ? 'gray' : /待/.test(s) ? 'warn' : ''}">${esc(s)}</span>`;
 const balT = b => b < 0 ? `欠 ${-b} 堂` : `剩 ${b} 堂`;
 const bal = b => (b <= 1 ? '⚠️ ' : '') + balT(b);
@@ -297,7 +306,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r98';
+const FE_VER = '2026-11-14-r99';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -1179,7 +1188,7 @@ function pendingCard(title, key, type) {
       <div class="muted" style="margin:4px 0 0;color:var(--pri);font-weight:700">${esc(l.reasonText || l.reason)}</div>`;
   };
   return anch('a_' + key, card(title + (list.length ? ` <span class="pill warn">${list.length}</span>` : ''),
-    list.map(l => `<div class="item" style="border-left:4px solid #ef4444">${NEWTAG}<br>${body(l)}${btns(l)}</div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>'));
+    list.map(l => `<div class="item" id="lv_item_${esc(l.id)}" style="border-left:4px solid #ef4444">${NEWTAG}<br>${body(l)}${btns(l)}</div>`).join('') || '<p class="muted">目前沒有待處理的申請</p>'));
 }
 function setRv(v) { S.rvMine = v; const e = document.getElementById('rv_list'); if (e) e.innerHTML = rvRows(); }
 function rvRows() {
@@ -1323,7 +1332,7 @@ async function viewAdmin() {
     foldify('sch', scheduleCardAdmin(a)) +
     // 待審核繳費卡片：標題右側新增「💵 現場收取現金」快捷鍵 +
     anch('a_pay', card('💳 待審核繳費' + ((a.payments || []).length ? ` <span class="pill warn">${a.payments.length}</span>` : ''), `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px"><button class="ghost mini" onclick="run(this,cashPayUi)">💵 補登收款</button><button class="ghost mini" onclick="run(this,markCashUi)">📝 標記現金（還沒收到）</button></div>` + ((a.payments || []).map(p => `<div class="item" style="border-left:4px solid #ef4444" id="pay_item_${esc(p.id)}">${NEWTAG}<br>
-      <b>${esc(p.parentName)}</b>${p.parentPhone ? ` <a href="tel:${esc(p.parentPhone)}" style="color:var(--pri);font-size:13px;font-weight:700;text-decoration:none">📞 ${esc(p.parentPhone)}</a>` : ''}｜期別：<b>${esc(p.period)}</b>
+      <div style="font-size:17px;font-weight:900;margin:2px 0 2px">👤 ${(p.students || []).map(st => esc(st.name) + '（' + esc(st.id) + '）').join('、') || '（沒有學員資料）'}</div><div class="muted" style="font-size:12px;margin:0 0 4px">單號 ${esc(p.id)}</div>送出人：<b>${esc(p.parentName)}</b>${p.parentPhone ? ` <a href="tel:${esc(p.parentPhone)}" style="color:var(--pri);font-size:13px;font-weight:700;text-decoration:none">📞 ${esc(p.parentPhone)}</a>` : ''}｜期別：<b>${esc(p.period)}</b>
       <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
       ${p.expOld ? `<div class="muted" style="margin:0 0 8px;font-weight:700;color:${(Number(p.amount) === p.expOld || Number(p.amount) === p.expNew) ? 'var(--ok)' : 'var(--bad)'}">簡章應收：舊生 $${p.expOld}／新生 $${p.expNew}${Number(p.amount) === p.expOld ? ' ✓ 符合舊生價' : Number(p.amount) === p.expNew ? ' ✓ 符合新生價' : ' ⚠️ 金額與兩種價格都不符，請確認'}</div>` : ''}${p.giftNew ? `<div class="muted" style="margin:0 0 8px;color:var(--pri);font-weight:700">🎁 若為新生：${esc(p.giftNew)}</div>` : ''}
       <div style="background:#f1eae2;padding:12px;border-radius:12px;margin-bottom:8px">

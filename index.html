@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r95';
+const FE_VER = '2026-11-14-r96';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -643,11 +643,16 @@ const noticeOf = (st, d) => ((S.parentData && S.parentData.notices) || []).find(
 function duesBanner() { // 繳費提醒（家長）：冬令營或常態班還沒繳費／等待對帳
   const kids = ((S.me && S.me.students) || []).filter(s => (s.dues || []).length);
   if (!kids.length) return '';
-  const line = s => s.dues.map(d => d.t === 'cash'
-    ? `<div style="margin:3px 0">💵 <b>${esc(s.name)}</b>：${esc(d.label)} 已選擇現金，請於上課當天把現金交給教練</div>`
-    : d.t === 'pending'
-    ? `<div style="margin:3px 0">⏳ <b>${esc(s.name)}</b>：${esc(d.label)} 匯款已送出，等總教練對帳</div>`
-    : `<div style="margin:3px 0">💳 <b>${esc(s.name)}</b>：${esc(d.label)} 尚未繳費</div>`).join('');
+  const $$ = n => '$' + Number(n || 0).toLocaleString(), seen = new Set();
+  const money = n => n ? `<span style="color:#c2410c;font-weight:900;font-size:16px">${$$(n)}</span>` : '';
+  const line = s => s.dues.map(d => {
+    if (d.t === 'cash') { // 兄弟姊妹合併成一筆，只顯示一次
+      const k = d.label + '|' + d.amt + '|' + (d.group || s.name); if (seen.has(k)) return ''; seen.add(k);
+      return `<div style="margin:8px 0;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #fed7aa;line-height:1.7">💵 <b>${esc(d.group || s.name)}</b>：${esc(d.label)}<br>選擇現金，應繳 ${money(d.amt) || '（金額請洽教練）'}${d.group ? '（合計）' : ''}<br><b>請於上課當天把現金交給教練</b></div>`;
+    }
+    if (d.t === 'pending') return `<div style="margin:6px 0">⏳ <b>${esc(s.name)}</b>：${esc(d.label)} 匯款已送出，等總教練對帳</div>`;
+    return `<div style="margin:6px 0">💳 <b>${esc(s.name)}</b>：${esc(d.label)} 尚未繳費${d.amt ? '，應繳 ' + money(d.amt) : ''}</div>`;
+  }).join('');
   const hasUnpaid = kids.some(s => s.dues.some(d => d.t === 'unpaid'));
   return `<div class="card" style="background:${hasUnpaid ? '#fff7ed' : '#f0f9ff'};border-color:${hasUnpaid ? '#fed7aa' : '#bae6fd'}"><h2 style="color:${hasUnpaid ? '#c2410c' : '#0369a1'}">💳 繳費提醒</h2>
     ${kids.map(line).join('')}

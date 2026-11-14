@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r85';
+const FE_VER = '2026-11-14-r86';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -1211,6 +1211,8 @@ async function cashPayUi() {
     { key: 'studentId', label: '學員', type: 'select', options: stus.map(s => [s.id, `${s.name} (${s.className}${s.grp ? '・' + s.grp : ''}・目前剩${s.balance}堂)`]) },
     { key: 'period', label: '繳費期別（一次報多期，選第一期）', type: 'select', value: (S.adm.financeP || {}).current || '', options: ((S.adm.periodsAll || []).map(p => [p, p])).concat([['試上', '試上（1 堂，興趣班 400／其他 500）'], ['中途插班', '中途插班繳費（自訂堂數）']]) },
     { key: 'terms', label: '報名期數（試上、插班不用管）', type: 'select', value: '1', options: [['1', '1 期（7 堂）'], ['2', '一次報 2 期（14 堂）']] },
+    { key: 'campPer', label: '🏕️ 營隊學員才選：繳費期別（營隊不加堂，上面「繳費期別、期數、堂數」不用管）', type: 'select', value: '', options: [['', '（不是營隊學員，免選）'], ['ALL', '兩期都繳（第一期＋第二期）']].concat([...new Set(stus.filter(s => s.camp).flatMap(s => (s.campPeriods || []).map(z => z.period)))].map(p => [p, p + ' 一期']))},
+    { key: 'shirts', label: '營隊另購短 T 件數（沒有就免填）', type: 'number', ph: '例如 1', value: '' },
     { key: 'amount', label: '實收金額', type: 'number', ph: '例如: 4200 (插班依比例填寫)' },
     { key: 'last5', label: '匯款帳號後五碼（匯款才填）', ph: '5 碼數字，現金免填' },
     { key: 'date', label: '轉帳／收款日期', type: 'date', value: today() },

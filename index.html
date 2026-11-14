@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r97';
+const FE_VER = '2026-11-14-r98';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -1400,7 +1400,7 @@ async function addStudentUi() {
     { key: 'kind', label: '學員類型', type: 'select', value: '', options: [['', '正式學員'], ['試上', '試上（體驗 1 堂）'], ['補課', '補課（來補課的學生，不固定每週來）']] },
     { key: 'visitDate', label: '上課日期（選試上／補課才填；隔幾週再來，之後可再加日期）', type: 'date' },
     { key: 'visitClassId', label: '上課的班級（試上／補課來上哪一班；不選＝上面的班級）', type: 'select', value: '', options: [['', '同上面的班級']].concat(cs.map(c => [c.classId, c.name])) },
-    { key: 'balance', label: '初始堂數', type: 'number', ph: '留空：正式 7 堂；試上、補課 1 堂', value: '' },
+    { key: 'balance', label: '初始堂數', type: 'number', ph: '留空＝0 堂（繳費核准後才加堂）；試上、補課留空＝1 堂', value: '' },
     { key: 'group', label: '班別（基礎／競技合開的班才選）', type: 'select', value: '', options: [['', '不分班別'], ['基礎班', '基礎班'], ['競技班', '競技班']] },
     { key: 'grade', label: '年級（教練點名時可看到）', type: 'select', value: '', options: gradeOpts },
     { key: 'phone', label: '緊急聯絡電話（必填）', type: 'tel', ph: '教練點名時可看到' },

@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r82';
+const FE_VER = '2026-11-14-r83';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -639,7 +639,7 @@ function duesBanner() { // 繳費提醒（家長）：冬令營或常態班還�
   if (!kids.length) return '';
   const line = s => s.dues.map(d => d.t === 'pending'
     ? `<div style="margin:3px 0">⏳ <b>${esc(s.name)}</b>：${esc(d.label)} 匯款已送出，等總教練對帳</div>`
-    : `<div style="margin:3px 0">💳 <b>${esc(s.name)}</b>：${d.label === '常態班' ? '剩餘堂數已用完，請記得繳費' : esc(d.label) + ' 尚未繳費'}</div>`).join('');
+    : `<div style="margin:3px 0">💳 <b>${esc(s.name)}</b>：${esc(d.label)} 尚未繳費</div>`).join('');
   const hasUnpaid = kids.some(s => s.dues.some(d => d.t === 'unpaid'));
   return `<div class="card" style="background:${hasUnpaid ? '#fff7ed' : '#f0f9ff'};border-color:${hasUnpaid ? '#fed7aa' : '#bae6fd'}"><h2 style="color:${hasUnpaid ? '#c2410c' : '#0369a1'}">💳 繳費提醒</h2>
     ${kids.map(line).join('')}

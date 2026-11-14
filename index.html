@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r94';
+const FE_VER = '2026-11-14-r95';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -1228,7 +1228,7 @@ async function cashPayUi() {
 
   const v = await dialog('💵 補登收款（匯款／現金）', [
     { key: 'method', label: '付款方式', type: 'select', value: '匯款', options: [['匯款', '匯款（已轉帳）'], ['現金', '現金（現場收取）']] },
-    { key: 'studentId', label: '學員', type: 'select', options: stus.map(s => [s.id, `${s.name} (${s.className}${s.grp ? '・' + s.grp : ''}・目前剩${s.balance}堂)`]) },
+    { key: 'studentId', label: '學員', type: 'select', options: stus.map(s => [s.id, `${stuLabel(s)}${s.grp ? '・' + s.grp : ''}・目前剩${s.balance}堂`]) },
     { key: 'period', label: '繳費期別（一次報多期，選第一期）', type: 'select', value: (S.adm.financeP || {}).current || '', options: ((S.adm.periodsAll || []).map(p => [p, p])).concat([['試上', '試上（1 堂，興趣班 400／其他 500）'], ['中途插班', '中途插班繳費（自訂堂數）']]) },
     { key: 'terms', label: '報名期數（試上、插班不用管）', type: 'select', value: '1', options: [['1', '1 期（7 堂）'], ['2', '一次報 2 期（14 堂）']] },
     { key: 'campPer', label: '🏕️ 營隊學員才選：繳費期別（營隊不加堂，上面「繳費期別、期數、堂數」不用管）', type: 'select', value: '', options: [['', '（不是營隊學員，免選）'], ['ALL', '兩期都繳（第一期＋第二期）']].concat([...new Set(stus.filter(s => s.camp).flatMap(s => (s.campPeriods || []).map(z => z.period)))].map(p => [p, p + ' 一期']))},
@@ -1236,7 +1236,7 @@ async function cashPayUi() {
     { key: 'amount', label: '實收金額', type: 'number', ph: '例如: 4200 (插班依比例填寫)' },
     { key: 'last5', label: '匯款帳號後五碼（匯款才填）', ph: '5 碼數字，現金免填' },
     { key: 'date', label: '轉帳／收款日期', type: 'date', value: today() },
-    { key: 'lessons', label: '增加堂數（已經加過堂數、只要記帳就填 0）', type: 'number', ph: '1 期填 7、2 期填 14，試上填 1；只記帳填 0', value: '7' },
+    { key: 'lessons', label: '增加堂數（已經加過堂數、只要記帳就填 0）', type: 'number', ph: '只記帳填 0；要加堂：1 期 7、2 期 14、試上 1', value: '0' },
     { key: 'note', label: '備註說明', ph: '例如: 表單報名後匯款 / 現場交付現金', value: '' }
   ], '確認入帳並加堂');
 
@@ -1246,19 +1246,38 @@ async function cashPayUi() {
   setTimeout(() => toast(Number(v.lessons) > 0 ? '已入帳，學員堂數已自動累加！' : '已記帳（未加堂）'), 100);
 }
 
+const stuLabel = s => s.name + (String(s.name).indexOf(s.className) !== -1 || !s.className ? '' : '（' + s.className + '）'); // 名字已經帶班級（例如「張愷威（冬令營B班）」）就不重複
 async function markCashUi() { // 家長確定付現、但還沒收到錢：先標記，家長登入就會看到「已選擇現金，請於上課當天交給教練」；收到現金後到「待審核繳費」核准
-  const stus = (S.adm.students || []).filter(s => s.status !== '結業' && !s.kind);
-  if (!stus.length) throw new Error('目前尚無學員資料');
-  const opt = [['', '（沒有）']].concat(stus.map(s => [s.id, `${s.name} (${s.className})`]));
-  const v = await dialog('📝 標記現金（家長已確定付現、還沒收到）', [
-    { key: 'studentId', label: '學員', type: 'select', options: stus.map(s => [s.id, `${s.name} (${s.className})`]) },
-    { key: 'studentId2', label: '一起繳的兄弟姊妹（選填，金額填合計）', type: 'select', options: opt, value: '' },
-    { key: 'period', label: '繳費期別（常態班用）', type: 'select', value: (S.adm.financeP || {}).current || '', options: (S.adm.periodsAll || []).map(p => [p, p]) },
-    { key: 'terms', label: '期數（常態班用）', type: 'select', value: '1', options: [['1', '1 期'], ['2', '一次 2 期']] },
-    { key: 'campPer', label: '🏕️ 營隊學員才選：繳費期別', type: 'select', value: '', options: [['', '（不是營隊學員，免選）'], ['ALL', '兩期都繳']].concat([...new Set(stus.filter(s => s.camp).flatMap(s => (s.campPeriods || []).map(z => z.period)))].map(p => [p, p + ' 一期'])) },
-    { key: 'shirts', label: '營隊另購短 T 件數（沒有免填）', type: 'number', ph: '例如 1', value: '' },
-    { key: 'amount', label: '預計收的現金金額（兄弟請填合計）', type: 'number', ph: '例如 8000' }
-  ], '標記');
+  const all = (S.adm.students || []).filter(s => s.status !== '結業' && !s.kind);
+  if (!all.length) throw new Error('目前尚無學員資料');
+  const type = await menu('📝 標記現金：這位學員繳的是哪一種？', [['reg', '🏀 常態班（週日班）'], ['camp', '🏕️ 冬令營']]);
+  if (!type) return;
+  const camp = type === 'camp', stus = all.filter(s => !!s.camp === camp);
+  if (!stus.length) throw new Error(camp ? '目前沒有冬令營學員' : '目前沒有常態班學員');
+  const opt = [['', '（沒有）']].concat(stus.map(s => [s.id, stuLabel(s)]));
+  let fields;
+  if (camp) {
+    const labs = {}; stus.forEach(s => (s.campPeriods || []).forEach(z => { labs[z.period] = z.label || z.period; }));
+    const per = Object.keys(labs);
+    fields = [
+      { key: 'studentId', label: '① 學員', type: 'select', options: stus.map(s => [s.id, stuLabel(s)]) },
+      { key: 'studentId2', label: '② 一起繳的兄弟姊妹（沒有就不用選）', type: 'select', options: opt, value: '' },
+      { key: 'campPer', label: '③ 繳哪幾期？', type: 'select', value: per.length > 1 ? 'ALL' : (per[0] || ''), options: (per.length > 1 ? [['ALL', '兩期都繳（' + per.map(q => labs[q]).join('＋') + '）']] : []).concat(per.map(q => [q, '只繳 ' + labs[q]])) },
+      { key: 'shirts', label: '④ 另購短 T 幾件（沒有就空白）', type: 'number', ph: '例如 1', value: '' },
+      { key: 'amount', label: '⑤ 預計收的現金金額（兩位就填合計）', type: 'number', ph: '例如 8000' }
+    ];
+  } else {
+    const camps = new Set(all.filter(s => s.camp).flatMap(s => (s.campPeriods || []).map(z => z.period)));
+    const per = (S.adm.periodsAll || []).filter(q => !camps.has(q));
+    fields = [
+      { key: 'studentId', label: '① 學員', type: 'select', options: stus.map(s => [s.id, stuLabel(s)]) },
+      { key: 'studentId2', label: '② 一起繳的兄弟姊妹（沒有就不用選）', type: 'select', options: opt, value: '' },
+      { key: 'period', label: '③ 繳哪一期？', type: 'select', value: per.indexOf((S.adm.financeP || {}).current) !== -1 ? (S.adm.financeP || {}).current : (per[0] || ''), options: per.map(q => [q, q]) },
+      { key: 'terms', label: '④ 一次繳幾期？', type: 'select', value: '1', options: [['1', '只繳這 1 期'], ['2', '一次繳 2 期']] },
+      { key: 'amount', label: '⑤ 預計收的現金金額（兩位就填合計）', type: 'number', ph: '例如 8000' }
+    ];
+  }
+  const v = await dialog(camp ? '📝 標記現金（冬令營・還沒收到）' : '📝 標記現金（常態班・還沒收到）', fields, '標記');
   if (!v) return;
   await api('markCash', v);
   render();
@@ -1294,21 +1313,20 @@ async function viewAdmin() {
     overviewCard(a) +
     foldify('sch', scheduleCardAdmin(a)) +
     // 待審核繳費卡片：標題右側新增「💵 現場收取現金」快捷鍵 +
-    anch('a_pay', card('💳 待審核繳費' + ((a.payments || []).length ? ` <span class="pill warn">${a.payments.length}</span>` : ''), (a.payments || []).map(p => `<div class="item" style="border-left:4px solid #ef4444" id="pay_item_${esc(p.id)}">${NEWTAG}<br>
+    anch('a_pay', card('💳 待審核繳費' + ((a.payments || []).length ? ` <span class="pill warn">${a.payments.length}</span>` : ''), `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px"><button class="ghost mini" onclick="run(this,cashPayUi)">💵 補登收款</button><button class="ghost mini" onclick="run(this,markCashUi)">📝 標記現金（還沒收到）</button></div>` + ((a.payments || []).map(p => `<div class="item" style="border-left:4px solid #ef4444" id="pay_item_${esc(p.id)}">${NEWTAG}<br>
       <b>${esc(p.parentName)}</b>${p.parentPhone ? ` <a href="tel:${esc(p.parentPhone)}" style="color:var(--pri);font-size:13px;font-weight:700;text-decoration:none">📞 ${esc(p.parentPhone)}</a>` : ''}｜期別：<b>${esc(p.period)}</b>
       <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
       ${p.expOld ? `<div class="muted" style="margin:0 0 8px;font-weight:700;color:${(Number(p.amount) === p.expOld || Number(p.amount) === p.expNew) ? 'var(--ok)' : 'var(--bad)'}">簡章應收：舊生 $${p.expOld}／新生 $${p.expNew}${Number(p.amount) === p.expOld ? ' ✓ 符合舊生價' : Number(p.amount) === p.expNew ? ' ✓ 符合新生價' : ' ⚠️ 金額與兩種價格都不符，請確認'}</div>` : ''}${p.giftNew ? `<div class="muted" style="margin:0 0 8px;color:var(--pri);font-weight:700">🎁 若為新生：${esc(p.giftNew)}</div>` : ''}
       <div style="background:#f1eae2;padding:12px;border-radius:12px;margin-bottom:8px">
         <div style="font-size:13.5px;font-weight:700;margin-bottom:4px;color:#475569">分別設定增加堂數：</div>
-        <div class="muted" style="font-size:12.5px">${p.suggest ? `依簡章每期7堂規則建議 ${p.suggest} 堂（中途插班可自訂修改）` : '手動輸入堂數'}</div>
+        <div class="muted" style="font-size:12.5px">預設加 0 堂（堂數你已經手動填好）；要加堂請自己改，例如 7</div>
         ${(p.students || []).map(st => `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div><b style="font-size:14.5px">${esc(st.name)}</b> <span class="muted" style="font-size:12px">(${esc(st.id)})・目前${balT(st.balance)}</span></div>
-          <input class="add-lesson-input" data-sid="${esc(st.id)}" type="number" inputmode="numeric" value="${p.suggest || 7}" style="width:105px!important;padding:6px 10px;margin:0;font-size:14px" placeholder="加幾堂"></div>`).join('')}
+          <input class="add-lesson-input" data-sid="${esc(st.id)}" type="number" inputmode="numeric" value="0" style="width:105px!important;padding:6px 10px;margin:0;font-size:14px" placeholder="加幾堂"></div>`).join('')}
       </div>
       <input id="nt_${esc(p.id)}" placeholder="退回說明（退回必填）">
       <div class="two"><button class="pri" data-act="reviewPay" data-id="${esc(p.id)}" data-d="pass">核准並加堂 ➜</button>
-        <button class="ghost" data-act="reviewPay" data-id="${esc(p.id)}" data-d="reject">退回匯款</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>',
-      `<button class="ghost mini" onclick="run(this,cashPayUi)">💵 補登收款</button> <button class="ghost mini" onclick="run(this,markCashUi)">📝 標記現金（還沒收到）</button>`)) +
+        <button class="ghost" data-act="reviewPay" data-id="${esc(p.id)}" data-d="reject">退回匯款</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的繳費</p>'))) +
     pendingCard('📝 待審核請假', 'leave', '請假') +
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +
@@ -1344,9 +1362,9 @@ async function reviewPaySafe(id, decision) {
   if (decision === 'pass') {
     box.querySelectorAll('.add-lesson-input').forEach(inp => { 
       const v = Number(inp.value); 
-      if (v > 0) addMap[inp.getAttribute('data-sid')] = v; 
+      if (inp.value !== '' && v >= 0) addMap[inp.getAttribute('data-sid')] = v; 
     });
-    if (!Object.keys(addMap).length) throw new Error('請至少為一位學員填寫要加的堂數');
+    if (!Object.keys(addMap).length) throw new Error('請在堂數欄填入數字（不加堂就填 0）');
   } else if (!nt.value.trim()) throw new Error('退回請填寫原因');
   await api('reviewPay', { id, decision, studentAddLessons: addMap, note: nt.value });
   render();

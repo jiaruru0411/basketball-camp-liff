@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r93';
+const FE_VER = '2026-11-14-r94';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -336,6 +336,8 @@ function testBar() { // 測試模式：只有後端開了 TEST_MODE 的總教練
   let vb = document.getElementById('verbar');
   if (!vb) { vb = document.createElement('div'); vb.id = 'verbar'; vb.style.cssText = 'text-align:center;font-size:11px;color:#9ba7b6;padding:0 0 10px'; document.querySelector('main').after(vb); }
   vb.textContent = '前端 ' + FE_VER + '｜後端 ' + ((S.me && S.me.ver) || '舊版（尚未更新）') + (S.me && S.me.testMode ? '｜測試模式開啟' : '');
+  let tb = document.getElementById('totopbar'); // 頁面最下方「回到最上方」（家長、教練、總教練都有）
+  if (!tb) { tb = document.createElement('div'); tb.id = 'totopbar'; tb.style.cssText = 'text-align:center;padding:6px 16px 20px'; tb.innerHTML = '<button class="ghost" style="width:auto;padding:10px 26px;font-size:15px;font-weight:800" onclick="window.scrollTo({ top: 0, behavior: \'smooth\' })">⬆️ 回到最上方</button>'; document.querySelector('main').after(tb); }
   let gb = document.getElementById('guidebar');
   if (!gb) { gb = document.createElement('div'); gb.id = 'guidebar'; gb.style.cssText = 'text-align:center;padding:10px 16px 0'; gb.innerHTML = '<button class="ghost" style="width:auto;padding:10px 26px;font-size:16px;font-weight:800" onclick="openGuide()">❓ 操作指南（點我）</button>'; document.querySelector('main').before(gb); }
   let b = document.getElementById('testbar');

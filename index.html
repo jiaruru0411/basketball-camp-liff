@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r81';
+const FE_VER = '2026-11-14-r82';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -947,19 +947,25 @@ function rosterHtml() {
       <span class="muted" style="margin:0;font-weight:700">${bal(x.balance)}</span></div>
     ${x.saved && x.by ? `<div class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(x.by)}・${esc(x.at)} 已點名</div>` : ''}
     ${x.cnote ? `<div style="margin:8px 0 0;padding:9px 12px;border-radius:12px;background:#fff7d6;border:1px solid #f5d76e;font-weight:700;color:#7a5200">📌 總教練提醒：${esc(x.cnote)}</div>` : ''}
-    ${S.me.role === 'admin' ? `<div style="margin:6px 0 0"><button type="button" class="ghost mini" style="width:auto;padding:5px 12px;font-size:13px" onclick="editCoachNote(${i})">${x.cnoteRaw ? '✏️ 修改備註' : '📌 加備註'}</button>${x.cnoteRaw && !x.cnote ? `<span class="muted" style="font-size:12.5px;margin-left:8px">（備註只限 ${esc(x.cnoteDate)} 顯示）</span>` : ''}</div>` : ''}
+    ${S.me.role === 'admin' ? `<div style="margin:6px 0 0;display:flex;gap:6px"><button type="button" class="ghost mini" style="width:auto;padding:5px 12px;font-size:13px" onclick="editCoachNote(${i})">${x.cnote ? '✏️ 修改備註' : '📌 加備註'}</button>${x.cnote ? `<button type="button" class="ghost mini" style="width:auto;padding:5px 12px;font-size:13px" onclick="clearCoachNote(${i})">✅ 已處理，清除</button>` : ''}</div>` : ''}
     ${x.note || x.phone ? `<div class="safe">${x.note ? `<span class="pill bad">⚠️ ${esc(x.note)}</span>` : ''}${x.phone ? `<a href="tel:${esc(x.phone.replace(/[^\d+]/g, ''))}">📞 ${esc(x.phone)}</a>` : ''}</div>` : ''}
     <div class="seg">${['未到', '出席', '請假', '缺席'].map(s => `<button type="button" data-s="${s}" class="${x.v === s ? 'on' : ''}" onclick="pickStatus(${i},'${s}')">${{ '未到': '⏳ 未到', '出席': '✓ 出席', '請假': '📝 請假', '缺席': '✕ 缺席' }[s]}</button>`).join('')}</div></div>`).join('');
 }
 async function editCoachNote(i) {
   const x = S.list[i]; if (!x) return;
   const v = await dialog('📌 給教練的備註：' + x.name, [
-    { key: 'text', label: '內容（清空＝刪除備註；教練點名時會看到）', ph: '例：新生第一堂，請發營隊衣服／今天要提早離開／尚未繳費', value: x.cnoteRaw || '' },
-    { key: 'scope', label: '顯示多久', type: 'select', value: x.cnoteRaw && x.cnoteDate ? 'day' : 'always', options: [['day', '只限這一天（' + S.date + '）'], ['always', '一直顯示，直到我清除']] }
+    { key: 'text', label: '內容（會一直顯示，直到你清除；清空儲存＝刪除）', ph: '例：新生第一堂，請發營隊衣服／尚未繳費', value: x.cnote || '' }
   ], '儲存');
   if (!v) return;
-  await api('setCoachNote', { studentId: x.studentId, text: v.text, date: v.scope === 'day' ? S.date : '' });
+  await api('setCoachNote', { studentId: x.studentId, text: v.text });
   toast(v.text ? '已儲存備註 📌' : '已清除備註');
+  await safe(viewCoach);
+}
+async function clearCoachNote(i) {
+  const x = S.list[i]; if (!x) return;
+  if (!(await ask('「' + x.name + '」的備註：\n' + x.cnote + '\n\n已經處理完了，要清除這則備註嗎？'))) return;
+  await api('setCoachNote', { studentId: x.studentId, text: '' });
+  toast('已清除備註');
   await safe(viewCoach);
 }
 function pickStatus(i, s) { if (S.list[i]) { S.list[i].v = s; $('#roster').innerHTML = rosterHtml(); } }

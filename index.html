@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r89';
+const FE_VER = '2026-11-14-r90';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -618,7 +618,7 @@ async function viewParent() {
       <select id="pay_method" onchange="togglePayMethod()"><option value="匯款">🏦 匯款（轉帳後在下面填寫）</option><option value="現金">💵 現金（上課當天交給教練）</option></select>
       <p id="bank_info" class="muted" style="font-weight:700;line-height:1.7;color:var(--ink)">${esc(CONFIG.BANK).replace(/\n/g, '<br>')}</p>
       <p id="cash_note" class="muted" style="display:none;font-weight:700;color:var(--ink);background:#fffaf3;border:1px solid #f3e8da;border-radius:12px;padding:10px 12px">💵 選擇現金：請填寫要交的金額後送出，並在<b>上課當天把現金交給教練</b>。總教練收到後會幫您登記，登記前這裡會顯示「尚未繳費」。</p>
-      <p class="muted" style="margin:10px 0 4px;font-weight:800;color:var(--ink)">① 選擇要繳費的學員</p>
+      <p class="muted" style="margin:10px 0 4px;font-weight:800;color:var(--ink)">① 選擇要繳費的學員 <button type="button" class="ghost mini" style="width:auto;padding:3px 10px;font-size:12.5px;margin-left:6px" onclick="pickAllKids()">☑️ 全選／取消全選</button></p>
       <div class="chk" onchange="calcPay()">${st.map(s => `<label><input type="checkbox" value="${esc(s.studentId)}" ${S.curKid === 'ALL' || S.curKid === s.studentId ? 'checked' : ''}>${esc(s.name)}${st.filter(z => z.name === s.name).length > 1 ? '（' + esc(s.className) + '）' : ''}</label>`).join('') || '<p class="muted">尚未綁定學員</p>'}</div>
       <div id="reg_box"><p class="muted" style="margin:10px 0 4px;font-weight:800;color:var(--ink)">② 期別與期數</p>
         <select id="pay_period" onchange="calcPay()">${(periods || []).map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
@@ -720,6 +720,10 @@ async function switchKid(id) {
   restoreForm(snap);
 }
 
+function pickAllKids() {
+  const all = [...document.querySelectorAll('.chk input')], on = all.some(i => !i.checked);
+  all.forEach(i => { i.checked = on; }); calcPay();
+}
 function togglePayMethod() {
   const cash = ($('#pay_method') || {}).value === '現金', sh = (id, on) => { const e = $(id); if (e) e.style.display = on ? '' : 'none'; };
   sh('#bank_info', !cash); sh('#cash_note', cash); sh('#l5', !cash); sh('#pay_dt', !cash);

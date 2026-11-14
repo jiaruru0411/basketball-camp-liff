@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r78';
+const FE_VER = '2026-11-14-r79';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -508,7 +508,11 @@ function updateMk() {
   const h = $('#mk_hint'); 
   if (h) {
     const av = mkAvailDates(dl);
-    h.textContent = av.length ? `可選的補課日（週日常態班／冬令營開課日）：${av.map(x => x.slice(5).replace('-', '/')).join('、')}（${dl || '期限內'} 前）` : (dl ? `限選 ${mn} ～ ${dl} 之間的週日（逾期無法補課）` : '限選週日開課時段');
+    const md2 = x => x.slice(5).replace('-', '/'), cpm2 = (S.parentData && S.parentData.calPer) || {}, sun = av.filter(x => dow(x) === 7 && !((S.parentData.cl || []).some(c => c.camp && (c.periods || []).some(z => z.period === cpm2[x])))), camp = {};
+    av.filter(x => !sun.includes(x)).forEach(x => { (camp[cpm2[x] || '冬令營'] = camp[cpm2[x] || '冬令營'] || []).push(x); });
+    const campTxt = Object.keys(camp).map(k => `${esc(k)}：${camp[k].map(md2).join('、')}`).join('<br>');
+    if (av.length) h.innerHTML = `<div style="line-height:1.8"><b>📅 常態班（週日）可補：</b>${sun.length ? sun.map(md2).join('、') : '目前沒有'}${campTxt ? `<br><b>🏕️ 冬令營可補（平日，時數 2 小時的班才能補）：</b><br>${campTxt}` : ''}<br><span class="muted">截止：${esc(dl || '期限內')}</span></div>`;
+    else h.textContent = dl ? `限選 ${mn} ～ ${dl} 之間的上課日（逾期無法補課）` : '請選擇上課日';
   }
 }
 

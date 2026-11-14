@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r90';
+const FE_VER = '2026-11-14-r91';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -1244,6 +1244,24 @@ async function cashPayUi() {
   setTimeout(() => toast(Number(v.lessons) > 0 ? '已入帳，學員堂數已自動累加！' : '已記帳（未加堂）'), 100);
 }
 
+async function markCashUi() { // 家長確定付現、但還沒收到錢：先標記，家長登入就會看到「已選擇現金，請於上課當天交給教練」；收到現金後到「待審核匯款」核准
+  const stus = (S.adm.students || []).filter(s => s.status !== '結業' && !s.kind);
+  if (!stus.length) throw new Error('目前尚無學員資料');
+  const opt = [['', '（沒有）']].concat(stus.map(s => [s.id, `${s.name} (${s.className})`]));
+  const v = await dialog('📝 標記現金（家長已確定付現、還沒收到）', [
+    { key: 'studentId', label: '學員', type: 'select', options: stus.map(s => [s.id, `${s.name} (${s.className})`]) },
+    { key: 'studentId2', label: '一起繳的兄弟姊妹（選填，金額填合計）', type: 'select', options: opt, value: '' },
+    { key: 'period', label: '繳費期別（常態班用）', type: 'select', value: (S.adm.financeP || {}).current || '', options: (S.adm.periodsAll || []).map(p => [p, p]) },
+    { key: 'terms', label: '期數（常態班用）', type: 'select', value: '1', options: [['1', '1 期'], ['2', '一次 2 期']] },
+    { key: 'campPer', label: '🏕️ 營隊學員才選：繳費期別', type: 'select', value: '', options: [['', '（不是營隊學員，免選）'], ['ALL', '兩期都繳']].concat([...new Set(stus.filter(s => s.camp).flatMap(s => (s.campPeriods || []).map(z => z.period)))].map(p => [p, p + ' 一期'])) },
+    { key: 'shirts', label: '營隊另購短 T 件數（沒有免填）', type: 'number', ph: '例如 1', value: '' },
+    { key: 'amount', label: '預計收的現金金額（兄弟請填合計）', type: 'number', ph: '例如 8000' }
+  ], '標記');
+  if (!v) return;
+  await api('markCash', v);
+  render();
+  setTimeout(() => toast('已標記，家長登入會看到「已選擇現金」。收到現金後到「待審核匯款」核准'), 100);
+}
 async function viewAdmin() {
   const a = await api('admin', { month: S.salKey || '' }, true);
   S.adm = a; S.salKey = (a.stats && a.stats.month) || S.salKey || '';
@@ -1288,7 +1306,7 @@ async function viewAdmin() {
       <input id="nt_${esc(p.id)}" placeholder="退回說明（退回必填）">
       <div class="two"><button class="pri" data-act="reviewPay" data-id="${esc(p.id)}" data-d="pass">核准並加堂 ➜</button>
         <button class="ghost" data-act="reviewPay" data-id="${esc(p.id)}" data-d="reject">退回匯款</button></div></div>`).join('') || '<p class="muted">目前沒有待處理的匯款</p>',
-      `<button class="ghost mini" onclick="run(this,cashPayUi)">💵 補登收款</button>`)) +
+      `<button class="ghost mini" onclick="run(this,cashPayUi)">💵 補登收款</button> <button class="ghost mini" onclick="run(this,markCashUi)">📝 標記現金（還沒收到）</button>`)) +
     pendingCard('📝 待審核請假', 'leave', '請假') +
     pendingCard('⭐ 待審核補課', 'makeup', '補課') +
     pendingCard('🔄 待審核調課（當天換時段）', 'swap', '調課') +

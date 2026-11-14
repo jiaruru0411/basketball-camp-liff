@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r76';
+const FE_VER = '2026-11-14-r78';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -467,9 +467,10 @@ async function doSubmitSwap() {
 const tmRange = (tm, h) => { const m = /(\d{1,2}):(\d{2})/.exec(tm || ''); if (!m) return tm || ''; const a = Number(m[1]) * 60 + Number(m[2]), b = a + Math.round((Number(h) || 0) * 60), f = x => String(Math.floor(x / 60) % 24).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); return h ? f(a) + '–' + f(b) : f(a); };
 const tmMin = t => { const m = /(\d{1,2}):(\d{2})/.exec(t || ''); return m ? Number(m[1]) * 60 + Number(m[2]) : 0; };
 const mkFam = c => !c ? '' : (/高框/.test(c.name) || tmMin(c.tm) >= 960 ? 'high' : (/基礎|競技/.test(c.name) ? 'base' : ''));
-function mkFamOk(own, c) { const f = mkFam(own); if (!f) return true; const g = mkFam(c), m = tmMin(c.tm); return f === 'base' ? g === 'base' : (g === 'high' || (m >= 840 && m < 960)); }
+function mkFamOk(own, c) { if (c.camp) return true; const f = mkFam(own); if (!f) return true; const g = mkFam(c), m = tmMin(c.tm); return f === 'base' ? g === 'base' : (g === 'high' || (m >= 840 && m < 960)); }
 const sid2cid = () => { const o = $('#mk_leave') && $('#mk_leave').selectedOptions[0]; return o ? o.dataset.cid : ''; };
-function mkClash(sid, c) { // 本期有報名的孩子：不能補自己現在的班，也不能補同時段的班；本期沒報名就不擋
+function mkClash(sid, c) {
+  if (c.camp) return false; // 冬令營平日班不會和週日的常態班衝突 // 本期有報名的孩子：不能補自己現在的班，也不能補同時段的班；本期沒報名就不擋
   const st = stuById(sid), dt = $('#mk_date'), d = dt ? dt.value : '', cp = (S.parentData && S.parentData.calPer) || {}, ep = (st && st.enrPeriods) || [];
   if (!st) return false;
   const enr = d && cp[d] ? ep.includes(cp[d]) : ep.some(p => Object.values(cp).includes(p)); // 還沒選日期：只要未來有報名的期別就先當有報名
@@ -482,9 +483,17 @@ function fillMkClasses() { // 只列出「不是原班」且「時數相同」�
   const sel = $('#mk_leave'), cs = $('#mk_cls'); if (!sel || !cs || !sel.selectedOptions[0]) return;
   const op = sel.selectedOptions[0], cid = op.dataset.cid, h = Number(op.dataset.h) || 0, keep = cs.value;
   const own0 = ((S.parentData && S.parentData.cl) || []).find(c => c.classId === cid);
-  const list = ((S.parentData && S.parentData.cl) || []).filter(c => (!h || c.hours === h) && (!c.days || !c.days.length || c.days.includes(7)) && mkFamOk(own0, c) && !mkClash(op.dataset.sid, c));
+  const dv = ($('#mk_date') || {}).value || '', cpm = (S.parentData && S.parentData.calPer) || {}, wd = dv ? dow(dv) : 0;
+  const dayOk = c => c.camp ? (!dv || (c.periods || []).some(z => z.period === cpm[dv])) && (!dv || !c.days || !c.days.length || c.days.includes(wd)) : (!dv || wd === 7) && (!c.days || !c.days.length || c.days.includes(7));
+  const list = ((S.parentData && S.parentData.cl) || []).filter(c => (!h || c.hours === h) && dayOk(c) && mkFamOk(own0, c) && !mkClash(op.dataset.sid, c));
   cs.innerHTML = list.length ? list.map(c => `<option value="${esc(c.classId)}">${esc(c.name)} (${c.hours}h${c.days && c.days.length ? '・' + dayTxt(c.days) : ''})</option>`).join('') : '<option value="">沒有可補課的班級（需不同班、同時數）</option>';
   if (keep && list.some(c => c.classId === keep)) cs.value = keep;
+}
+function mkAvailDates(dl) { // 課程日曆裡、今天之後、截止日之前的週日
+  const cal = (S.parentData && S.parentData.cal) || [], t = today();
+  const ds = cal.map(x => typeof x === 'string' ? x : x && x.date).filter(Boolean);
+  const cpm = (S.parentData && S.parentData.calPer) || {}, campPer = new Set(((S.parentData && S.parentData.cl) || []).filter(c => c.camp).flatMap(c => (c.periods || []).map(z => z.period)));
+  return [...new Set(ds)].filter(d => d >= t && (!dl || d <= dl) && (dow(d) === 7 || (dow(d) <= 6 && campPer.has(cpm[d])))).sort();
 }
 function updateMk() {
   const sel = $('#mk_leave'); if (!sel || !sel.selectedOptions[0]) return;
@@ -498,7 +507,8 @@ function updateMk() {
   
   const h = $('#mk_hint'); 
   if (h) {
-    h.textContent = dl ? `限選 ${mn} ～ ${dl} 之間的週日（逾期無法補課）` : '限選週日開課時段';
+    const av = mkAvailDates(dl);
+    h.textContent = av.length ? `可選的補課日（週日常態班／冬令營開課日）：${av.map(x => x.slice(5).replace('-', '/')).join('、')}（${dl || '期限內'} 前）` : (dl ? `限選 ${mn} ～ ${dl} 之間的週日（逾期無法補課）` : '限選週日開課時段');
   }
 }
 
@@ -775,6 +785,7 @@ async function doSubmitLeave() {
 async function doSubmitMakeup() {
   const d = $('#mk_date').value;
   if (!d) throw new Error('請選擇補課日期');
+  { const o0 = $('#mk_leave') && $('#mk_leave').selectedOptions[0], av = mkAvailDates(o0 ? o0.dataset.dl || '' : ''); if (av.length && !av.includes(d)) throw new Error('這一天沒有開課，請選擇可選的補課日：' + av.map(x => x.slice(5).replace('-', '/')).join('、')); }
   
   const sel = $('#mk_leave');
   if (!sel || !sel.selectedOptions[0]) throw new Error('請選擇要補課的假單');

@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r87';
+const FE_VER = '2026-11-14-r89';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -708,7 +708,7 @@ function calcPay() { // 簡章金額試算（新舊生由總教練人工確認�
     return;
   }
   if (box) box.style.display = 'none'; showReg(true);
-  { const per = ($('#pay_period') || {}).value, done = sel.filter(x => (x.paidPeriods || []).includes(per)); if (per && done.length) { hint.innerHTML = `<span style="color:var(--bad);font-weight:700">✅ ${done.map(x => esc(x.name)).join('、')} 「${esc(per)}」已經對帳完成，不需要再匯款。<br>如果要繳下一期，請改選上方的期別。</span>`; return; } }
+  { const per = ($('#pay_period') || {}).value, done = sel.filter(x => (x.paidPeriods || []).includes(per)); if (per && done.length) { hint.innerHTML = `<span style="color:var(--bad);font-weight:700">✅ ${done.map(x => esc(x.name)).join('、')} 「${esc(per)}」已經對帳完成，不需要再${(($('#pay_method') || {}).value === '現金') ? '繳費' : '匯款'}。<br>如果要繳下一期，請改選上方的期別。</span>`; return; } }
   if (!ids.length || fees.some(x => !x)) { hint.textContent = ids.length ? '此班尚未設定費用，請依報名表單通知的金額輸入' : '請先勾選學員'; return; }
   const tot = id => fees.reduce((t, x) => t + x * terms - (((pl.discount || {})[id] || {})[terms] || 0), 0) + shirts * (pl.shirt || 450);
   hint.innerHTML = `參考金額：舊生 <b style="color:var(--pri)">$${tot('舊生').toLocaleString()}</b>／新生 <b style="color:var(--pri)">$${tot('新生').toLocaleString()}</b>（${ids.length} 人・${terms} 期${shirts ? '・T恤 ' + shirts + ' 件' : ''}）<br>請依報名後通知您的金額匯款，新舊生身分由總教練確認。`;
@@ -723,8 +723,9 @@ async function switchKid(id) {
 function togglePayMethod() {
   const cash = ($('#pay_method') || {}).value === '現金', sh = (id, on) => { const e = $(id); if (e) e.style.display = on ? '' : 'none'; };
   sh('#bank_info', !cash); sh('#cash_note', cash); sh('#l5', !cash); sh('#pay_dt', !cash);
-  const a = $('#amt'); if (a) a.placeholder = cash ? '要交的現金金額 (如: 4200)' : '匯款金額 (如: 4200)';
+  const a = $('#amt'); if (a) { a.placeholder = cash ? '要交的現金金額（例如 4200）' : '匯款金額 (如: 4200)'; if (a.parentElement) { a.parentElement.style.gridTemplateColumns = cash ? '1fr' : ''; a.parentElement.style.display = cash ? 'block' : ''; } }
   const b = a && a.closest('.card') ? [...a.closest('.card').querySelectorAll('button.pri')].pop() : null; if (b) b.textContent = cash ? '送出現金繳費通知 ➜' : '送出對帳資料 ➜';
+  calcPay();
 }
 function toggleShirt() { const on = $('#shirt_on').checked, e = $('#pay_shirts'); e.style.display = on ? '' : 'none'; e.value = on ? (Number(e.value) > 0 ? e.value : 1) : 0; calcPay(); }
 function campAppsCard(a) { // 營隊報名審核：同一位孩子的申請合併成一張，期別可取消勾選（修正家長勾錯），一次全部核准

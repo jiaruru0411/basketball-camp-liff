@@ -297,14 +297,14 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r92';
+const FE_VER = '2026-11-14-r93';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
     ['📝 請假', ['找到「📝 我要請假」卡片。', '選孩子 → 選要請假的上課日 → 選病假或事假。', '按送出，確認後等總教練核准。', '事假每期只能補 1 堂；冬令營可以請假，但不提供補課。']],
     ['🏀 預約補課', ['請假被總教練核准後，「🏀 預約補課」才會出現那張假單。', '先選補課日期（只能選週日），再選要補的班級。', '本期有報名：只能選和自己班錯開的時段；本期沒報名：上午、下午都能選。', '送出後等總教練確認。']],
     ['🔄 調課（同一天換時段）', ['找到「🔄 當天換時段（調課）」。', '選孩子、日期、要換去的班級。', '調課不算請假，不用補課。', '送出後等總教練核准。']],
-    ['💳 匯款', ['找到「💳 匯款對帳回傳」。', '① 先勾選要繳費的孩子 → ② 選期別 → ③ 要買短 T 就打勾並填件數。', '填金額、帳號後五碼、轉帳日期，確認後送出。', '總教練對帳完成後，堂數會自動加上去。', '看到「已經對帳完成」代表這一期不用再匯。現金請直接交給總教練。']],
+    ['💳 匯款', ['找到「💳 繳費回報」。', '① 先勾選要繳費的孩子 → ② 選期別 → ③ 要買短 T 就打勾並填件數。', '填金額、帳號後五碼、轉帳日期，確認後送出。', '總教練對帳完成後，堂數會自動加上去。', '看到「已經對帳完成」代表這一期不用再匯。現金請直接交給總教練。']],
     ['🏕️ 冬令營報名', ['找到「🏕️ 冬令營報名」卡片。', '勾選班級（A 班 08:00–10:00、B 班 10:00–12:00）和期別（可多選）。', '送出後等總教練審核通過，再回到「匯款」繳費。', '營隊請假不能補課，調課只能 A、B 班互換，而且要同一期。']],
     ['❓ 常見問題', ['看不到補課選項：請假還沒被核准，或是冬令營的請假。', '送錯了：在「🕒 最近申請進度」可以取消還在等待的申請。', '匯款後堂數沒變：要等總教練對帳，超過一天請聯絡總教練。', '輸入綁定碼失敗：確認 6 碼；連續錯 5 次要等 10 分鐘。']]
   ],
@@ -613,7 +613,7 @@ async function viewParent() {
         <li><b>補課期限</b>：請於<b>該期課程整期結束後『四週內』完成</b>，未上完之課程視同放棄，無法退費。</li>
         <li><b>時段規範</b>：補課一律安排於<b>每週日開課時段</b>。</li></ol></div></div>` : ''}${st.some(s => s.camp) ? `<div class="rules-box"><b>📌 冬令營請假規範：</b><ol><li>營隊期間可以請<b>事假或病假</b>，<b>一律不提供補課</b>，恕不退費。</li><li>A 班、B 班之間可以<b>調課</b>（需總教練核准）。</li></ol></div>` : ''}`) +
     campSignupCard(st, cl) +
-    '<div id="p_pay"></div>' + card('💳 匯款對帳回傳', `
+    '<div id="p_pay"></div>' + card('💳 繳費回報（匯款／現金）', `
       <p class="muted" style="margin:0 0 4px;font-weight:800;color:var(--ink)">付款方式</p>
       <select id="pay_method" onchange="togglePayMethod()"><option value="匯款">🏦 匯款（轉帳後在下面填寫）</option><option value="現金">💵 現金（上課當天交給教練）</option></select>
       <p id="bank_info" class="muted" style="font-weight:700;line-height:1.7;color:var(--ink)">${esc(CONFIG.BANK).replace(/\n/g, '<br>')}</p>
@@ -649,7 +649,7 @@ function duesBanner() { // 繳費提醒（家長）：冬令營或常態班還�
   const hasUnpaid = kids.some(s => s.dues.some(d => d.t === 'unpaid'));
   return `<div class="card" style="background:${hasUnpaid ? '#fff7ed' : '#f0f9ff'};border-color:${hasUnpaid ? '#fed7aa' : '#bae6fd'}"><h2 style="color:${hasUnpaid ? '#c2410c' : '#0369a1'}">💳 繳費提醒</h2>
     ${kids.map(line).join('')}
-    ${hasUnpaid ? `<button class="pri" style="margin-top:10px" onclick="goTo('p_pay')">前往匯款對帳回傳 ➜</button><p class="muted" style="margin:8px 0 0;font-size:13px">已經用現金繳給教練、或剛匯款完成的話，總教練對帳後這個提醒就會消失。</p>` : ''}</div>`;
+    ${hasUnpaid ? `<button class="pri" style="margin-top:10px" onclick="goTo('p_pay')">前往繳費回報 ➜</button><p class="muted" style="margin:8px 0 0;font-size:13px">已經用現金繳給教練、或剛匯款完成的話，總教練對帳後這個提醒就會消失。</p>` : ''}</div>`;
 }
 function noticeBanner() { // 停課公告（家長）
   const ns = (S.parentData && S.parentData.notices) || [];
@@ -778,7 +778,7 @@ function campSignupCard(st, cl) { // 家長自己報名冬令營：每位常態�
     return `<div style="margin:10px 0"><b>${esc(k.name)}</b>${blocks}${canSend ? `<button class="pri" data-act="campSignup" data-sid="${esc(k.studentId)}">送出 ${esc(k.name)} 的營隊報名申請 ➜</button>` : ''}</div>`;
   }).join('');
   if (!rows) return '';
-  return card('🏕️ 冬令營報名', `<p class="muted" style="margin:0 0 6px">請勾選要報名的<b>班級與期別</b>（可多選，例如 A 班第一期＋B 班第一期）。送出後由<b>總教練審核</b>，通過會通知您，再到下方「匯款對帳回傳」匯款。營隊請假<b>不提供補課</b>，A、B 班之間可以調課。</p>` + rows);
+  return card('🏕️ 冬令營報名', `<p class="muted" style="margin:0 0 6px">請勾選要報名的<b>班級與期別</b>（可多選，例如 A 班第一期＋B 班第一期）。送出後由<b>總教練審核</b>，通過會通知您，再到下方「繳費回報」匯款。營隊請假<b>不提供補課</b>，A、B 班之間可以調課。</p>` + rows);
 }
 async function campSignup(sid) {
   const k = (S.me.students || []).find(x => x.studentId === sid), cls = (S.parentData && S.parentData.cl) || [];
@@ -1244,7 +1244,7 @@ async function cashPayUi() {
   setTimeout(() => toast(Number(v.lessons) > 0 ? '已入帳，學員堂數已自動累加！' : '已記帳（未加堂）'), 100);
 }
 
-async function markCashUi() { // 家長確定付現、但還沒收到錢：先標記，家長登入就會看到「已選擇現金，請於上課當天交給教練」；收到現金後到「待審核匯款」核准
+async function markCashUi() { // 家長確定付現、但還沒收到錢：先標記，家長登入就會看到「已選擇現金，請於上課當天交給教練」；收到現金後到「待審核繳費」核准
   const stus = (S.adm.students || []).filter(s => s.status !== '結業' && !s.kind);
   if (!stus.length) throw new Error('目前尚無學員資料');
   const opt = [['', '（沒有）']].concat(stus.map(s => [s.id, `${s.name} (${s.className})`]));
@@ -1260,7 +1260,7 @@ async function markCashUi() { // 家長確定付現、但還沒收到錢：先�
   if (!v) return;
   await api('markCash', v);
   render();
-  setTimeout(() => toast('已標記，家長登入會看到「已選擇現金」。收到現金後到「待審核匯款」核准'), 100);
+  setTimeout(() => toast('已標記，家長登入會看到「已選擇現金」。收到現金後到「待審核繳費」核准'), 100);
 }
 async function viewAdmin() {
   const a = await api('admin', { month: S.salKey || '' }, true);
@@ -1285,14 +1285,14 @@ async function viewAdmin() {
        <button class="ghost" data-act="lockMonth">🔒 月結鎖定</button><button class="ghost" data-act="copySalary">📋 複製薪資表</button>`;
 
   $('#app').innerHTML =
-    `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核匯款')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${(s.board ? box(new Set(s.board.toMakeup.map(x => x.name)).size + ' 人', '⭐ 還有請假沒補課<br>共 ' + (s.approvedMakeupCount ?? 0) + ' 堂待補') : box((s.approvedMakeupCount ?? 0) + ' 堂', '⭐ 請假還沒補的堂數'))}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
+    `<div class="stats">${box(s.pendingPay ?? 0, '💳 待審核繳費')}${box(s.pendingLeave ?? 0, '📅 待審核申請')}${(s.board ? box(new Set(s.board.toMakeup.map(x => x.name)).size + ' 人', '⭐ 還有請假沒補課<br>共 ' + (s.approvedMakeupCount ?? 0) + ' 堂待補') : box((s.approvedMakeupCount ?? 0) + ' 堂', '⭐ 請假還沒補的堂數'))}${box(money(totalSal), esc(s.month) + ' 預計薪資')}</div>` +
     todoBar(a) +
     boardCard(s) +
     campAppsCard(a) +
     overviewCard(a) +
     foldify('sch', scheduleCardAdmin(a)) +
-    // 待審核匯款卡片：標題右側新增「💵 現場收取現金」快捷鍵 +
-    anch('a_pay', card('💳 待審核匯款' + ((a.payments || []).length ? ` <span class="pill warn">${a.payments.length}</span>` : ''), (a.payments || []).map(p => `<div class="item" style="border-left:4px solid #ef4444" id="pay_item_${esc(p.id)}">${NEWTAG}<br>
+    // 待審核繳費卡片：標題右側新增「💵 現場收取現金」快捷鍵 +
+    anch('a_pay', card('💳 待審核繳費' + ((a.payments || []).length ? ` <span class="pill warn">${a.payments.length}</span>` : ''), (a.payments || []).map(p => `<div class="item" style="border-left:4px solid #ef4444" id="pay_item_${esc(p.id)}">${NEWTAG}<br>
       <b>${esc(p.parentName)}</b>${p.parentPhone ? ` <a href="tel:${esc(p.parentPhone)}" style="color:var(--pri);font-size:13px;font-weight:700;text-decoration:none">📞 ${esc(p.parentPhone)}</a>` : ''}｜期別：<b>${esc(p.period)}</b>
       <div class="muted" style="margin:4px 0 8px">$${esc(p.amount)}｜末五碼 <b>${esc(p.last5)}</b>｜${esc(p.transferDate)}</div>
       ${p.expOld ? `<div class="muted" style="margin:0 0 8px;font-weight:700;color:${(Number(p.amount) === p.expOld || Number(p.amount) === p.expNew) ? 'var(--ok)' : 'var(--bad)'}">簡章應收：舊生 $${p.expOld}／新生 $${p.expNew}${Number(p.amount) === p.expOld ? ' ✓ 符合舊生價' : Number(p.amount) === p.expNew ? ' ✓ 符合新生價' : ' ⚠️ 金額與兩種價格都不符，請確認'}</div>` : ''}${p.giftNew ? `<div class="muted" style="margin:0 0 8px;color:var(--pri);font-weight:700">🎁 若為新生：${esc(p.giftNew)}</div>` : ''}

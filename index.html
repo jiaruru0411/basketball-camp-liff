@@ -297,7 +297,7 @@ document.addEventListener('click', e => {
 
 const GRADES = ['幼稚園', '小一', '小二', '小三', '小四', '小五', '小六', '國一', '國二', '國三', '高中'];
 const gradeOpts = [['', '未填']].concat(GRADES.map(g => [g, g]));
-const FE_VER = '2026-11-14-r96';
+const FE_VER = '2026-11-14-r97';
 const GUIDE = {
   parent: [
     ['🎒 第一次使用：綁定孩子', ['輸入總教練給你的 6 碼「綁定碼」。', '第一次要填「家長真實姓名」和「聯絡電話」。', '有兄弟姊妹用同一組綁定碼，一次就全部綁好。', '爸爸媽媽可以各用自己的 LINE 綁同一位孩子。']],
@@ -630,7 +630,7 @@ async function viewParent() {
       <label style="display:flex;gap:8px;align-items:center;margin:0 0 6px"><input id="shirt_on" type="checkbox" onchange="toggleShirt()"> 要另購短 T</label>
       <input id="pay_shirts" type="number" inputmode="numeric" min="1" value="0" placeholder="要幾件？" oninput="calcPay()" style="display:none;margin:6px 0">
       <p id="pay_hint" class="muted" style="font-weight:600"></p>
-      <div class="two"><input id="amt" type="number" inputmode="numeric" placeholder="匯款金額 (如: 4200)"><input id="l5" maxlength="5" inputmode="numeric" placeholder="匯款帳號末五碼（5 碼數字）"></div>
+      <div class="two"><input id="amt" oninput="this.dataset.touched=1" type="number" inputmode="numeric" placeholder="匯款金額 (如: 4200)"><input id="l5" maxlength="5" inputmode="numeric" placeholder="匯款帳號末五碼（5 碼數字）"></div>
       <div id="pay_dt"><p class="muted" style="font-weight:600">轉帳日期</p><input id="pdate" type="date" value="${today()}"></div>
       <button class="pri" onclick="run(this,doSubmitPay)">送出對帳資料 ➜</button>`) +
     bindBox();
@@ -643,7 +643,7 @@ const noticeOf = (st, d) => ((S.parentData && S.parentData.notices) || []).find(
 function duesBanner() { // 繳費提醒（家長）：冬令營或常態班還沒繳費／等待對帳
   const kids = ((S.me && S.me.students) || []).filter(s => (s.dues || []).length);
   if (!kids.length) return '';
-  const $$ = n => '$' + Number(n || 0).toLocaleString(), seen = new Set();
+  const $$ = n => '$' + Number(n || 0).toLocaleString(), seen = new Set(), campDue = [];
   const money = n => n ? `<span style="color:#c2410c;font-weight:900;font-size:16px">${$$(n)}</span>` : '';
   const line = s => s.dues.map(d => {
     if (d.t === 'cash') { // 兄弟姊妹合併成一筆，只顯示一次
@@ -651,11 +651,12 @@ function duesBanner() { // 繳費提醒（家長）：冬令營或常態班還�
       return `<div style="margin:8px 0;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #fed7aa;line-height:1.7">💵 <b>${esc(d.group || s.name)}</b>：${esc(d.label)}<br>選擇現金，應繳 ${money(d.amt) || '（金額請洽教練）'}${d.group ? '（合計）' : ''}<br><b>請於上課當天把現金交給教練</b></div>`;
     }
     if (d.t === 'pending') return `<div style="margin:6px 0">⏳ <b>${esc(s.name)}</b>：${esc(d.label)} 匯款已送出，等總教練對帳</div>`;
-    return `<div style="margin:6px 0">💳 <b>${esc(s.name)}</b>：${esc(d.label)} 尚未繳費${d.amt ? '，應繳 ' + money(d.amt) : ''}</div>`;
+    if (d.amt) { campDue.push({ n: s.name, l: d.label, a: d.amt }); return ''; } // 冬令營沒繳的：下面彙整成一張明細＋總計
+    return `<div style="margin:6px 0">💳 <b>${esc(s.name)}</b>：${esc(d.label)} 尚未繳費</div>`;
   }).join('');
   const hasUnpaid = kids.some(s => s.dues.some(d => d.t === 'unpaid'));
   return `<div class="card" style="background:${hasUnpaid ? '#fff7ed' : '#f0f9ff'};border-color:${hasUnpaid ? '#fed7aa' : '#bae6fd'}"><h2 style="color:${hasUnpaid ? '#c2410c' : '#0369a1'}">💳 繳費提醒</h2>
-    ${kids.map(line).join('')}
+    ${kids.map(line).join('')}${campDue.length ? (() => { const tot = campDue.reduce((t, x) => t + x.a, 0); return `<div style="margin:8px 0;padding:12px;border-radius:12px;background:#fff;border:1px solid #fed7aa"><b>🏕️ 冬令營尚未繳費</b>${campDue.map(x => `<div style="display:flex;justify-content:space-between;gap:8px;margin:6px 0"><span>${esc(x.n)}・${esc(x.l)}</span><b>${$$(x.a)}</b></div>`).join('')}<div style="display:flex;justify-content:space-between;border-top:1px dashed #fdba74;margin-top:8px;padding-top:8px"><b>合計應繳</b>${money(tot)}</div><div class="muted" style="font-size:12.5px;margin:6px 0 0">另購短 T 另計（每件 $${(S.plan || {}).shirt || 450}）</div></div>`; })() : ''}
     ${hasUnpaid ? `<button class="pri" style="margin-top:10px" onclick="goTo('p_pay')">前往繳費回報 ➜</button><p class="muted" style="margin:8px 0 0;font-size:13px">已經用現金繳給教練、或剛匯款完成的話，總教練對帳後這個提醒就會消失。</p>` : ''}</div>`;
 }
 function noticeBanner() { // 停課公告（家長）
@@ -704,14 +705,16 @@ function calcPay() { // 簡章金額試算（新舊生由總教練人工確認�
   if (nCamp) { // 營隊：勾選要報名的期別，金額＝各期價目×人數＋T恤，沒有新舊生折扣
     showReg(false);
     if (nCamp !== sel.length) { box.style.display = 'none'; hint.textContent = '營隊和常態班請分開送出匯款（先勾選同一類的學員）'; return; }
-    const sets = sel.map(s => (s.campPick || []).slice().sort().join('+'));
-    if (sel.length > 1 && sets.some(x => x !== sets[0])) { box.style.display = 'none'; box.dataset.sig = ''; hint.innerHTML = '<span style="color:var(--bad)">⚠️ 您勾選的營隊班，報名的期別不一樣（例如 A 班第一期、B 班第二期），請<b>分開送出匯款</b>：先只勾選其中一位，送出後再匯另一位。</span>'; return; }
-    const okPk = sel.every(s => (s.campPick || []).length) ? sel[0].campPick : null, cps = sel[0].campPeriods.filter(p => sel.every(s => (s.campPeriods || []).some(z => z.period === p.period)) && (!okPk || okPk.includes(p.period))), sig = cps.map(p => p.period).join('|') + '#' + sel.map(s => s.studentId).join(',');
-    if (box.dataset.sig !== sig) { box.dataset.sig = sig; box.innerHTML = '<p class="muted" style="margin:10px 0 4px;font-weight:800;color:var(--ink)">② 營隊報名期別（依總教練核准的期別）</p>' + (cps.map(p => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" value="${esc(p.period)}" checked onchange="calcPay()"> <span><b>${esc(p.label || p.period)}</b><span class="muted">（${p.lessons} 堂・$${p.amount.toLocaleString()}）</span></span></label>`).join('') || '<p class="muted">這個營隊尚未設定期別，請洽總教練</p>'); }
+    // 每位孩子各自勾選要繳的期別（例如 A 班第一＋第二期、B 班只有第一期），金額加總成一筆
+    const lab = x => String(x.label || x.period), dl = s => s.dues || [], unpaidL = s => dl(s).filter(d => d.t === 'unpaid').map(d => d.label), waitL = s => dl(s).filter(d => d.t !== 'unpaid').flatMap(d => String(d.label).split('＋'));
+    const periodsOf = s => (s.campPeriods || []).filter(z => !(s.campPick || []).length || s.campPick.includes(z.period)), stOf = (s, z) => (s.dues === undefined || unpaidL(s).includes(lab(z)) || unpaidL(s).includes('冬令營')) ? 'todo' : (waitL(s).includes(lab(z)) ? 'wait' : 'done');
+    const sig = sel.map(s => s.studentId + ':' + periodsOf(s).map(z => z.period + stOf(s, z)).join(',')).join('|');
+    if (box.dataset.sig !== sig) { box.dataset.sig = sig; box.innerHTML = '<p class="muted" style="margin:10px 0 4px;font-weight:800;color:var(--ink)">② 每位孩子要繳的營隊期別（依總教練核准的期別，已繳的不能再勾）</p>' + sel.map(s => `<div style="margin:8px 0;padding:8px 12px;border:1px solid #f3e8da;border-radius:12px;background:#fffaf3"><b>${esc(s.name)}</b>${periodsOf(s).map(z => { const t = stOf(s, z); return `<label style="display:flex;gap:8px;align-items:center;margin:6px 0;${t === 'todo' ? '' : 'opacity:.55'}"><input type="checkbox" data-sid="${esc(s.studentId)}" value="${esc(z.period)}" ${t === 'todo' ? 'checked' : 'disabled'} onchange="calcPay()"> <span><b>${esc(lab(z))}</b><span class="muted">（${z.lessons} 堂・$${Number(z.amount || 0).toLocaleString()}）</span>${t === 'wait' ? ' <span class="pill gray">已送出，等對帳</span>' : t === 'done' ? ' <span class="pill">已繳費</span>' : ''}</span></label>`; }).join('') || '<p class="muted" style="margin:4px 0">這位孩子沒有可以繳的期別，請洽總教練</p>'}</div>`).join(''); }
     box.style.display = '';
-    const pickP = [...box.querySelectorAll('input:checked')].map(i => i.value), picked = cps.filter(p => pickP.includes(p.period)), per = picked.reduce((a, b) => a + b.amount, 0), shirtAmt = shirts * (pl.shirt || 450);
-    if (!pickP.length) { hint.textContent = '請勾選要報名的期別'; return; }
-    hint.innerHTML = `<div style="line-height:1.8;padding:10px 12px;border:1px solid #f3e8da;border-radius:12px;background:#fffaf3"><b>📋 費用明細</b>${sel.map(s => `<div>・${esc(s.name)}：${picked.map(p => esc(String(p.label || p.period).replace(/^冬令營/, ''))).join('＋')}　<b>$${per.toLocaleString()}</b></div>`).join('')}${shirts ? `<div>・短 T ${shirts} 件　<b>$${shirtAmt.toLocaleString()}</b></div>` : ''}<div style="margin-top:4px;font-size:16px">合計　<b style="color:var(--pri)">$${(per * sel.length + shirtAmt).toLocaleString()}</b></div></div><div class="muted" style="margin-top:6px">請依上方合計匯款，並在下方填入金額。</div>`;
+    const lines = sel.map(s => { const ps = periodsOf(s).filter(z => [...box.querySelectorAll('input[data-sid="' + s.studentId + '"]:checked')].some(i => i.value === z.period)); return { s, ps, amt: ps.reduce((t, z) => t + Number(z.amount || 0), 0) }; }).filter(l => l.ps.length), shirtAmt = shirts * (pl.shirt || 450);
+    if (!lines.length) { hint.textContent = '請勾選要繳的期別（沒有可勾的，代表都已經繳過或送出了）'; return; }
+    hint.innerHTML = `<div style="line-height:1.8;padding:10px 12px;border:1px solid #f3e8da;border-radius:12px;background:#fffaf3"><b>📋 費用明細</b>${lines.map(l => `<div>・${esc(l.s.name)}：${l.ps.map(z => esc(lab(z).replace(/^冬令營/, ''))).join('＋')}　<b>$${l.amt.toLocaleString()}</b></div>`).join('')}${shirts ? `<div>・短 T ${shirts} 件　<b>$${shirtAmt.toLocaleString()}</b></div>` : ''}<div style="margin-top:4px;font-size:16px">合計　<b style="color:var(--pri)">$${(lines.reduce((t, l) => t + l.amt, 0) + shirtAmt).toLocaleString()}</b></div></div><div class="muted" style="margin-top:6px">請依上方合計一次匯款（或現金），並在下方填入金額。</div>`;
+    const am = $('#amt'); if (am && !am.dataset.touched) am.value = lines.reduce((t, l) => t + l.amt, 0) + shirtAmt;
     return;
   }
   if (box) box.style.display = 'none'; showReg(true);
@@ -802,11 +805,12 @@ async function doSubmitPay() {
   const cash = ($('#pay_method') || {}).value === '現金';
   const ids = [...document.querySelectorAll('.chk input:checked')].map(i => i.value);
   if (!ids.length) throw new Error('請勾選繳費的學員');
-  const campOn = $('#camp_box') && $('#camp_box').style.display !== 'none', campPer = campOn ? [...document.querySelectorAll('#camp_box input:checked')].map(i => i.value) : [];
-  if (campOn && !campPer.length) throw new Error('請勾選要報名的營隊期別');
-  const nm = ids.map(i => (stuById(i) || {}).name).filter(Boolean).join('、'), per = campOn ? campPer.join('＋') : (($('#pay_period') || {}).value || '') + '・' + ($('#pay_terms') ? $('#pay_terms').value : 1) + ' 期', sh0 = Number(($('#pay_shirts') || {}).value) || 0;
+  const campOn = $('#camp_box') && $('#camp_box').style.display !== 'none', campMap = {}; if (campOn) document.querySelectorAll('#camp_box input[data-sid]:checked').forEach(i => { (campMap[i.dataset.sid] = campMap[i.dataset.sid] || []).push(i.value); });
+  const campPer = [...new Set(Object.values(campMap).flat())], payIds = campOn ? Object.keys(campMap) : ids;
+  if (campOn && !campPer.length) throw new Error('請勾選要繳的營隊期別');
+  const campLbl = (sid, q) => { const z = ((stuById(sid) || {}).campPeriods || []).find(z => z.period === q); return String((z && z.label) || q); }, nm = payIds.map(i => (stuById(i) || {}).name).filter(Boolean).join('、'), per = campOn ? '\n' + Object.entries(campMap).map(([sid, ps]) => '　' + ((stuById(sid) || {}).name || '') + '：' + ps.map(q => campLbl(sid, q)).join('＋')).join('\n') : (($('#pay_period') || {}).value || '') + '・' + ($('#pay_terms') ? $('#pay_terms').value : 1) + ' 期', sh0 = Number(($('#pay_shirts') || {}).value) || 0;
   if (!await ask(`請再確認此筆報名資料是否正確：\n\n學員：${nm}\n報名：${per}${sh0 ? '\nT恤：' + sh0 + ' 件' : ''}\n${cash ? '付款方式：現金（上課當天交給教練）\n金額' : '匯款金額'}：$${Number($('#amt').value || 0).toLocaleString()}${cash ? '' : `\n帳號後五碼：${$('#l5').value.trim() || '（未填）'}\n匯款日期：${$('#pdate').value || '（未填）'}`}\n\n確定送出嗎？${cash ? '送出後會通知總教練，請記得上課當天把現金交給教練。' : '送出後將由總教練核對。'}`)) return;
-  await api('pay', { period: $('#pay_period').value, plan: { terms: $('#pay_terms').value, shirts: $('#pay_shirts').value, camp: campPer }, studentIds: ids, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value, method: cash ? '現金' : '匯款' });
+  await api('pay', { period: $('#pay_period').value, plan: { terms: $('#pay_terms').value, shirts: $('#pay_shirts').value, camp: campPer, campMap: campOn ? campMap : undefined }, studentIds: payIds, amount: $('#amt').value, last5: $('#l5').value.trim(), date: $('#pdate').value, method: cash ? '現金' : '匯款' });
   render();
   setTimeout(() => toast(cash ? '已通知總教練，上課當天請把現金交給教練 💵' : '繳費資料已送出，等待總教練確認！'), 100);
 }
